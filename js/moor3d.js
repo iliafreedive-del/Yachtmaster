@@ -68,16 +68,16 @@ function startMoor3D(mode){
   /* ---------- сцена ---------- */
   const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,90,260);
   const cam=new THREE.PerspectiveCamera(50,R.width/R.height,.3,600);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.8));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.9);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
   {const c=sun.shadow.camera;c.left=-70;c.right=70;c.top=70;c.bottom=-70;c.near=1;c.far=200}sun.shadow.bias=-.0008;sun.target.position.set(0,0,25);scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
   // дно, вода
   mesh(new THREE.PlaneGeometry(400,300).rotateX(-Math.PI/2),M(0x2f8f88),0,-3,40);
   const wg=new THREE.PlaneGeometry(240,150,48,30);wg.rotateX(-Math.PI/2);
-  const water=new THREE.Mesh(wg,M(0x1f8197,{transparent:true,opacity:.86,roughness:.4}));water.position.set(0,0,40);water.receiveShadow=true;scene.add(water);
+  const water=new THREE.Mesh(wg,M(0x1f8197,{transparent:true,opacity:.86,roughness:.3,envMapIntensity:.6}));water.position.set(0,0,40);water.receiveShadow=true;scene.add(water);
   // причал, кнехты, фонари, город, холмы
-  mesh(new THREE.BoxGeometry(320,4,60),M(0xc4b494),0,-1,-30);
+  mesh(new THREE.BoxGeometry(320,4,60),M(0xa89c82),0,-1,-30);
   mesh(new THREE.BoxGeometry(320,.3,.6),M(0x9a8d72),0,1.0,-.3);
   const slotX=k=>k*M4SP+Math.sign(k)*wide;
   for(let k=-8;k<=8;k++){[-2.6-(k?0:wide),2.6+(k?0:wide)].forEach(dx=>{mesh(new THREE.CylinderGeometry(.18,.22,.5,8),M(0x3b4247),slotX(k)+dx,1.25,-.8);mesh(new THREE.SphereGeometry(.24,8,6),M(0x3b4247),slotX(k)+dx,1.5,-.8)})}
@@ -126,6 +126,20 @@ function startMoor3D(mode){
   const coils=new THREE.Group();me.add(coils);[1,-1].forEach(sd=>mesh(new THREE.TorusGeometry(.22,.05,6,14).rotateX(Math.PI/2),M(0xf2a33a),sd*(B.W-.75),1.12,B.L-.4,coils));
   const foamG=new THREE.CircleGeometry(1,10).rotateX(-Math.PI/2),foam=[];
   for(let i=0;i<40;i++){const m=new THREE.Mesh(foamG,new THREE.MeshBasicMaterial({color:0xf4fbfb,transparent:true,opacity:0,depthWrite:false}));m.visible=false;scene.add(m);foam.push(m)}
+  /* оживление набережной (только декор, без столкновений): небо, отражения, пальмы, колонки, круги, люди, тузик */
+  let skyD=null,deco=null;
+  if(typeof skyDome==='function'){
+    scene.environment=skyEnv(renderer);skyD=skyDome(scene,{r:300});
+    const k=kit3();
+    for(let k2=-8;k2<=8;k2++){const x=slotX(k2);powerPost3(k,x+3.6,1,-1.4);if(k2%3===0)buoyStand3(k,x-3.6,1,-1.6)}
+    k.build(scene);
+    [-46,-31,-17,17,31,46].forEach((x,i)=>{const p=makePalm(5.5+(i%3)*.8,i%2?.8:-.8);p.position.set(x,1,-8.5);scene.add(p)});
+    const crew=[[0xe2564d,0xffffff,-6,-3.2,.4],[0x2a6f8a,null,-5.2,-3.6,-2.6],[0xf2c14e,0x24394a,12,-6,1.2],[0xffffff,0x1d5a3c,20.5,-2.4,3]];
+    deco={walkers:[],dinghy:null};
+    crew.forEach(([c,cap,x,z,ry])=>{const p=makePerson(c,cap);p.position.set(x,1,z);p.rotation.y=ry;scene.add(p)});
+    [[0x6a4a8a,-30,-5],[0x1f4f7a,30,-6.5]].forEach(([c,x,z],i)=>{const p=makePerson(c,i?0xf4f1e6:null,{hair:0x6b4a2a});p.position.set(x,1,z);scene.add(p);deco.walkers.push({p,x0:x,z,sp:i?-1:1})});
+    deco.dinghy=makeDinghy(0x5d6770);const r=makePerson(0xf07a28,null);r.position.set(0,.05,.9);r.scale.setScalar(.95);deco.dinghy.add(r);scene.add(deco.dinghy);
+  }
   scene.traverse(o=>{if(o.isMesh&&o!==water&&o.material.transparent!==true){o.castShadow=true;o.receiveShadow=true}});
 
   /* ---------- состояние ---------- */
@@ -273,6 +287,9 @@ function startMoor3D(mode){
   function frame(now){
     if(M4!==st)return;
     const dt=Math.min(.05,(now-lastT)/1000);lastT=now;st.t+=st.running?dt*M4X:0;
+    if(deco){const T=now/1000;skyD.clouds.rotation.y=T*.004;
+      deco.walkers.forEach(w=>{const s=Math.sin(T*.12+w.x0);w.p.position.x=w.x0+s*14*w.sp;w.p.rotation.y=Math.cos(T*.12+w.x0)*w.sp>0?-Math.PI/2:Math.PI/2;w.p.userData.walk(T*6,.45)});
+      const a=T*.12;deco.dinghy.position.set(40+Math.sin(a)*9,0,28+Math.cos(a)*6);deco.dinghy.rotation.y=a+Math.PI/2}
     for(let i=0;i<M4X&&st.running&&$('#dlg').hidden;i++){physics(dt);if(st.running)(lesson?lessonTick:practiceTick)(dt)}
     const t=now/1000;
     // яхта
