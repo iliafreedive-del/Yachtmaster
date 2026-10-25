@@ -13,7 +13,7 @@ const BOATS={
 function boatType(){try{const t=localStorage.getItem('gals-boat');if(BOATS[t])return t}catch(e){}return'cruiser'}
 function setBoatType(t){try{localStorage.setItem('gals-boat',t)}catch(e){}}
 /* лодка для упражнения: на парусных днях моторная яхта не годится, берём круизную */
-function boatFor(kind){const t=boatType();return kind!=='moor'&&!BOATS[t].sail?'cruiser':t}
+function boatFor(kind){const t=boatType();return !/moor/.test(kind)&&!BOATS[t].sail?'cruiser':t}
 
 /* ---------- набор деталей: всё одного цвета сливается в один меш, такелаж — в один LineSegments ---------- */
 const MAT3={};let RIG3=null;
