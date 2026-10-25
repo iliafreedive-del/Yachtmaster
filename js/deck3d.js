@@ -15,7 +15,7 @@ function start3D(){
   const cam=new THREE.PerspectiveCamera(55,R.width/R.height,.1,500);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
   const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-18,30,14);sun.castShadow=true;
-  sun.shadow.mapSize.set(2048,2048);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
+  sun.shadow.mapSize.set(SHADOW,SHADOW);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
   scene.add(sun);scene.add(sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,parent)=>mesh3(geo,mat,x,y,z,parent||scene);
   // дно и вода

@@ -39,10 +39,13 @@ function trimSails(rig,boomDeg,jibDeg,side,camber,flap,t){
     p.needsUpdate=true;g.computeVertexNormals()}
 }
 function makeMotorboat(band){const m=makeBoat('motor',{band});m.scale.setScalar(.8);return m}
+/* телефоны, планшеты и слабые компьютеры: меньше пикселей и проще тени, чтобы не грелось и не тормозило */
+const LOWGFX=matchMedia('(pointer:coarse)').matches||(navigator.deviceMemory||8)<=4||(navigator.hardwareConcurrency||8)<=4;
+const SHADOW=LOWGFX?1024:2048;
 /* WebGL-рендерер или null, если браузер не даёт контекст */
 function makeRenderer(host){
-  try{const r=new THREE.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(2,devicePixelRatio||1));const R=host.getBoundingClientRect();r.setSize(R.width,R.height);
-    r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;host.appendChild(r.domElement);return r}catch(e){console.warn('WebGL недоступен',e);return null}
+  try{const r=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});r.setPixelRatio(Math.min(LOWGFX?1.5:2,devicePixelRatio||1));const R=host.getBoundingClientRect();r.setSize(R.width,R.height);
+    r.shadowMap.enabled=true;r.shadowMap.type=LOWGFX?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;host.appendChild(r.domElement);return r}catch(e){console.warn('WebGL недоступен',e);return null}
 }
 /* перетаскивание камеры мышью или пальцем; onDrag(dx,dy), onZoom(dy) */
 function dragCamera(el,onDrag,onZoom){

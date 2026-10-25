@@ -69,7 +69,7 @@ function startMoor3D(mode){
   const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,90,260);
   const cam=new THREE.PerspectiveCamera(50,R.width/R.height,.3,600);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(SHADOW,SHADOW);
   {const c=sun.shadow.camera;c.left=-70;c.right=70;c.top=70;c.bottom=-70;c.near=1;c.far=200}sun.shadow.bias=-.0008;sun.target.position.set(0,0,25);scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
   // дно, вода

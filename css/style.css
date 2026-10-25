@@ -235,3 +235,51 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .task3 li em.trim s{position:absolute;top:0;bottom:0;background:rgba(60,191,126,.55);border-radius:4px}
 .task3 li em.trim u{position:absolute;top:-3px;width:4px;height:16px;margin-left:-2px;background:var(--buoy);border-radius:2px}
 .task3 .tt b .en{display:inline;font-size:.72em;color:var(--muted);letter-spacing:0;text-transform:none;margin-left:6px}
+/* Галс · адаптив: телефоны, планшеты, большие мониторы. Сцена занимает экран по высоте (dvh учитывает адресную строку телефона) */
+.stage{height:clamp(420px,calc(100vh - 200px),1100px);height:clamp(420px,calc(100dvh - 200px),1100px)}
+.stage.tall{height:clamp(560px,calc(100vh - 200px),1200px);height:clamp(560px,calc(100dvh - 200px),1200px);min-height:0}
+@media (min-width:1600px){.wrap{max-width:1640px}.grid{grid-template-columns:minmax(0,1fr) 380px}}
+@media (min-width:2200px){body{font-size:16px}.wrap{max-width:2000px}.grid{grid-template-columns:minmax(0,1fr) 420px}}
+/* телефон: шапка в одну строку, вкладки — лента с прокруткой пальцем */
+@media (max-width:700px){
+  body{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));padding-block:10px 20px}
+  .wrap{gap:10px}
+  header{align-items:baseline;flex-wrap:nowrap}
+  .brand h1{font-size:24px}
+  .brand p{display:none}
+  .prog{font-size:11px;letter-spacing:.04em}
+  nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -10px;padding:0 10px 2px;scroll-snap-type:x proximity}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:none;scroll-snap-align:start;padding:8px 13px}
+  nav .sep{display:none}
+  .grid{gap:10px}
+  .stage,.stage.tall{height:calc(100vh - 20px);height:calc(100dvh - 20px);min-height:460px;max-height:900px;border-radius:12px}
+}
+/* телефон в альбомной ориентации и низкие окна: сцена во весь экран, подсказки компактнее */
+@media (max-height:560px) and (orientation:landscape){
+  .stage,.stage.tall{height:calc(100vh - 12px);height:calc(100dvh - 12px);min-height:300px;max-height:none}
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .brand p{display:none}
+  .prompt{bottom:70px}
+}
+@container (max-height:520px){
+  .coach{top:12px;left:auto;right:12px;width:min(46%,420px);max-height:calc(100% - 24px);overflow:auto;font-size:12.5px;line-height:1.35;padding:8px 10px}
+  .stage.tall .hud3.wind{display:none}
+  .task3{max-height:calc(100% - 80px);overflow:auto}
+}
+@container (max-height:520px) and (min-width:560px){
+  #m4actG{order:0;flex:0 1 auto;background:rgba(10,29,42,.86);border:1px solid var(--line);padding:6px 8px}
+  #m4actG .acts{width:auto}
+  .wheel{width:56px;height:56px}
+}
+/* палец вместо мыши: кнопки крупнее, без двойного тапа-зума и без меню по долгому нажатию */
+button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+@media (pointer:coarse){
+  .pad button{min-width:56px;height:52px;font-size:14px}
+  .pad .cross{grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,52px)}
+  .pad button,.hb,.wheel,.track{-webkit-touch-callout:none}
+  .hb{min-height:44px}
+  .tools button{padding:8px 12px}
+  .slidenav .btn{padding:12px 20px}
+  .chips button{padding:8px 13px}
+}
