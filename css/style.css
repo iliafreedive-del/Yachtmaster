@@ -248,6 +248,8 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .an-tl.sel{background:var(--buoy);color:#1b1206;border-color:var(--buoy);z-index:3}.an-tl.sel .en,.an-tl.sel b{color:#5a3a0d}
 .an-bar{position:absolute;top:10px;left:10px;right:10px;z-index:4;display:flex;gap:6px;align-items:flex-start;pointer-events:none}
 .an-bar>*{pointer-events:auto}
+/* двойной тап по кнопкам не должен увеличивать страницу на телефоне */
+.an-bar,.an-cut,.an-card,.an-pult,.an-labs .an-tl,.an-vm{touch-action:manipulation}
 .an-bar>button{font:inherit;font-size:13px;background:rgba(10,29,42,.88);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;min-height:36px}
 .an-bar>button[aria-pressed="true"]{background:var(--buoy);color:#1b1206;border-color:var(--buoy)}
 .an-q{position:relative;flex:0 1 260px;min-width:0}
@@ -264,6 +266,9 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .an-layers button i{width:8px;height:8px;border-radius:50%;background:var(--lc);opacity:.35}
 .an-layers button[aria-pressed="true"]{color:var(--ink);border-color:var(--lc,var(--buoy))}
 .an-layers button[aria-pressed="true"] i{opacity:1}
+/* «Все» всегда на виду: если слои случайно выключены, их легко вернуть */
+.an-layers button[data-l="*"]{position:sticky;left:0;z-index:1;background:#0a1d2a}
+.an-layers button[data-l="*"][aria-pressed="false"]{color:#1b1206;background:var(--buoy);border-color:var(--buoy)}
 .an-card,.an-pult{position:absolute;z-index:4;top:var(--antop,94px);right:10px;bottom:10px;width:min(360px,42%);overflow:auto;overscroll-behavior:contain;background:rgba(10,29,42,.95);border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;font-size:14px;line-height:1.45}
 .an-card h3{margin:2px 0 8px;font-family:var(--f-display);font-weight:500;font-size:18px;line-height:1.25}
 .an-card h3 .en{display:block;font-size:12px;margin-top:3px}
