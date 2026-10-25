@@ -418,3 +418,4 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #steps li[style*="pointer"]:hover{color:var(--ink)}
 @media (max-width:700px){.slide.haslab{grid-template-columns:1fr}.course{padding:16px}.snd button{grid-template-columns:90px 1fr}}
 @media (prefers-reduced-motion:reduce){.flap,.flow{animation:none}}
+.fcard .fcert{margin:-2px 0 0;font-size:12px;color:var(--stbd)}
