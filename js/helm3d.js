@@ -15,7 +15,7 @@ function h5cross(g,px,pz,qx,qz){const s=Math.sin(g.h*D),c=-Math.cos(g.h*D);
 const h5dh=s=>Math.abs(norm(s.h-s.h0));
 const H5DONE={
   intro:()=>false,engine:s=>s.eng,ahead:s=>s.eng&&s.thrI===3&&s.u>.15,gate:s=>s.gateOk,
-  full:s=>s.thrI===4&&s.u>s.B.ut[4]*.8,circle:s=>Math.abs(s.turn)>340,mid:s=>Math.abs(s.rud)<.1,
+  full:s=>s.thrI===4&&s.u>s.B.ut[4]*.8&&Math.hypot(s.x-H5LG.x,s.z-H5LG.z)>30,circle:s=>Math.abs(s.turn)>340,mid:s=>Math.abs(s.rud)<.1,
   coast:s=>s.thrI===2&&Math.abs(s.u)<.4,ahead2:s=>s.thrI>=3&&s.u>Math.min(.9,s.B.ut[3]*.85),
   brake:s=>s.ast&&s.thrI===2&&Math.abs(s.u)<.1,
   walk:s=>s.u<0&&s.astT>3&&(s.E.walk<.5||h5dh(s)>8),
@@ -149,7 +149,7 @@ function startHelm3D(mode){
     if(s.id==='circle')st.box=[st.x,st.x,st.z,st.z];
     if(s.id==='back'){const[x,z]=m4w(st,0,B.L+25);st.ring={x,z};ring.position.set(x,.12,z)}
     ring.visible=s.id==='back'||s.id==='stop2';
-    if(s.id==='walk'&&E.walk<.5)msg('У этой лодки [[заброс винта]] слабый: корма почти не уходит. Попробуй потом на «Круизной яхте 12 м» во вкладке «Флот».','warn');
+    if(s.id==='walk'&&E.walk<.5)msg('У этой лодки [[заброс винта]] слабый: корма почти не уходит. Попробуй потом однокорпусную парусную яхту — выбери её во вкладке «Флот».','warn');
     (s.hl||[]).forEach(q=>{const e=host.querySelector(q);if(e)e.classList.add('hl')});
     $('#h5coach').hidden=false;
     $('#h5coach').innerHTML=`<p class="qn">Мастер-класс · шаг ${st.si+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="h5next">Дальше</button></div>':''}`;
@@ -224,7 +224,8 @@ function startHelm3D(mode){
     const k=!thr?.12:(Math.sign(uT)!==Math.sign(st.u)&&Math.abs(st.u)>.05)?.9:.4;
     st.u+=(uT-st.u)*Math.min(1,dt*k);
     const flow=st.u+(thr>0?1.2*thr:0);
-    let rT=st.rud*6*E.turn*flow*(flow<0?.8:1)*6/B.L;
+    // на скорости яхта поворачивает шире, чем в марине: диаметр циркуляции на полном ходу — 2–3 длины
+    let rT=st.rud*6*E.turn*flow*(flow<0?.8:1)*6/B.L/(1+.5*Math.max(0,st.u));
     if(thr<0)rT+=7*E.walk/4*(-thr)*clamp(1-Math.abs(st.u)/1.2,.25,1);   // заброс винта: корму тянет влево
     const btE=st.bt*clamp(1-Math.abs(st.u)/1.5,0,1);rT+=btE*10;
     const slow=1-clamp(Math.abs(st.u)/1.2,0,1),rel=norm(wind.from+180-st.h);
