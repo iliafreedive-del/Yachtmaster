@@ -11,20 +11,21 @@ function start3D(){
   const labelsBox=document.createElement('div');host.appendChild(labelsBox);
 
   /* ---------- сцена: low-poly диорама марины ---------- */
-  const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,70,190);
+  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:220}).getHex(),hq=gfxQ()==='high';
   const cam=new THREE.PerspectiveCamera(55,R.width/R.height,.1,500);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.75));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.95);sun.position.set(-18,30,14);sun.castShadow=true;
-  sun.shadow.mapSize.set(2048,2048);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
+  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-18,30,14);sun.castShadow=true;
+  sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
   scene.add(sun);scene.add(sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,parent)=>mesh3(geo,mat,x,y,z,parent||scene);
   // дно и вода
   const bed=new THREE.PlaneGeometry(320,320,40,40);bed.rotateX(-Math.PI/2);
   {const p=bed.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,-2.6+Math.sin(x*.21)*.35+Math.cos(z*.17)*.35+Math.sin((x+z)*.07)*.4)}}
   mesh(bed,M(0x2f8f88),0,0,0);
-  const water=new THREE.Mesh(new THREE.PlaneGeometry(320,320,56,56),M(0x37b9c9,{transparent:true,opacity:.8,roughness:.35}));water.rotation.x=-Math.PI/2;water.position.y=.15;water.receiveShadow=true;scene.add(water);
+  // вода в марине: мелкая рябь, сквозь неё видно дно; за маяком — зыбь открытого моря
+  const sea=makeOcean(scene,{R:200,y:.15,sun:[-18,30,14],wind:{from:300,kn:7},calm:.2,opacity:.78,foam:0,rip:.8,deep:0x1a5f69,shal:0x2b8a84,sky}),water=sea.mesh;
   // набережная, город, холмы
-  mesh(new THREE.BoxGeometry(62,4,26),M(0xc4b494),0,-1,25);
+  mesh(new THREE.BoxGeometry(62,4,26),M(0xa89c82),0,-1,25);
   for(let x=-26;x<=26;x+=6.5){if(Math.abs(x)<1)continue;mesh(new THREE.CylinderGeometry(.06,.06,2.6,6),M(0x3b4247),x,2.3,13.4);mesh(new THREE.SphereGeometry(.22,8,6),M(0xfff3c4,{emissive:0x332a10}),x,3.65,13.4)}
   const houseCols=[0xf6f1e7,0xf1e2c6,0xe9d3b5,0xf4ece0,0xd9e4e6,0xf3d9c8];
   for(let i=0;i<11;i++){const x=-27+i*5.4+(i%2)*.6,w=3.6+(i%3)*.6,h=3+((i*7)%4),d=4;
@@ -47,7 +48,7 @@ function start3D(){
   mesh(new THREE.CylinderGeometry(.75,.75,.9,10),M(0xfff3c4,{emissive:0x664e14}),34,9.1,-30);mesh(new THREE.ConeGeometry(.95,1,10),M(0x333a3e),34,10,-30);
 
   /* ---------- понтоны на сваях ---------- */
-  const plankM=[M(0xb7854f),M(0xa8763f)],pileM=M(0x5c4330);
+  const plankM=[M(0x9a7d5e),M(0x8c7053)],pileM=M(0x5c4330);
   function walkway(x0,x1,z0,z1){ // доски поперёк длинной стороны
     const alongX=(x1-x0)>(z1-z0);const L=alongX?x1-x0:z1-z0,W=alongX?z1-z0:x1-x0;let i=0;
     for(let s=0;s<L;s+=.5,i++){const g=new THREE.BoxGeometry(alongX?.46:W,.12,alongX?W:.46);
@@ -76,41 +77,61 @@ function start3D(){
   add(new THREE.BoxGeometry(.8,.06,3.3),0xd8d2c4,0,1.02,7.5);
 
   /* ---------- люди ---------- */
-  function person(shirt,capC){
-    const g=new THREE.Group();const body=mesh(new THREE.CylinderGeometry(.24,.26,.85,10),M(shirt),0,.75,0,g);
-    mesh(new THREE.CylinderGeometry(.22,.2,.36,10),M(0x24303a),0,.18,0,g);mesh(new THREE.SphereGeometry(.2,10,8),M(0xe8c3a0),0,1.38,0,g);
-    mesh(new THREE.CylinderGeometry(.21,.21,.08,10),M(capC),0,1.52,0,g);mesh(new THREE.BoxGeometry(.24,.03,.16),M(0x24303a),0,1.49,-.22,g);
-    g.userData.body=body;return g}
+  const person=(shirt,capC,o)=>makePerson(shirt,capC,o);
   const hero=person(0x2f5d8a,0xf4f1e6);hero.position.set(0,1,13);scene.add(hero);const bodyM=hero.userData.body.material;
   const oleg=person(0xfbfaf6,0xf2a33a);oleg.position.set(1.9,1,10.2);oleg.rotation.y=Math.PI*.75;scene.add(oleg);
   const npcs=[[0xe2564d,0x24394a,-22,-4,10.4,.9],[0x3cbf7e,0xfbfaf6,6,22,11.3,.7],[0xf2a33a,0x24394a,-9,-9,2,.6]].map(([a,b,x0,x1,z,s],i)=>{const p=person(a,b);p.position.set(x0,1,z);scene.add(p);return{p,x0,x1,z,s,dir:1,fin:i===2}});
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.5,.05,8,28),new THREE.MeshBasicMaterial({color:0xf2a33a}));ring.rotation.x=Math.PI/2;ring.visible=false;scene.add(ring);
-  scene.traverse(o=>{if(o.isMesh&&o!==water&&o!==ring){o.castShadow=true;o.receiveShadow=true}});
+
+  /* ---------- детали марины: небо, пальмы, утки, колонки, круги, кафе, тузик, лодки на рейде, люди ---------- */
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300,hor:sky,top:0x6fa7c4});
+  [[-24,15],[-12,15.5],[3,15.2],[17,15.6],[25,14.8],[-36,-12],[-38,14],[-41,4]].forEach(([x,z],i)=>{const p=makePalm(4.4+(i%3)*.9,.9);p.position.set(x,x<-30?.4:1,z);p.rotation.y=i*1.3;scene.add(p)});
+  const dk=kit3();
+  for(let x=-24;x<=24;x+=4.5)cleat3(dk,x+.6,1,9.15);
+  [-10,10].forEach(x=>{for(let z=-4;z<=6;z+=3.3){cleat3(dk,x+.5,1,z,Math.PI/2);cleat3(dk,x-.5,1,z,Math.PI/2)}powerPost3(dk,x,1,8.3)});
+  [-20,-2.5,12].forEach(x=>buoyStand3(dk,x,1,11.7));
+  [[-18,17],[-14.5,17.4],[8,17],[11.5,17.4]].forEach(([x,z],i)=>{dk.add(new THREE.CylinderGeometry(.45,.45,.05,10),0xf4f2ec,x,1.75,z).rod([x,1,z],[x,1.75,z],.04,0x3b3f41).rod([x,1.75,z],[x,3,z],.03,0xd9dee0)
+    .add(new THREE.ConeGeometry(1.5,.5,8),i%2?0xe2564d:0xf4f2ec,x,3.15,z);[1,-1].forEach(s=>dk.box(.4,.45,.4,0x8a6a45,x+s*.75,1.22,z))});
+  dk.build(scene);
+  // у соседей кранцы и кормовые швартовы к понтону
+  const lineY=new THREE.LineBasicMaterial({color:0xe6dcc3});
+  others.slice(0,6).forEach(n=>{const fk=kit3();[-1,1].forEach(sd=>[-.5,1.8].forEach(z=>fk.add(new THREE.CylinderGeometry(.15,.15,.6,10),0xf4f2ec,sd*2.25,.72,z)));fk.build(n);
+    [-1.45,1.45].forEach(x=>n.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x,1.06,5.6),new THREE.Vector3(x*1.5,1.15,9.2)]),lineY)))});
+  // тузик и моторная яхта на рейде
+  const dinghy=makeDinghy(0x5d6770);scene.add(dinghy);const rower=person(0xf2a33a,0x24394a);rower.position.set(0,.05,1.0);rower.scale.setScalar(.95);rower.userData.legs.forEach(l=>l.rotation.x=-1.4);dinghy.add(rower);
+  const cruiser=makeBoat('motor',{band:0xb8423a});cruiser.scale.setScalar(.75);scene.add(cruiser);
+  // люди на набережной: беседуют, рыбачит, сидят в кафе
+  const still=[[0xffffff,null,-6,15,1.2,{hair:0x2b1d14}],[0x2a6fa8,0xf4f1e6,-5.3,15.1,-1.6],[0xe0a23a,null,-18.75,17,-1.57,{hair:0x8a5a2a}],[0x3cbf7e,0x24394a,8.75,17,-1.57]].map(([a,b,x,z,r,o])=>{const p=person(a,b,o);p.position.set(x,1,z);p.rotation.y=r;scene.add(p);return p});
+  [still[2],still[3]].forEach(p=>{p.userData.legs.forEach(l=>l.rotation.x=-1.45);p.position.y=.62});
+  const fisher=person(0x8fd0e0,0xf2a33a);fisher.position.set(24.6,.62,9.25);fisher.rotation.y=Math.PI;fisher.userData.legs.forEach(l=>l.rotation.x=-1.5);scene.add(fisher);
+  {const rod=kit3();rod.rod([0,1.1,-.2],[0,3.2,-3.4],.015,0x3b3f41,4).line([0,3.2,-3.4],[0,-.2,-5]);rod.build(fisher)}
+  scene.traverse(o=>{if(o.isMesh&&o!==water&&o!==ring&&o.material.fog!==false){o.castShadow=true;o.receiveShadow=true}});
 
   /* ---------- точки интереса и задания ---------- */
   const HS={
-    oleg:{p:[1.9,1.2,10.2],n:'Шкипер Олег',talk:true},
-    locker:{p:[-1.3,1.2,3.6],n:'Рундук со спасжилетами'},extinguisher:{p:[.75,1.3,1.75],n:'Огнетушитель'},
-    helm:{p:[0,1.6,4.5],n:'Штурвал'},winchP:{p:[-1.55,1.4,2.4],n:'Левая лебёдка'},winchS:{p:[1.55,1.4,2.4],n:'Правая лебёдка'},
-    halyard:{p:[-.25,1.65,1.45],n:'Стопоры фалов'},mast:{p:[0,1.3,-2.8],n:'Мачта'},windlass:{p:[0,1.2,-5],n:'Брашпиль'},
-    bowcleat:{p:[.75,1.1,-4.6],n:'Носовая утка'},fenderP:{p:[-2.05,1,1.8],n:'Кранец левого борта'},fenderS:{p:[2.05,1,1.8],n:'Кранец правого борта'},
-    sternP:{p:[-1.45,1.1,5.6],n:'Левый кормовой швартов'},sternS:{p:[1.45,1.1,5.6],n:'Правый кормовой швартов'}};
-  const labels={};for(const id in HS){const d=document.createElement('div');d.className='tlabel';d.textContent=HS[id].n;d.hidden=true;labelsBox.appendChild(d);labels[id]=d}
+    oleg:{p:[1.9,1.2,10.2],n:'Шкипер Олег',en:'skipper',talk:true},
+    locker:{p:[-1.3,1.2,3.6],n:'Рундук со спасжилетами',en:'lifejacket locker'},extinguisher:{p:[.75,1.3,1.75],n:'Огнетушитель',en:'fire extinguisher'},
+    helm:{p:[.85,1.6,4.3],n:'Штурвал',en:'wheel'},winchP:{p:[-1.55,1.4,2.4],n:'Левая лебёдка',en:'port winch'},winchS:{p:[1.55,1.4,2.4],n:'Правая лебёдка',en:'starboard winch'},
+    halyard:{p:[-.25,1.65,1.45],n:'Стопоры фалов',en:'halyard clutches'},mast:{p:[0,1.3,-2.8],n:'Мачта',en:'mast'},windlass:{p:[0,1.2,-5],n:'Брашпиль',en:'windlass'},
+    bowcleat:{p:[.75,1.1,-4.6],n:'Носовая утка',en:'bow cleat'},fenderP:{p:[-2.05,1,1.8],n:'Кранец левого борта',en:'port fender'},fenderS:{p:[2.05,1,1.8],n:'Кранец правого борта',en:'starboard fender'},
+    sternP:{p:[-1.45,1.1,5.6],n:'Левый кормовой швартов',en:'port stern line'},sternS:{p:[1.45,1.1,5.6],n:'Правый кормовой швартов',en:'starboard stern line'}};
+  const hsName=id=>`${HS[id].n} ${en('· '+HS[id].en)}`;
+  const labels={};for(const id in HS){const d=document.createElement('div');d.className='tlabel';d.innerHTML=HS[id].n+en(HS[id].en);d.hidden=true;labelsBox.appendChild(d);labels[id]=d}
   const CHECK=[
-    {id:'board',n:'Перейти по трапу на яхту',say:'Наша яхта — синяя, прямо перед тобой. Проходи по [[трап|трапу]] на борт, трап качается.',w:'Молодец. Ты на [[корма|корме]], в [[кокпит|кокпите]].'},
-    {id:'locker',n:'Надеть спасжилет из рундука',say:'Первым делом жилет. Они лежат в [[рундук|рундуке]] в кокпите, по левому борту.',w:'Жилет на тебе. На настоящем брифинге каждый подгоняет его по себе.'},
-    {id:'extinguisher',n:'Найти огнетушитель',say:'Найди огнетушитель. Он у входа в каюту, справа.',w:'Отлично. При пожаре на яхте счёт идёт на секунды, поэтому место огнетушителя знают все.'},
-    {id:'helm',n:'Проверить штурвал и руль',say:'Теперь проверь штурвал. Он должен крутиться свободно от борта до борта.',w:'Штурвал крутится, [[перо руля]] отвечает.'},
-    {id:'winch',n:'Осмотреть лебёдку',say:'Осмотри любую [[лебёдка|лебёдку]] у края кокпита. На них работают шкоты.',w:'Лебёдка вращается по часовой. Шкот кладут на барабан тоже по часовой.'},
-    {id:'halyard',n:'Проверить стопоры фалов',say:'На крыше рубки, у входа, стоят [[стопор|стопоры]]. Через них идут [[фал|фалы]].',w:'Все фалы промаркированы. Перепутать фал грота и стакселя — классика новичка.'},
-    {id:'windlass',n:'Проверить брашпиль на носу',say:'Иди на [[нос]] по боковому проходу и проверь [[брашпиль]]. Держись за [[леера]].',w:'Брашпиль на месте, цепь уложена. Якорь понадобится в бухте.'},
-    {id:'fender',n:'Проверить кранцы',say:'Последнее: проверь [[кранец|кранцы]] по бортам. Соседи стоят близко.',w:'Кранцы висят, узлы надёжные. Приёмка закончена!'}];
+    {id:'board',n:'Перейти по трапу на яхту',en:'board via the passerelle',say:'Наша яхта — синяя, прямо перед тобой. Проходи по [[трап|трапу]] на борт, трап качается.',w:'Молодец. Ты на [[корма|корме]], в [[кокпит|кокпите]].'},
+    {id:'locker',n:'Надеть спасжилет из рундука',en:'put on a lifejacket',say:'Первым делом жилет. Они лежат в [[рундук|рундуке]] в кокпите, по левому борту.',w:'Жилет на тебе. На настоящем брифинге каждый подгоняет его по себе.'},
+    {id:'extinguisher',n:'Найти огнетушитель',en:'find the fire extinguisher',say:'Найди [[огнетушитель]]. Он у входа в каюту, справа.',w:'Отлично. При пожаре на яхте счёт идёт на секунды, поэтому место огнетушителя знают все.'},
+    {id:'helm',n:'Проверить штурвал и руль',en:'check the wheel and rudder',say:'Теперь проверь [[штурвал]]. Он должен крутиться свободно от борта до борта.',w:'Штурвал крутится, [[перо руля]] отвечает.'},
+    {id:'winch',n:'Осмотреть лебёдку',en:'inspect a winch',say:'Осмотри любую [[лебёдка|лебёдку]] у края кокпита. На них работают шкоты.',w:'Лебёдка вращается по часовой. Шкот кладут на барабан тоже по часовой.'},
+    {id:'halyard',n:'Проверить стопоры фалов',en:'check the halyard clutches',say:'На крыше [[рубка|рубки]], у входа, стоят [[стопор|стопоры]]. Через них идут [[фал|фалы]].',w:'Все фалы промаркированы. Перепутать фал грота и стакселя — классика новичка.'},
+    {id:'windlass',n:'Проверить брашпиль на носу',en:'check the windlass on the bow',say:'Иди на [[нос]] по боковому проходу и проверь [[брашпиль]]. Держись за [[леера]].',w:'Брашпиль на месте, цепь уложена. [[якорь|Якорь]] понадобится в бухте.'},
+    {id:'fender',n:'Проверить кранцы',en:'check the fenders',say:'Последнее: проверь [[кранец|кранцы]] по бортам. Соседи стоят близко.',w:'Кранцы висят, узлы надёжные. Приёмка закончена!'}];
   const DRILL=[
-    {s:'Беги на нос, к брашпилю — готовим якорь!',t:'windlass'},{s:'Встань за штурвал!',t:'helm'},
-    {s:'Правую лебёдку — выбрать стаксель-шкот!',t:'winchS'},{s:'Левую лебёдку!',t:'winchP'},
-    {s:'Кранец на левый борт, нас прижимает!',t:'fenderP'},{s:'Кранец на правый борт!',t:'fenderS'},
-    {s:'Подай левый кормовой швартов!',t:'sternP'},{s:'Правый кормовой швартов — потрави!',t:'sternS'},
-    {s:'Носовой швартов на утку!',t:'bowcleat'},{s:'Пожар в камбузе! Огнетушитель!',t:'extinguisher'},{s:'К мачте — проверь фал грота!',t:'mast'}];
+    {s:'Беги на нос, к брашпилю — готовим якорь!',en:'Go forward to the windlass, prepare the anchor!',t:'windlass'},{s:'Встань за штурвал!',en:'Take the helm!',t:'helm'},
+    {s:'Правую лебёдку — выбрать стаксель-шкот!',en:'Starboard winch, sheet in the jib!',t:'winchS'},{s:'Левую лебёдку!',en:'Port winch!',t:'winchP'},
+    {s:'Кранец на левый борт, нас прижимает!',en:'Fender to port, we’re drifting onto them!',t:'fenderP'},{s:'Кранец на правый борт!',en:'Fender to starboard!',t:'fenderS'},
+    {s:'Подай левый кормовой швартов!',en:'Pass the port stern line!',t:'sternP'},{s:'Правый кормовой швартов — потрави!',en:'Ease the starboard stern line!',t:'sternS'},
+    {s:'Носовой швартов на утку!',en:'Make the bow line fast on the cleat!',t:'bowcleat'},{s:'Пожар в камбузе! Огнетушитель!',en:'Fire in the galley! Extinguisher!',t:'extinguisher'},{s:'К мачте — проверь фал грота!',en:'To the mast, check the main halyard!',t:'mast'}];
   const st={running:true,raf:0,renderer,phase:'check',ci:0,yaw:0,pitch:.42,dist:6.2,mode:'follow',isoYaw:Math.PI/4,isoDist:24,labels:false,hintOn:false,taskT:0,drill:null,near:null,curSay:''};
   T3=st;st.hero=hero;
   const walk=(x,z)=>{
@@ -121,7 +142,8 @@ function start3D(){
       if(Math.abs(x)<1.18&&z>-2.6&&z<1.6)return false;
       if(Math.abs(x)>1.02&&z>1.9&&z<4.5)return false;
       if(Math.hypot(x,z+2.8)<.3)return false;
-      if(Math.abs(x)<.6&&z>4.3&&z<5.1)return false;
+      if(Math.abs(Math.abs(x)-.85)<.4&&z>4.4&&z<5.05)return false; // два штурвала
+      if(Math.abs(x)<.32&&z>2.55&&z<3.85)return false;             // стол кокпита
       return true}
     return false};
   const onDeck=()=>hero.position.z<5.9&&Math.abs(hero.position.x)<3;
@@ -130,8 +152,8 @@ function start3D(){
     if(st.phase==='check'){const c=CHECK[st.ci];if(!c||c.id==='board')return null;if(c.id==='winch')return['winchP','winchS'];if(c.id==='fender')return['fenderP','fenderS'];return[c.id]}
     if(st.phase==='drill'&&st.drill)return[st.drill.list[st.drill.i].t];return null}
   function sideTasks(){
-    if(st.phase==='check'){$('#taskLbl').textContent='Приёмка яхты · check-in';$('#steps').innerHTML=CHECK.map((c,i)=>`<li class="${i<st.ci?'done':i===st.ci?'now':''}"><i>${i<st.ci?'✓':i+1}</i>${c.n}</li>`).join('')}
-    else if(st.drill){$('#taskLbl').textContent='Команды шкипера';$('#steps').innerHTML=`<li class="now"><i>${st.drill.i+1}/6</i>${st.drill.list[st.drill.i]?.s||''}</li><li><i>✓</i>Выполнено: ${st.drill.ok}</li><li><i>⏱</i>На каждую команду 20 секунд</li>`}}
+    if(st.phase==='check'){$('#taskLbl').textContent='Приёмка яхты · check-in';$('#steps').innerHTML=CHECK.map((c,i)=>`<li class="${i<st.ci?'done':i===st.ci?'now':''}"><i>${i<st.ci?'✓':i+1}</i><span>${c.n}${en(c.en)}</span></li>`).join('')}
+    else if(st.drill){$('#taskLbl').textContent='Команды шкипера · skipper\'s orders';const dc=st.drill.list[st.drill.i];$('#steps').innerHTML=`<li class="now"><i>${st.drill.i+1}/6</i>${dc?.s||''}</li><li><i>✓</i>Выполнено: ${st.drill.ok}</li><li><i>⏱</i>На каждую команду 20 секунд</li>`}}
   function checkStep(){sayT(CHECK[st.ci].say);hint('');st.taskT=0;sideTasks()}
   function passCheck(){const c=CHECK[st.ci];hint(c.w,'good');st.ci++;
     if(st.ci>=CHECK.length){setTimeout(startDrill,1600);return}
@@ -139,7 +161,7 @@ function start3D(){
   function startDrill(){if(T3!==st)return;st.phase='pre';
     showDialog(`<h3>Приёмка закончена</h3><p>Теперь проверка. Шкипер будет отдавать команды, а ты беги к нужному месту и нажимай «Действие». На каждую команду 20 секунд, всего шесть.</p><p class="ex">Совет: в изометрии удобнее видеть всю яхту сразу.</p><div class="row"><button class="btn" id="dgo">Готов!</button></div>`);
     $('#dgo').onclick=()=>{hideDialog();st.phase='drill';st.drill={list:DRILL.slice().sort(()=>Math.random()-.5).slice(0,6),i:0,ok:0,t:20};drillStep();$('#stage').focus()}}
-  function drillStep(){const d=st.drill;d.t=20;sayT(d.list[d.i].s);hint('');sideTasks()}
+  function drillStep(){const d=st.drill,c=d.list[d.i];d.t=20;sayT(`${c.s}<span class="en line">«${c.en}»</span>`);hint('');sideTasks()}
   function drillNext(ok){const d=st.drill;if(ok)d.ok++;d.i++;
     if(d.i>=d.list.length){st.phase='end';$('#tt').hidden=true;const pass=d.ok>=4;if(pass)markDone('day1');
       endCard(pass?'День 1 пройден':'Экипаж пока путается',`Команд выполнено: ${d.ok} из 6. ${pass?'Ты знаешь яхту и быстро двигаешься по палубе. Завтра выходим в море и разбираемся с ветром.':'Включи «Подписи», походи по палубе и попробуй снова.'}`,pass);return}
@@ -151,7 +173,7 @@ function start3D(){
       if(t&&t.includes(id)){if(id==='locker')bodyM.color.set(0xf07a28);if(id==='helm')st.spin=2.4;passCheck()}
       else hint(`Это ${HS[id].n.toLowerCase()}. Сейчас нужно другое.`,'warn')}
     else if(st.phase==='drill'){const t=st.drill.list[st.drill.i].t;
-      if(id===t){hint('Есть! '+HS[id].n+'.','good');drillNext(true)}else hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}
+      if(id===t){hint(`Есть! ${hsName(id)}`,'good');drillNext(true)}else hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}
   };
   const setMode=m=>{st.mode=m;$('#tc').textContent=m==='iso'?'За персонажем':'Изометрия'};
   $('#tc').onclick=()=>setMode(st.mode==='iso'?'follow':'iso');
@@ -175,18 +197,22 @@ function start3D(){
       if(f||s){const fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
         let dx=fx*f+rx*s,dz=fz*f+rz*s;const l=Math.hypot(dx,dz);dx/=l;dz/=l;const sp=2.4*dt,p=hero.position;
         if(walk(p.x+dx*sp,p.z+dz*sp)){p.x+=dx*sp;p.z+=dz*sp}else if(walk(p.x+dx*sp,p.z)){p.x+=dx*sp}else if(walk(p.x,p.z+dz*sp)){p.z+=dz*sp}
-        hero.rotation.y=Math.atan2(-dx,-dz);hero.userData.body.position.y=.75+Math.abs(Math.sin(t*9))*.04}
+        hero.rotation.y=Math.atan2(-dx,-dz);hero.userData.walk(t*9,.55)}else hero.userData.walk(0,0)
     }
     // покачивание
-    if(st.spin>0){st.spin-=dt;wheel.rotation.z=Math.sin((2.4-st.spin)*2.6)*2.2}
-    me.rotation.z=Math.sin(t*.8)*.012;me.position.y=Math.sin(t*1.1)*.03;
-    others.forEach((o,i)=>{o.rotation.z=Math.sin(t*.7+i)*.012;o.position.y=Math.sin(t*1.0+i*1.7)*.03});
+    if(st.spin>0){st.spin-=dt;me.userData.helm(Math.sin((2.4-st.spin)*2.6)*1.4)}
+    sea.update(t,hero.position.x,hero.position.z);
+    {const r=sea.float(me,me.position.x,me.position.z,0,6,2.2,t,dt,.15);me.rotation.x=r.p;me.rotation.z=r.r}
+    others.forEach(o=>{const r=sea.float(o,o.position.x,o.position.z,0,5,2,t,dt,.15);o.rotation.x=r.p;o.rotation.z=r.r});
     free.rotation.z=.12+Math.sin(t*.9)*.03;free.position.y=Math.sin(t*1.2)*.08;
     free2.rotation.z=-.1+Math.sin(t*.8)*.03;
     hero.position.y=onDeck()?1+me.position.y:1;
     npcs.forEach(n=>{const p=n.p;if(n.fin){p.position.x=-10;p.position.z+=n.dir*n.s*dt;if(p.position.z>8)n.dir=-1;if(p.position.z<-4)n.dir=1;p.rotation.y=n.dir>0?Math.PI:0}
       else{p.position.x+=n.dir*n.s*dt;if(p.position.x>Math.max(n.x0,n.x1))n.dir=-1;if(p.position.x<Math.min(n.x0,n.x1))n.dir=1;p.rotation.y=n.dir>0?-Math.PI/2:Math.PI/2}
-      p.userData.body.position.y=.75+Math.abs(Math.sin(t*8+n.z))*.03});
+      p.userData.walk(t*6+n.z,.45)});
+    skyD.clouds.rotation.y=t*.004;
+    {const a=t*.11,vx=Math.cos(a)*14,vz=-Math.sin(a)*8;dinghy.position.set(Math.sin(a)*14,.08+Math.sin(t*1.7)*.04,-26+Math.cos(a)*8);dinghy.rotation.y=Math.atan2(-vx,-vz)}
+    {const a=-t*.05+2,vx=-Math.cos(a)*30,vz=Math.sin(a)*14;cruiser.position.set(8+Math.sin(a)*30,Math.sin(t*1.1)*.05,-70+Math.cos(a)*14);cruiser.rotation.y=Math.atan2(-vx,-vz)}
     oleg.rotation.y=Math.atan2(-(hero.position.x-oleg.position.x),-(hero.position.z-oleg.position.z))+Math.PI;
     // этапы
     if(st.phase==='check'){st.taskT+=dt;if(CHECK[st.ci]&&CHECK[st.ci].id==='board'&&onDeck())passCheck()}
@@ -194,7 +220,7 @@ function start3D(){
     // ближайшая точка
     let best=null,bd=1.35;for(const id in HS){const h=HS[id].p;const d=Math.hypot(hero.position.x-h[0],hero.position.z-h[2]);if(d<bd){bd=d;best=id}}
     st.near=best;const tp=$('#tp');
-    if(best&&(st.phase==='check'||st.phase==='drill')){tp.hidden=false;tp.innerHTML=`<kbd>E</kbd>${HS[best].talk?'Поговорить: ':''}${HS[best].n}`}else tp.hidden=true;
+    if(best&&(st.phase==='check'||st.phase==='drill')){tp.hidden=false;tp.innerHTML=`<kbd>E</kbd>${HS[best].talk?'Поговорить: ':''}${hsName(best)}`}else tp.hidden=true;
     const tg=curTarget();const showRing=tg&&(st.hintOn||(st.phase==='check'&&st.taskT>7));
     ring.visible=!!showRing;if(showRing){const h=HS[tg[0]].p;ring.position.set(h[0],1.08+me.position.y,h[2]);ring.scale.setScalar(1+Math.sin(t*5)*.12)}
     // камера: плавный переход между режимами
@@ -205,8 +231,6 @@ function start3D(){
     const fov=st.mode==='iso'?32:55;if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*k;cam.updateProjectionMatrix()}
     // тени следуют за героем
     sun.position.set(hero.position.x-18,30,hero.position.z+14);sun.target.position.copy(hero.position);
-    // волны
-    const pos=water.geometry.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);pos.setZ(i,Math.sin(x*.2+t*1.2)*.09+Math.cos(y*.23+t*.9)*.09)}pos.needsUpdate=true;
     renderer.render(scene,cam);
     const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;
     for(const id in HS){const d=labels[id];const sh=st.labels||id===best;if(!sh){d.hidden=true;continue}

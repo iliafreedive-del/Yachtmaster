@@ -10,7 +10,13 @@ const C={};
 (function(){const cs=getComputedStyle(document.documentElement);['deep','sea','panel','panel2','line','ink','muted','buoy','port','stbd','sail'].forEach(k=>C[k]=cs.getPropertyValue('--'+k).trim())})();
 
 const gkey=k=>G[k]?k:Object.keys(G).find(x=>x.toLowerCase()===k.toLowerCase());
-function rich(s){return s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(m,k,v)=>{const key=gkey(k);return key?`<button class="term" data-k="${key}">${v||k}</button>`:(v||k)})}
+/* английский рядом с русским: «гик (boom)». Регистр сохраняем у аббревиатур вроде COLREGs */
+const enForm=t=>/[A-Z]{2}/.test(t)?t:t.toLowerCase();
+const en=t=>t?`<span class="en">${t}</span>`:'';
+/* в каждом тексте английский вариант термина показываем при первом упоминании, чтобы не рябило */
+function rich(s){const seen={};return s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(m,k,v)=>{const key=gkey(k);if(!key)return v||k;
+  const g=G[key],first=!seen[key];seen[key]=1;const e=first&&!g[1].toLowerCase().startsWith(g[0].toLowerCase())?' '+en('('+enForm(g[1])+')'):'';
+  return `<button class="term" data-k="${key}">${v||k}</button>${e}`})}
 const pop=$('#pop');
 document.addEventListener('click',e=>{
   const t=e.target.closest('.term');

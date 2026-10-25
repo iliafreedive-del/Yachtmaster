@@ -1,9 +1,9 @@
 /* Галс · оболочка: вкладки, брифинги, диалоги, словарь, экзамен, ввод */
-const TABS=[...CH.map(c=>({id:c.id,n:c.n,en:c.en})),{id:'gloss',n:'Словарь',en:'Glossary'}];
+const TABS=[...CH.map(c=>({id:c.id,n:c.n,en:c.en})),{id:'fleet',n:'Флот',en:'Fleet'},{id:'gloss',n:'Словарь',en:'Glossary'}];
 let cur='prolog',slideI=0,phase='brief';
 
 function renderTabs(){
-  $('#tabs').innerHTML=TABS.map(m=>`${m.id==='gloss'?'<span class="sep"></span>':''}<button data-m="${m.id}" aria-pressed="${m.id===cur}">${done[m.id]?'<span class="ok">✓</span>':''}${m.n}<small>${m.en}</small></button>`).join('');
+  $('#tabs').innerHTML=TABS.map(m=>`${m.id==='fleet'?'<span class="sep"></span>':''}<button data-m="${m.id}" aria-pressed="${m.id===cur}">${done[m.id]?'<span class="ok">✓</span>':''}${m.n}<small>${m.en}</small></button>`).join('');
   $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>openChapter(b.dataset.m));
   const n=CH.filter(m=>done[m.id]).length;$('#prog').innerHTML=`Пройдено <b>${n}</b> из ${CH.length} глав`;
 }
@@ -23,11 +23,12 @@ function padMode(m){ // null | 'walk' | 'sail' | 'motor'
   $('#padSteer').hidden=!(m==='sail'||m==='motor');$('#padSail').hidden=!(m==='sail'||m==='motor');
   $('#padUp').textContent=m==='motor'?'Газ ▲':'Выбрать';$('#padDown').textContent=m==='motor'?'Назад ▼':'Травить';
 }
-function stopAll(){sim=null;stop3D();stopSail3D();hideDialog();for(const k in keys)keys[k]=false}
+function stopAll(){sim=null;stop3D();stopSail3D();stopMoor3D();stopFleet3D();hideDialog();for(const k in keys)keys[k]=false}
 
 function openChapter(id){
-  stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
+  stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
   if(id==='gloss'){renderGloss();return}
+  if(id==='fleet'){startFleet();return}
   phase='brief';slideI=0;renderSlide();
 }
 function renderSlide(){
@@ -53,10 +54,15 @@ function startPractice(p){
   const backLink=`<br><button class="back" id="toBrief">Вернуться к брифингу</button>`;
   if(p==='exam'){startExam()}
   else if(p==='deck3d'){if(window.THREE)start3D();else no3D()}
+  // День 4: сначала мастер-класс, после него — практика; без WebGL — прежняя 2D-швартовка
+  else if(p==='moor3d'){moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
   else startSim(p);
-  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',exam:''}[p]||'')+backLink;
+  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (у штурвала, за кормой, сверху). Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
   $('#toBrief').onclick=()=>openChapter(cur);
+  focusStage();
 }
+/* на телефоне и в альбомной ориентации сцена занимает весь экран: прокручиваем к ней, вкладки остаются выше */
+function focusStage(){if(innerWidth<700||innerHeight<600)$('#stage').scrollIntoView({block:'start'})}
 
 /* ---------- dialogs ---------- */
 function showDialog(html){$('#dlgCard').innerHTML=rich(html);$('#dlg').hidden=false}
@@ -100,12 +106,12 @@ function startExam(){exam={i:0,score:0};show('board');say('Вопросы уро
 function renderExam(){
   const q=EXAM[exam.i];
   $('#steps').innerHTML=`<li class="now"><i>${exam.i+1}</i>Вопрос из ${EXAM.length}</li><li><i>✓</i>Верно: ${exam.score}</li>`;
-  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">IYT Bareboat · вопрос ${exam.i+1} из ${EXAM.length}</p><h3>${q.q}</h3><div class="opts">${q.o.map((o,j)=>`<button class="opt" data-j="${j}">${o}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
+  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">IYT Bareboat · вопрос ${exam.i+1} из ${EXAM.length}</p><h3>${rich(q.q)}</h3><div class="opts">${q.o.map((o,j)=>`<button class="opt" data-j="${j}">${o}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
   $('#board').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     const j=+b.dataset.j;
     $('#board').querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.j===q.a)x.classList.add('right')});
     if(j===q.a)exam.score++;else b.classList.add('wrong');
-    const ex=$('#eex');ex.hidden=false;ex.textContent=q.e;
+    const ex=$('#eex');ex.hidden=false;ex.innerHTML=rich(q.e);
     const n=$('#enx');n.hidden=false;n.focus();n.onclick=()=>{exam.i++;
       if(exam.i>=EXAM.length){const pass=exam.score>=10;if(pass)markDone('exam');
         endCard(pass?'Теория сдана':'Пока не сдано',`Верных ответов: ${exam.score} из ${EXAM.length}. ${pass?'Учебная неделя пройдена. На настоящем курсе дальше практический экзамен с инструктором IYT.':'Перечитай объяснения и попробуй снова.'}`,pass)}
