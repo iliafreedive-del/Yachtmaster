@@ -516,7 +516,7 @@ function startAnatomy(){
       const mat=(c,o)=>{const m=clipM(M3(c,Object.assign({roughness:.75},o||{})));m.userData={em:0,ei:1};mats.push(m);return m};
       const box=(w,h,l,c,x,y,z,o)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,l),mat(c,o));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m};
       r.it.forEach(([t,x,z,w,l,o])=>{const d=IT[t],y0=r.y+(o&&o.y0!==undefined?o.y0:d[2]||0),h=o&&o.h||d[0];w=w||.4;l=l||.5;
-        if(t==='bunk'){box(w,h-.14,l,0xa77f52,x,y0+(h-.14)/2,z);box(w-.04,.14,l-.04,d[1],x,y0+h-.07,z)}
+        if(t==='bunk'){box(w,h-.14,l,0xa77f52,x,y0+(h-.14)/2,z);box(w-.04,.14,l-.04,0x8fb8d8,x,y0+h-.07,z)}
         else if(t==='tbl'){box(w,.05,l,d[1],x,y0+h,z);box(.08,h,.08,0x6a5035,x,y0+h/2,z)}
         else if(t==='steps'){const n=4;for(let i=0;i<n;i++)box(w,h*(i+1)/n,l/n,d[1],x,y0+h*(i+1)/n/2,z+l/2-(i+.5)*l/n)}
         else if(t==='shw'){box(w,.05,l,d[1],x,y0+.025,z);box(w,h,l,0xbfe3ef,x,y0+h/2,z,{transparent:true,opacity:.22,depthWrite:false})}
