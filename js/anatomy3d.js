@@ -31,8 +31,10 @@ function startAnatomy(){
   const R=host.getBoundingClientRect();
   host.insertAdjacentHTML('beforeend',`<svg class="an-lines" id="anSvg"></svg><div class="an-labs" id="anLabs"></div>
     <div class="an-bar"><div class="an-q"><input id="anQ" type="search" autocomplete="off" placeholder="Найти: шкот, mast, киль…" aria-label="Поиск части яхты"><div class="an-res" id="anRes" hidden></div></div>
-      <button id="anPultB" aria-pressed="false">Пульт</button><button id="anLblB" aria-pressed="true">Подписи</button><button id="anViewB" title="Вернуть вид">Вид</button></div>
-    <div class="an-layers" id="anLayers"></div>
+      <button id="anPultB" aria-pressed="false">Пульт</button><button id="anLblB" aria-pressed="true">Подписи</button>
+      <div class="an-vw"><button id="anViewB" aria-expanded="false" aria-controls="anVm">Вид ▾</button><div class="an-vm" id="anVm" hidden></div></div>
+      <button id="anCutB" aria-pressed="false" title="Что где внутри · cutaway">Разрез</button></div>
+    <div class="an-layers" id="anLayers"></div><div class="an-cut" id="anCut" hidden></div>
     <div class="an-card" id="anCard" hidden></div><div class="an-pult" id="anPult" hidden></div>`);
 
   /* ---------- сцена ---------- */
@@ -148,12 +150,15 @@ function startAnatomy(){
   rope('shrouds',0x9aa3a6,.026,()=>{const L=[];[1,-1].forEach(s=>{L.push([anV(MX,TOP-.25,MZ),tip(1,s),tip(0,s),chain(s)],[anV(MX,spr[1],MZ),tip(0,s)],[anV(MX,spr[0]-.05,MZ),chain(s).add(anV(0,0,-.15))])});return L},{metalness:.6,roughness:.35});
 
   /* ---------- паруса: сетки, считаются из положения гика и органов управления ---------- */
-  const sailM=M3(0xfaf8f1,{side:THREE.DoubleSide,roughness:.8}),jibM=M3(0xf4f1e6,{side:THREE.DoubleSide,roughness:.8});
+  const sailM=M3(0xfaf8f1,{side:THREE.DoubleSide,roughness:.8}),jibM=M3(0xffffff,{side:THREE.DoubleSide,roughness:.8,map:(()=>{
+    /* защита от ультрафиолета нарисована прямо на стакселе: отдельная лента на кривой поверхности паруса вылезала сквозь него */
+    const c=document.createElement('canvas');c.width=128;c.height=512;const x=c.getContext('2d');x.fillStyle='#f4f1e6';x.fillRect(0,0,128,512);
+    x.fillStyle='#1f4f9a';x.fillRect(119,0,9,512);x.fillRect(0,500,128,12);const t=new THREE.CanvasTexture(c);t.anisotropy=4;return t})()});
   const main=sailGrid(10,7),jib=sailGrid(9,6);
   const mainMesh=new THREE.Mesh(main,sailM);mainMesh.castShadow=true;part('mainsail').g.add(mainMesh);
   const jibMesh=new THREE.Mesh(jib,jibM);jibMesh.castShadow=true;part('jib').g.add(jibMesh);
   const ribbonMesh=(id,col)=>{const m=new THREE.Mesh(new THREE.BufferGeometry(),M3(col,{side:THREE.DoubleSide,roughness:.8}));part(id).g.add(m);return m};
-  const uvMesh=ribbonMesh('uvstrip',0x1f4f9a),patchMesh=ribbonMesh('patches',0xe6e1d3),ttMesh=ribbonMesh('telltales',0xe2564d);
+  const uvMesh=ribbonMesh('uvstrip',0xff8a1a),patchMesh=ribbonMesh('patches',0xe6e1d3),ttMesh=ribbonMesh('telltales',0xe2564d);
   const furlRoll=new THREE.Mesh(new THREE.BufferGeometry(),M3(0x1f4f9a,{roughness:.8}));part('jib').g.add(furlRoll);
   const corner=(id,col)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.11,10,8),M3(col||0xdcd6c6,{roughness:.6}));part(id).g.add(m);
     const px=new THREE.Mesh(new THREE.SphereGeometry(.32,8,6),proxyM);px.userData.proxy=true;part(id).g.add(px);return [m,px]};
@@ -269,7 +274,7 @@ function startAnatomy(){
     const jn=(()=>{const a=S.jib(0,.3),b=S.jib(1,.3);let nx=b.z-a.z,nz=-(b.x-a.x);const l=Math.hypot(nx,nz)||1;return{x:nx/l,z:nz/l}})();
     {const A=[],B=[],C=[],E=[];const ch0=S.jib(0,0).distanceTo(S.jib(1,0))||1;for(let i=0;i<=8;i++){const vv=i/8;A.push(S.jib(1,vv));B.push(S.jib(Math.max(0,1-.28/Math.max(.3,S.jib(0,vv).distanceTo(S.jib(1,vv)))),vv));
         const u=i/8;C.push(S.jib(u,0));E.push(S.jib(u,Math.min(.2,.3/ch0*1.2)))}
-      ribbon(uvMesh,v.furl<.97?strip({n:jn},[[A,B],[C,E]],.012):[]);uvMesh.visible=v.furl<.97}
+      ribbon(uvMesh,v.furl<.97?strip({n:jn},[[A,B],[C,E]],.03):[]);uvMesh.userData.proxy=true;uvMesh.visible=v.furl<.97&&st.sel==='uvstrip'}
     // усиления углов грота: маленькие треугольники у трёх углов
     {const out=[],add=(f,u0,v0,du,dv,o,n)=>{const a=f(u0,v0),b=f(u0+du,v0),c=f(u0,v0+dv);[o,-o].forEach(s=>out.push(a.x+n.x*s,a.y,a.z+n.z*s,b.x+n.x*s,b.y,b.z+n.z*s,c.x+n.x*s,c.y,c.z+n.z*s))};
       if(mainMesh.visible){const f=S.main,a=f(0,.5),b=f(1,.5);let nx=b.z-a.z,nz=-(b.x-a.x);const l=Math.hypot(nx,nz)||1,n={x:nx/l,z:nz/l};
@@ -288,6 +293,7 @@ function startAnatomy(){
   function paint(){for(const id in parts){const p=parts[id],on=st.layers[p.info?p.info.l:'hull'],sel=st.sel===id,hov=st.hov===id&&!sel;
     p.mats.forEach(m=>{const u=m.userData;m.transparent=!on||u.tr;m.opacity=on?u.op:.08;m.depthWrite=on;m.emissive.setHex(sel?0xff8a1a:hov?0x5a3a10:u.em);m.emissiveIntensity=sel?.6:hov?1:u.ei;m.needsUpdate=true});
     if(p.zone)p.zone.visible=sel}
+    if(st.cut)cutPaint();
     const under=st.sel&&parts[st.sel]&&/under|dims/.test(parts[st.sel].info.l);waterM.opacity=under||cam.position.y<AN_WL?.35:.8}
 
   /* ---------- подписи ---------- */
@@ -322,10 +328,13 @@ function startAnatomy(){
   const partOf=o=>{while(o&&!o.userData.part)o=o.parent;return o&&o.userData.part};
   function drawLabels(){
     const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;
+    // пока крутят или двигают яхту, подписи прячутся; отпустил — вернулись
+    if(st.drag){labs.hidden=true;svg.innerHTML='';return}
+    if(st.cut)return cutLabels(W,H);
     if(!st.labels&&!st.sel){labs.hidden=true;svg.innerHTML='';return}labs.hidden=false;
     const narrow=W<600,max=narrow?11:24;
     // занятые прямоугольники: панели интерфейса
-    const taken=[],hr=host.getBoundingClientRect();['.an-bar','#anLayers','#anCard','#anPult'].forEach(s=>{const e=host.querySelector(s);if(e&&!e.hidden&&e.offsetWidth){const r=e.getBoundingClientRect();taken.push([r.left-hr.left,r.top-hr.top,r.right-hr.left,r.bottom-hr.top])}});
+    const taken=[],hr=host.getBoundingClientRect();['.an-bar','#anLayers','#anCard','#anPult','#anVm'].forEach(s=>{const e=host.querySelector(s);if(e&&!e.hidden&&e.offsetWidth){const r=e.getBoundingClientRect();taken.push([r.left-hr.left,r.top-hr.top,r.right-hr.left,r.bottom-hr.top])}});
     const rel=st.sel&&ANAT[st.sel].rel||[];
     // спущенный грот и закрученный стаксель: подписи их углов и шкаторин не нужны
     const gone=id=>/^(main-|battens|patches)/.test(id)&&st.v.mainhalyard<.05||/^(jib-(clew|leech|foot|luff)|uvstrip|telltales)$/.test(id)&&st.v.furl>.95;
@@ -376,7 +385,7 @@ function startAnatomy(){
       ${a.warn?`<p class="an-warn"><b>Осторожно.</b> ${rich(a.warn)}</p>`:''}
       ${a.rel?`<h4>Связано</h4><div class="chips an-rel">${a.rel.filter(r=>ANAT[r]).map(r=>`<button data-go="${r}">${ANAT[r].n}</button>`).join('')}</div>`:''}${les}`;
     card.hidden=false;card.scrollTop=0;wire(card);status()}
-  function select(id,fly){
+  function select(id,fly){if(st.cut)return cutSelect(id,fly);
     if(id&&!st.layers[ANAT[id].l]){st.layers[ANAT[id].l]=true;renderLayers()}
     st.sel=id;paint();st.dirty=true;renderCard();renderSide();
     if(id&&fly)flyTo(id);
@@ -404,8 +413,19 @@ function startAnatomy(){
 
   /* ---------- слои и поиск ---------- */
   const lay=$('#anLayers');
+  /* ряд кнопок можно тянуть мышью, как пальцем; после перетаскивания щелчок не срабатывает */
+  let dsR=null,dsX=0,dsS=0;
+  function dragScroll(row){if(row._ds)return;row._ds=1;
+    row.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')return;dsR=row;dsX=e.clientX;dsS=row.scrollLeft;row._moved=false});
+    row.addEventListener('click',e=>{if(row._moved){row._moved=false;e.stopPropagation();e.preventDefault()}},true)}
+  host.addEventListener('pointermove',e=>{if(!dsR)return;const d=e.clientX-dsX;if(Math.abs(d)>5)dsR._moved=true;if(dsR._moved)dsR.scrollLeft=dsS-d});
+  host.addEventListener('pointerup',()=>{dsR=null});
+  dragScroll(lay);
+  /* карточка начинается под рядами кнопок: на широком экране слои идут в два ряда */
+  function topSync(){const e=st.cut?$('#anCut'):lay;if(!e||e.hidden)return;host.style.setProperty('--antop',(e.offsetTop+e.offsetHeight+8)+'px')}
   function renderLayers(){const all=ANAT_LAYERS.every(l=>st.layers[l.id]);
     lay.innerHTML=`<button data-l="*" aria-pressed="${all}">Все</button>`+ANAT_LAYERS.map(l=>`<button data-l="${l.id}" aria-pressed="${st.layers[l.id]}" style="--lc:${AN_LAYER_C[l.id]}"><i></i>${l.n}</button>`).join('');
+    topSync();
     lay.querySelectorAll('button').forEach(b=>b.onclick=()=>{const l=b.dataset.l;
       if(l==='*'){const on=!ANAT_LAYERS.filter(x=>x.id!=='dims').every(x=>st.layers[x.id]);ANAT_LAYERS.forEach(x=>st.layers[x.id]=x.id==='dims'?st.layers.dims:on||x.id==='dims')}
       else st.layers[l]=!st.layers[l];
@@ -415,6 +435,7 @@ function startAnatomy(){
   const q=$('#anQ'),res=$('#anRes');
   const norm2=s=>s.toLowerCase().replace(/ё/g,'е');
   function search(){const s=norm2(q.value.trim());if(!s){res.hidden=true;return}
+    if(st.cut)return cutSearch(s);
     const hit=Object.keys(ANAT).map(id=>{const a=ANAT[id],t=norm2(a.n+' '+a.en),b=norm2(a.d+' '+(a.why||''));return{id,sc:t.startsWith(s)?3:t.includes(s)?2:b.includes(s)?1:0}}).filter(x=>x.sc).sort((a,b)=>b.sc-a.sc).slice(0,8);
     res.innerHTML=hit.length?hit.map(h=>`<button data-go="${h.id}"><i style="--lc:${AN_LAYER_C[ANAT[h.id].l]}"></i>${ANAT[h.id].n}<span class="en">${ANAT[h.id].en}</span></button>`).join(''):'<p>Ничего не нашлось</p>';
     res.hidden=false;res.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{res.hidden=true;q.value='';q.blur();select(b.dataset.go,true)})}
@@ -422,11 +443,11 @@ function startAnatomy(){
   host.addEventListener('pointerdown',e=>{if(!e.target.closest('.an-q'))res.hidden=true});
   $('#anPultB').onclick=()=>togglePult();
   $('#anLblB').onclick=()=>{st.labels=!st.labels;$('#anLblB').setAttribute('aria-pressed',st.labels)};
-  $('#anViewB').onclick=()=>{st.fly={tgt:anV(0,6.2,0),dist:34,k:0,yaw:.85,pitch:.28}};
+  
 
   /* ---------- боковая панель: слои со счётчиками ---------- */
   const INTRO='Это круизная яхта 40 футов, на таких сдают практику IYT. Крути её, приближай и нажимай на любую часть: откроется карточка с объяснением, инструкциями и примерами. Внизу кнопка «Пульт»: там можно потянуть шкоты и фалы.';
-  function renderSide(){$('#taskLbl').textContent='Слои · layers';
+  function renderSide(){if(st.cut)return cutSide();$('#taskLbl').textContent='Слои · layers';
     $('#steps').innerHTML=ANAT_LAYERS.map(l=>{const n=Object.keys(ANAT).filter(id=>ANAT[id].l===l.id).length;return`<li class="${st.layers[l.id]?'now':''}"><i>${n}</i><span>${l.n}${en(l.en)}</span></li>`}).join('')}
   $('#keysHelp').innerHTML='Мышь: левая кнопка — вращать, правая или <kbd>Shift</kbd> — сдвигать, колесо — ближе/дальше, двойной щелчок — подлететь к части. Телефон: один палец — вращать, два — приблизить и сдвинуть, двойной тап — подлететь. Двойной щелчок по слою оставляет только его.';
   say(INTRO);hint('Подписи не накладываются: если места мало, часть подписей прячется. Приблизь яхту или выключи лишние слои — появятся остальные.');
@@ -441,14 +462,16 @@ function startAnatomy(){
     if(ptr.size===1)tap={x:e.clientX,y:e.clientY,t:performance.now()};else{tap=null;const[a,b]=[...ptr.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),mx:(a.x+b.x)/2,my:(a.y+b.y)/2}}});
   el.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p){hover(e);return}const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
     if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>7)tap=null;
-    if(ptr.size===1){if(p.b===2||p.sh)pan(dx,dy);else{st.cam.yaw-=dx*.007;st.cam.pitch=clamp(st.cam.pitch+dy*.005,-.45,1.5)}}
+    if(!tap)st.drag=true;
+    if(ptr.size===1){if(p.b===2||p.sh)pan(dx,dy);else{st.cam.yaw-=dx*.007;st.cam.pitch=clamp(st.cam.pitch+dy*.005,-1.5,1.5)}}
     else if(ptr.size===2&&pinch){const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;if(d>10)zoom(pinch.d/d);pan(mx-pinch.mx,my-pinch.my);pinch={d,mx,my}}});
-  const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;
-    if(tap&&ptr.size===0&&performance.now()-tap.t<450){const id=pick(e),now=performance.now(),dbl=now-lastTap<350;lastTap=now;if(id)select(id,dbl);else if(dbl)$('#anViewB').click();else if(st.sel)select(null)}tap=null};
+  const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;if(!ptr.size&&st.drag){st.drag=false;occI=0}
+    if(tap&&ptr.size===0&&performance.now()-tap.t<450){const id=pick(e),now=performance.now(),dbl=now-lastTap<350;lastTap=now;if(id)select(id,dbl);else if(dbl)setView('iso');else if(st.sel||st.cut&&st.cut.sel)select(null)}tap=null};
   ['pointerup','pointercancel'].forEach(ev=>el.addEventListener(ev,up));
   el.addEventListener('wheel',e=>{e.preventDefault();st.fly=null;zoom(Math.exp(e.deltaY*.0012))},{passive:false});
   const ndc=new THREE.Vector2();
   function pick(e){const r=el.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,cam);ray.far=500;
+    if(st.cut)return cutPick();
     const objs=[];for(const id in parts){const p=parts[id];if(st.layers[p.info.l])p.g.traverse(o=>{if(o.isMesh&&!o.userData.zone&&(o.visible||o.userData.proxy))objs.push(o)})}
     const hits=ray.intersectObjects(objs,false);if(!hits.length)return null;
     // тонкий трос рядом с поверхностью важнее: «жирная» невидимая трубка ловит палец
@@ -458,7 +481,117 @@ function startAnatomy(){
   el.addEventListener('pointerleave',()=>{if(st.hov){st.hov=null;paint()}});
   host.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!pultBox.hidden)togglePult(false);else select(null)}});
 
-  st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;for(const k in labEl)labEl[k]._w=0;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
+  /* ---------- виды: 3/4, сбоку, сверху, снизу, спереди, сзади; «Без воды» прячет море, чтобы видеть киль, перо руля и винт ---------- */
+  const VIEWS=[['iso','3/4','3/4',.85,.28],['side','Сбоку','side',Math.PI/2,.03],['top','Сверху','top',0,1.5],['bottom','Снизу','bottom',1.2,-.62],['front','Спереди','bow',Math.PI,.12],['back','Сзади','stern',0,.12]];
+  const vm=$('#anVm'),vb=$('#anViewB');
+  function setView(k){const v=VIEWS.find(x=>x[0]===k)||VIEWS[0],I=st.cut&&INTERIOR[st.cut.type];
+    let tgt=I?anV(...I.cam.tgt):k==='bottom'?anV(0,-.5,.4):k==='top'?anV(0,2,0):anV(0,6.2,0),dist=I?I.cam.dist:k==='bottom'?20:k==='top'?40:34;
+    if(I&&st.cut.half&&k==='iso'){st.fly={tgt,dist,k:0,yaw:st.cut.half<0?1.35:-1.35,pitch:.32};return}
+    if(k==='bottom'&&!st.cut){st.noWater=true;renderVm()}
+    st.fly={tgt,dist,k:0,yaw:v[3]+Math.round((st.cam.yaw-v[3])/(Math.PI*2))*Math.PI*2,pitch:I&&k==='iso'?.75:v[4]}}
+  function renderVm(){vm.innerHTML=VIEWS.map(v=>`<button data-v="${v[0]}">${v[1]}<span class="en">${v[2]}</span></button>`).join('')+
+      `<button data-w aria-pressed="${!!st.noWater}"${st.cut?' disabled':''}>Без воды<span class="en">hide water</span></button>`;
+    vm.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{setView(b.dataset.v);vmOpen(false)});
+    vm.querySelector('[data-w]').onclick=()=>{st.noWater=!st.noWater;renderVm()}}
+  function vmOpen(on){if(on)renderVm();vm.hidden=!on;vb.setAttribute('aria-expanded',on)}
+  vb.onclick=()=>vmOpen(vm.hidden);
+  host.addEventListener('pointerdown',e=>{if(!e.target.closest('.an-vw'))vmOpen(false)});
+
+  /* ---------- «Разрез»: лодка флота без палубы или без половины корпуса, отсеки внутри (js/content/interiors.js) ---------- */
+  const CUT_C={cabin:'#7fb3d5',heads:'#6fd0b5',galley:'#f2a33a',saloon:'#d9b77e',nav:'#b49be0',steps:'#d9d3c3',eng:'#ef7a5a',tankF:'#e3c75a',tankW:'#4aa3df',helm:'#9fb4c2',locker:'#c4a374'};
+  /* предметы: высота по умолчанию, цвет, подъём над полом (то, что стоит на столешнице) */
+  const IT={floor:[.03,0xcdb28a],bunk:[.42,0xe9e4d8],locker:[.9,0xa77f52],wc:[.42,0xf4f4f0],cnt:[.85,0xa77f52],seat:[.42,0x2f5f8a],tbl:[.72,0x9a6f45],panel:[.2,0x1a1f22,.78],
+    stove:[.05,0x2b2f31,.85],sink:[.03,0xc9d1d6,.85],fridge:[.04,0xf4f4f0,.85],shw:[.9,0xe8eef0],steps:[.9,0xa77f52],eng:[.6,0xb8412e],tankF:[.4,0xc9a43a],tankW:[.3,0x3d8fd0],helmw:[0,0x2b2f31,.95]};
+  const cutG=new THREE.Group();cutG.visible=false;scene.add(cutG);
+  const plL=new THREE.Plane(anV(0,-1,0),1),plH=new THREE.Plane(anV(-1,0,0),100),planes=[plL,plH];
+  renderer.localClippingEnabled=true;
+  const clipM=m=>{const c=m.clone();c.side=THREE.DoubleSide;c.clippingPlanes=planes;c.clipShadows=true;return c};
+  const cutBox=$('#anCut');
+  function cutBuild(type){
+    cutG.children.slice().forEach(o=>{cutG.remove(o);o.traverse(x=>{if(x.geometry)x.geometry.dispose();if(x.material)[].concat(x.material).forEach(m=>m.dispose())})});
+    if(st.cut)st.cut.rooms.forEach(r=>r.el.remove());
+    const I=INTERIOR[type],boat=makeBoat(type,{band:0x1f4f7a});
+    boat.traverse(o=>{if(o.material)o.material=Array.isArray(o.material)?o.material.map(clipM):clipM(o.material);if(o.isMesh)o.castShadow=o.receiveShadow=true});cutG.add(boat);
+    const rooms=I.rooms.map(r=>{const g=new THREE.Group();g.userData.room=r.id;cutG.add(g);const mats=[];
+      const mat=(c,o)=>{const m=clipM(M3(c,Object.assign({roughness:.75},o||{})));m.userData={em:0,ei:1};mats.push(m);return m};
+      const box=(w,h,l,c,x,y,z,o)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,l),mat(c,o));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m};
+      r.it.forEach(([t,x,z,w,l,o])=>{const d=IT[t],y0=r.y+(o&&o.y0!==undefined?o.y0:d[2]||0),h=o&&o.h||d[0];w=w||.4;l=l||.5;
+        if(t==='bunk'){box(w,h-.14,l,0xa77f52,x,y0+(h-.14)/2,z);box(w-.04,.14,l-.04,0x8fb8d8,x,y0+h-.07,z)}
+        else if(t==='tbl'){box(w,.05,l,d[1],x,y0+h,z);box(.08,h,.08,0x6a5035,x,y0+h/2,z)}
+        else if(t==='steps'){const n=4;for(let i=0;i<n;i++)box(w,h*(i+1)/n,l/n,d[1],x,y0+h*(i+1)/n/2,z+l/2-(i+.5)*l/n)}
+        else if(t==='shw'){box(w,.05,l,d[1],x,y0+.025,z);box(w,h,l,0xbfe3ef,x,y0+h/2,z,{transparent:true,opacity:.22,depthWrite:false})}
+        else if(t==='wc'){box(.36,.36,.42,d[1],x,y0+.18,z);box(.4,.04,.46,0xe6e6e0,x,y0+.38,z)}
+        else if(t==='helmw'){const m=new THREE.Mesh(new THREE.TorusGeometry(.2,.025,6,16),mat(d[1]));m.position.set(x,y0,z);m.rotation.x=-.35;g.add(m)}
+        else if(t==='eng'){box(w,h,l,d[1],x,y0+h/2,z);box(w*.6,.08,l*.7,0x2b2f31,x,y0+h+.04,z)}
+        else if(t==='cnt'){box(w,h-.04,l,d[1],x,y0+(h-.04)/2,z);box(w+.02,.04,l+.02,0xe4ddcd,x,y0+h-.02,z)}
+        else box(w,h,l,d[1],x,y0+h/2,z)});
+      const bb=new THREE.Box3().setFromObject(g),c=bb.getCenter(anV(0,0,0));
+      const el=document.createElement('button');el.className='an-tl';el.dataset.room=r.id;el.style.setProperty('--lc',CUT_C[r.t]);el.innerHTML=`${r.n}<span class="en">${r.en}</span>`;
+      el.onclick=e=>{e.stopPropagation();cutSelect(r.id,true)};labs.appendChild(el);
+      return{r,g,mats,el,anchor:anV(c.x,Math.min(bb.max.y,r.y+1.1)+.08,c.z),cx:c.x}});
+    const old=st.cut;st.cut={type,lv:old&&old.type===type?old.lv:0,half:old?old.half:0,sel:null,rooms,byId:{}};rooms.forEach(R=>st.cut.byId[R.r.id]=R);
+    cutLevel();renderCut();cutSide();cutPaint()}
+  /* уровень разреза и половина корпуса: какие отсеки видно */
+  function cutLevel(){const c=st.cut,I=INTERIOR[c.type],L=I.levels[c.lv];plL.constant=L.y;plH.normal.set(c.half<0?-1:1,0,0);plH.constant=c.half?0:100;
+    c.rooms.forEach(R=>{R.vis=R.r.y<L.y-.2&&R.r.y>=(L.min===undefined?-9:L.min)&&!(c.half<0&&R.cx>.35)&&!(c.half>0&&R.cx<-.35);R.g.visible=R.vis});
+    if(c.sel&&!c.byId[c.sel].vis)cutSelect(null)}
+  function renderCut(){const c=st.cut,I=INTERIOR[c.type];
+    const hl=['Половина корпуса','Видно левый борт','Видно правый борт'][c.half<0?1:c.half>0?2:0];
+    cutBox.innerHTML=`<div class="an-cr">${FLEET.map(f=>`<button data-b="${f.id}" aria-pressed="${f.id===c.type}" title="${f.n}">${f.s}</button>`).join('')}</div>
+      <div class="an-cr">${I.levels.length>1?I.levels.map((l,i)=>`<button data-lv="${i}" aria-pressed="${i===c.lv}">${l.n}<span class="en">${l.en}</span></button>`).join(''):`<span class="an-cl">${I.levels[0].n}<span class="en">${I.levels[0].en}</span></span>`}
+      <button data-h aria-pressed="${!!c.half}">${hl}<span class="en">half hull</span></button></div>`;
+    cutBox.querySelectorAll('.an-cr').forEach(dragScroll);topSync();
+    cutBox.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{if(b.dataset.b===c.type)return;cutSelect(null);cutBuild(b.dataset.b);setView('iso');say(cutIntro())});
+    cutBox.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{c.lv=+b.dataset.lv;cutLevel();renderCut();cutSide()});
+    cutBox.querySelector('[data-h]').onclick=()=>{c.half=c.half===0?-1:c.half<0?1:0;cutLevel();renderCut();cutSide();setView('iso')}}
+  const cutIntro=()=>{const I=INTERIOR[st.cut.type];return`<b>${I.n}</b>, ${I.v}. Палуба снята, видно, что где внутри. Нажми на отсек: каюту, гальюн, камбуз, моторный отсек. Кнопка «Половина корпуса» разрежет лодку вдоль. ${en('cutaway')}`};
+  function cutSide(){const c=st.cut;$('#taskLbl').textContent='Отсеки · compartments';
+    $('#steps').innerHTML=c.rooms.filter(R=>R.vis).map(R=>`<li class="${c.sel===R.r.id?'now':''}"><i style="background:${CUT_C[R.r.t]}"></i><span>${R.r.n}${en(R.r.en)}</span></li>`).join('')||'<li><span>На этом уровне отсеков нет</span></li>'}
+  function cutPaint(){const c=st.cut;c.rooms.forEach(R=>{const sel=c.sel===R.r.id,hov=st.hov===R.r.id&&!sel;R.mats.forEach(m=>{m.emissive.setHex(sel?0xff8a1a:hov?0x5a3a10:0);m.emissiveIntensity=sel?.6:1})})}
+  function cutPick(){const objs=[];st.cut.rooms.forEach(R=>{if(R.vis)R.g.traverse(o=>{if(o.isMesh)objs.push(o)})});const h=ray.intersectObjects(objs,false)[0];
+    let o=h&&h.object;while(o&&!o.userData.room)o=o.parent;return o?o.userData.room:null}
+  function cutSelect(id,fly){const c=st.cut;if(id&&(!c.byId[id]||!c.byId[id].vis))id=null;c.sel=id;cutPaint();cutSide();
+    if(!id){card.hidden=true;say(cutIntro());return}
+    const R=c.byId[id],r=R.r,T=CUT_T[r.t],I=INTERIOR[c.type];togglePult(false,true);
+    const how=(T.how||[]).map(([w,t],i)=>`<details${i?'':' open'}><summary>${w}</summary><p>${rich(t)}</p></details>`).join('');
+    const near=c.rooms.filter(x=>x.vis&&x!==R).map(x=>`<button data-go="${x.r.id}">${x.r.n}</button>`).join('');
+    card.innerHTML=`<div class="an-head"><p class="an-ly" style="--lc:${CUT_C[r.t]}">${T.n} <span class="en">· ${T.en}</span></p><button class="an-x" aria-label="Закрыть карточку">✕</button></div>
+      <h3>${r.n}<span class="en">${r.en}</span></h3><p>${rich(T.d)}</p>${r.note?`<p>${rich(r.note)}</p>`:''}
+      ${how?`<h4>Когда и что делать</h4><div class="an-how">${how}</div>`:''}${T.warn?`<p class="an-warn"><b>Осторожно.</b> ${rich(T.warn)}</p>`:''}
+      ${near?`<h4>Ещё внутри</h4><div class="chips an-rel">${near}</div>`:''}
+      <p class="an-note">${I.n}, ${I.v}. ${I.src}</p>`;
+    card.hidden=false;card.scrollTop=0;wire(card);
+    say(`<b>${r.n}</b> ${en('· '+r.en)}. ${T.d}`);
+    if(fly)st.fly={tgt:R.anchor.clone().setY(R.anchor.y-.3),dist:clamp(INTERIOR[c.type].cam.dist*.55,7,14),k:0}}
+  function cutSearch(s){const hit=st.cut.rooms.filter(R=>R.vis).map(R=>{const T=CUT_T[R.r.t],t=norm2(R.r.n+' '+R.r.en+' '+T.n+' '+T.en),b=norm2(T.d+' '+(R.r.note||''));return{R,sc:t.startsWith(s)?3:t.includes(s)?2:b.includes(s)?1:0}})
+      .filter(x=>x.sc).sort((a,b)=>b.sc-a.sc).slice(0,8);
+    res.innerHTML=hit.length?hit.map(h=>`<button data-go="${h.R.r.id}"><i style="--lc:${CUT_C[h.R.r.t]}"></i>${h.R.r.n}<span class="en">${h.R.r.en}</span></button>`).join(''):'<p>Ничего не нашлось</p>';
+    res.hidden=false;res.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{res.hidden=true;q.value='';q.blur();cutSelect(b.dataset.go,true)})}
+  /* подписи отсеков: те же правила, что у частей яхты — без наложений, выбранная всегда видна */
+  function cutLabels(W,H){const c=st.cut;for(const id in labEl)labEl[id].hidden=true;
+    const taken=[],hr=host.getBoundingClientRect();['.an-bar','#anCut','#anCard','#anVm'].forEach(s=>{const e=host.querySelector(s);if(e&&!e.hidden&&e.offsetWidth){const r=e.getBoundingClientRect();taken.push([r.left-hr.left,r.top-hr.top,r.right-hr.left,r.bottom-hr.top])}});
+    labs.hidden=false;let lines='';const list=c.rooms.slice().sort((a,b)=>(b.r.id===c.sel)-(a.r.id===c.sel));
+    list.forEach(R=>{const el=R.el,isSel=R.r.id===c.sel;el.hidden=true;if(!R.vis||!st.labels&&!isSel)return;
+      v3.copy(R.anchor).project(cam);if(v3.z>1)return;const x=(v3.x+1)/2*W,y=(1-v3.y)/2*H;if(x<4||x>W-4||y<4||y>H-4)return;
+      if(!el._w){el.hidden=false;el._w=el.offsetWidth;el._h=el.offsetHeight;el.hidden=true}const w=el._w||90,h=el._h||30,g=10;
+      const cand=[[x-w/2,y-h-g],[x+g,y-h/2],[x-w-g,y-h/2],[x-w/2,y+g],[x+g,y-h-g],[x-w-g,y-h-g],[x+g,y+g],[x-w-g,y+g]];
+      let ok=null;for(const[cx,cy]of cand){if(cx<4||cy<4||cx+w>W-4||cy+h>H-4)continue;const r=[cx-2,cy-2,cx+w+2,cy+h+2];if(!taken.some(t=>r[0]<t[2]&&r[2]>t[0]&&r[1]<t[3]&&r[3]>t[1])){ok=[cx,cy,r];break}}
+      if(!ok)return;taken.push(ok[2]);el.hidden=false;el.style.transform=`translate(${ok[0]|0}px,${ok[1]|0}px)`;el.classList.toggle('sel',isSel);
+      const lx=clamp(x,ok[0],ok[0]+w),ly=clamp(y,ok[1],ok[1]+h);
+      lines+=`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}"${isSel?' class="sel"':''}/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${isSel?3.5:2.5}"${isSel?' class="sel"':''}/>`});
+    svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=lines}
+  function toggleCut(on){if(on===undefined)on=!st.cut;const cb=$('#anCutB');
+    if(on){if(typeof INTERIOR==='undefined')return;select(null);togglePult(false);st.hov=null;cutBuild(st.cutType||'cruiser');Y.visible=false;cutG.visible=true;lay.hidden=true;cutBox.hidden=false;
+      $('#anPultB').disabled=true;q.placeholder='Найти: камбуз, heads, мотор…';setView('iso');say(cutIntro());
+      hint('Белые стенки — разрезанный корпус. Отсеки в стилизованном масштабе: высоты сжаты, места баков показаны условно. Планировка конкретной яхты может отличаться — смотри план на приёмке.')}
+    else{if(!st.cut)return;st.cutType=st.cut.type;cutSelect(null);st.cut.rooms.forEach(R=>R.el.remove());
+      cutG.children.slice().forEach(o=>{cutG.remove(o);o.traverse(x=>{if(x.geometry)x.geometry.dispose();if(x.material)[].concat(x.material).forEach(m=>m.dispose())})});
+      st.cut=null;Y.visible=true;cutG.visible=false;lay.hidden=false;cutBox.hidden=true;topSync();$('#anPultB').disabled=false;q.placeholder='Найти: шкот, mast, киль…';
+      renderSide();setView('iso');say(INTRO);hint('')}
+    cb.setAttribute('aria-pressed',!!st.cut);if(!vm.hidden)renderVm()}
+  $('#anCutB').onclick=()=>toggleCut();
+  st.cutOn=toggleCut;st.view=setView;
+  st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;for(const k in labEl)labEl[k]._w=0;topSync();if(st.cut)st.cut.rooms.forEach(r=>r.el._w=0);renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
 
   update();renderLayers();renderSide();paint();
   let last=performance.now();
@@ -477,7 +610,9 @@ function startAnatomy(){
     cam.position.set(c.tgt.x+Math.sin(c.yaw)*Math.cos(c.pitch)*dk,c.tgt.y+Math.sin(c.pitch)*dk,c.tgt.z+Math.cos(c.yaw)*Math.cos(c.pitch)*dk);cam.lookAt(c.tgt);
     if(st.dirty||S.mainFlap||S.jibFlap||st.v.furl<.6&&(st.jibA/D>40||st.jibA/D<14)){sails(t);rebuildRopes();st.dirty=false}
     if(st.sel){const pulse=.45+.35*Math.sin(t*5);parts[st.sel].mats.forEach(m=>m.emissiveIntensity=pulse)}
-    dyn.windArrow.visible=cam.position.distanceTo(dyn.windArrow.position)>9;
+    if(st.cut&&st.cut.sel){const pulse=.35+.3*Math.sin(t*5);st.cut.byId[st.cut.sel].mats.forEach(m=>m.emissiveIntensity=pulse)}
+    water.visible=deep.visible=!st.noWater&&!st.cut;
+    dyn.windArrow.visible=!st.cut&&cam.position.distanceTo(dyn.windArrow.position)>9;
     const under=st.sel&&/under|dims/.test(ANAT[st.sel].l);waterM.opacity=under||cam.position.y<AN_WL?.35:.8;
     renderer.render(scene,cam);drawLabels();
     st.raf=requestAnimationFrame(frame)}
