@@ -89,28 +89,29 @@ function start3D(){
 
   /* ---------- точки интереса и задания ---------- */
   const HS={
-    oleg:{p:[1.9,1.2,10.2],n:'Шкипер Олег',talk:true},
-    locker:{p:[-1.3,1.2,3.6],n:'Рундук со спасжилетами'},extinguisher:{p:[.75,1.3,1.75],n:'Огнетушитель'},
-    helm:{p:[0,1.6,4.5],n:'Штурвал'},winchP:{p:[-1.55,1.4,2.4],n:'Левая лебёдка'},winchS:{p:[1.55,1.4,2.4],n:'Правая лебёдка'},
-    halyard:{p:[-.25,1.65,1.45],n:'Стопоры фалов'},mast:{p:[0,1.3,-2.8],n:'Мачта'},windlass:{p:[0,1.2,-5],n:'Брашпиль'},
-    bowcleat:{p:[.75,1.1,-4.6],n:'Носовая утка'},fenderP:{p:[-2.05,1,1.8],n:'Кранец левого борта'},fenderS:{p:[2.05,1,1.8],n:'Кранец правого борта'},
-    sternP:{p:[-1.45,1.1,5.6],n:'Левый кормовой швартов'},sternS:{p:[1.45,1.1,5.6],n:'Правый кормовой швартов'}};
-  const labels={};for(const id in HS){const d=document.createElement('div');d.className='tlabel';d.textContent=HS[id].n;d.hidden=true;labelsBox.appendChild(d);labels[id]=d}
+    oleg:{p:[1.9,1.2,10.2],n:'Шкипер Олег',en:'skipper',talk:true},
+    locker:{p:[-1.3,1.2,3.6],n:'Рундук со спасжилетами',en:'lifejacket locker'},extinguisher:{p:[.75,1.3,1.75],n:'Огнетушитель',en:'fire extinguisher'},
+    helm:{p:[0,1.6,4.5],n:'Штурвал',en:'wheel'},winchP:{p:[-1.55,1.4,2.4],n:'Левая лебёдка',en:'port winch'},winchS:{p:[1.55,1.4,2.4],n:'Правая лебёдка',en:'starboard winch'},
+    halyard:{p:[-.25,1.65,1.45],n:'Стопоры фалов',en:'halyard clutches'},mast:{p:[0,1.3,-2.8],n:'Мачта',en:'mast'},windlass:{p:[0,1.2,-5],n:'Брашпиль',en:'windlass'},
+    bowcleat:{p:[.75,1.1,-4.6],n:'Носовая утка',en:'bow cleat'},fenderP:{p:[-2.05,1,1.8],n:'Кранец левого борта',en:'port fender'},fenderS:{p:[2.05,1,1.8],n:'Кранец правого борта',en:'starboard fender'},
+    sternP:{p:[-1.45,1.1,5.6],n:'Левый кормовой швартов',en:'port stern line'},sternS:{p:[1.45,1.1,5.6],n:'Правый кормовой швартов',en:'starboard stern line'}};
+  const hsName=id=>`${HS[id].n} ${en('· '+HS[id].en)}`;
+  const labels={};for(const id in HS){const d=document.createElement('div');d.className='tlabel';d.innerHTML=HS[id].n+en(HS[id].en);d.hidden=true;labelsBox.appendChild(d);labels[id]=d}
   const CHECK=[
-    {id:'board',n:'Перейти по трапу на яхту',say:'Наша яхта — синяя, прямо перед тобой. Проходи по [[трап|трапу]] на борт, трап качается.',w:'Молодец. Ты на [[корма|корме]], в [[кокпит|кокпите]].'},
-    {id:'locker',n:'Надеть спасжилет из рундука',say:'Первым делом жилет. Они лежат в [[рундук|рундуке]] в кокпите, по левому борту.',w:'Жилет на тебе. На настоящем брифинге каждый подгоняет его по себе.'},
-    {id:'extinguisher',n:'Найти огнетушитель',say:'Найди огнетушитель. Он у входа в каюту, справа.',w:'Отлично. При пожаре на яхте счёт идёт на секунды, поэтому место огнетушителя знают все.'},
-    {id:'helm',n:'Проверить штурвал и руль',say:'Теперь проверь штурвал. Он должен крутиться свободно от борта до борта.',w:'Штурвал крутится, [[перо руля]] отвечает.'},
-    {id:'winch',n:'Осмотреть лебёдку',say:'Осмотри любую [[лебёдка|лебёдку]] у края кокпита. На них работают шкоты.',w:'Лебёдка вращается по часовой. Шкот кладут на барабан тоже по часовой.'},
-    {id:'halyard',n:'Проверить стопоры фалов',say:'На крыше рубки, у входа, стоят [[стопор|стопоры]]. Через них идут [[фал|фалы]].',w:'Все фалы промаркированы. Перепутать фал грота и стакселя — классика новичка.'},
-    {id:'windlass',n:'Проверить брашпиль на носу',say:'Иди на [[нос]] по боковому проходу и проверь [[брашпиль]]. Держись за [[леера]].',w:'Брашпиль на месте, цепь уложена. Якорь понадобится в бухте.'},
-    {id:'fender',n:'Проверить кранцы',say:'Последнее: проверь [[кранец|кранцы]] по бортам. Соседи стоят близко.',w:'Кранцы висят, узлы надёжные. Приёмка закончена!'}];
+    {id:'board',n:'Перейти по трапу на яхту',en:'board via the passerelle',say:'Наша яхта — синяя, прямо перед тобой. Проходи по [[трап|трапу]] на борт, трап качается.',w:'Молодец. Ты на [[корма|корме]], в [[кокпит|кокпите]].'},
+    {id:'locker',n:'Надеть спасжилет из рундука',en:'put on a lifejacket',say:'Первым делом жилет. Они лежат в [[рундук|рундуке]] в кокпите, по левому борту.',w:'Жилет на тебе. На настоящем брифинге каждый подгоняет его по себе.'},
+    {id:'extinguisher',n:'Найти огнетушитель',en:'find the fire extinguisher',say:'Найди [[огнетушитель]]. Он у входа в каюту, справа.',w:'Отлично. При пожаре на яхте счёт идёт на секунды, поэтому место огнетушителя знают все.'},
+    {id:'helm',n:'Проверить штурвал и руль',en:'check the wheel and rudder',say:'Теперь проверь [[штурвал]]. Он должен крутиться свободно от борта до борта.',w:'Штурвал крутится, [[перо руля]] отвечает.'},
+    {id:'winch',n:'Осмотреть лебёдку',en:'inspect a winch',say:'Осмотри любую [[лебёдка|лебёдку]] у края кокпита. На них работают шкоты.',w:'Лебёдка вращается по часовой. Шкот кладут на барабан тоже по часовой.'},
+    {id:'halyard',n:'Проверить стопоры фалов',en:'check the halyard clutches',say:'На крыше [[рубка|рубки]], у входа, стоят [[стопор|стопоры]]. Через них идут [[фал|фалы]].',w:'Все фалы промаркированы. Перепутать фал грота и стакселя — классика новичка.'},
+    {id:'windlass',n:'Проверить брашпиль на носу',en:'check the windlass on the bow',say:'Иди на [[нос]] по боковому проходу и проверь [[брашпиль]]. Держись за [[леера]].',w:'Брашпиль на месте, цепь уложена. [[якорь|Якорь]] понадобится в бухте.'},
+    {id:'fender',n:'Проверить кранцы',en:'check the fenders',say:'Последнее: проверь [[кранец|кранцы]] по бортам. Соседи стоят близко.',w:'Кранцы висят, узлы надёжные. Приёмка закончена!'}];
   const DRILL=[
-    {s:'Беги на нос, к брашпилю — готовим якорь!',t:'windlass'},{s:'Встань за штурвал!',t:'helm'},
-    {s:'Правую лебёдку — выбрать стаксель-шкот!',t:'winchS'},{s:'Левую лебёдку!',t:'winchP'},
-    {s:'Кранец на левый борт, нас прижимает!',t:'fenderP'},{s:'Кранец на правый борт!',t:'fenderS'},
-    {s:'Подай левый кормовой швартов!',t:'sternP'},{s:'Правый кормовой швартов — потрави!',t:'sternS'},
-    {s:'Носовой швартов на утку!',t:'bowcleat'},{s:'Пожар в камбузе! Огнетушитель!',t:'extinguisher'},{s:'К мачте — проверь фал грота!',t:'mast'}];
+    {s:'Беги на нос, к брашпилю — готовим якорь!',en:'Go forward to the windlass, prepare the anchor!',t:'windlass'},{s:'Встань за штурвал!',en:'Take the helm!',t:'helm'},
+    {s:'Правую лебёдку — выбрать стаксель-шкот!',en:'Starboard winch, sheet in the jib!',t:'winchS'},{s:'Левую лебёдку!',en:'Port winch!',t:'winchP'},
+    {s:'Кранец на левый борт, нас прижимает!',en:'Fender to port, we’re drifting onto them!',t:'fenderP'},{s:'Кранец на правый борт!',en:'Fender to starboard!',t:'fenderS'},
+    {s:'Подай левый кормовой швартов!',en:'Pass the port stern line!',t:'sternP'},{s:'Правый кормовой швартов — потрави!',en:'Ease the starboard stern line!',t:'sternS'},
+    {s:'Носовой швартов на утку!',en:'Make the bow line fast on the cleat!',t:'bowcleat'},{s:'Пожар в камбузе! Огнетушитель!',en:'Fire in the galley! Extinguisher!',t:'extinguisher'},{s:'К мачте — проверь фал грота!',en:'To the mast, check the main halyard!',t:'mast'}];
   const st={running:true,raf:0,renderer,phase:'check',ci:0,yaw:0,pitch:.42,dist:6.2,mode:'follow',isoYaw:Math.PI/4,isoDist:24,labels:false,hintOn:false,taskT:0,drill:null,near:null,curSay:''};
   T3=st;st.hero=hero;
   const walk=(x,z)=>{
@@ -130,8 +131,8 @@ function start3D(){
     if(st.phase==='check'){const c=CHECK[st.ci];if(!c||c.id==='board')return null;if(c.id==='winch')return['winchP','winchS'];if(c.id==='fender')return['fenderP','fenderS'];return[c.id]}
     if(st.phase==='drill'&&st.drill)return[st.drill.list[st.drill.i].t];return null}
   function sideTasks(){
-    if(st.phase==='check'){$('#taskLbl').textContent='Приёмка яхты · check-in';$('#steps').innerHTML=CHECK.map((c,i)=>`<li class="${i<st.ci?'done':i===st.ci?'now':''}"><i>${i<st.ci?'✓':i+1}</i>${c.n}</li>`).join('')}
-    else if(st.drill){$('#taskLbl').textContent='Команды шкипера';$('#steps').innerHTML=`<li class="now"><i>${st.drill.i+1}/6</i>${st.drill.list[st.drill.i]?.s||''}</li><li><i>✓</i>Выполнено: ${st.drill.ok}</li><li><i>⏱</i>На каждую команду 20 секунд</li>`}}
+    if(st.phase==='check'){$('#taskLbl').textContent='Приёмка яхты · check-in';$('#steps').innerHTML=CHECK.map((c,i)=>`<li class="${i<st.ci?'done':i===st.ci?'now':''}"><i>${i<st.ci?'✓':i+1}</i><span>${c.n}${en(c.en)}</span></li>`).join('')}
+    else if(st.drill){$('#taskLbl').textContent='Команды шкипера · skipper\'s orders';const dc=st.drill.list[st.drill.i];$('#steps').innerHTML=`<li class="now"><i>${st.drill.i+1}/6</i>${dc?.s||''}</li><li><i>✓</i>Выполнено: ${st.drill.ok}</li><li><i>⏱</i>На каждую команду 20 секунд</li>`}}
   function checkStep(){sayT(CHECK[st.ci].say);hint('');st.taskT=0;sideTasks()}
   function passCheck(){const c=CHECK[st.ci];hint(c.w,'good');st.ci++;
     if(st.ci>=CHECK.length){setTimeout(startDrill,1600);return}
@@ -139,7 +140,7 @@ function start3D(){
   function startDrill(){if(T3!==st)return;st.phase='pre';
     showDialog(`<h3>Приёмка закончена</h3><p>Теперь проверка. Шкипер будет отдавать команды, а ты беги к нужному месту и нажимай «Действие». На каждую команду 20 секунд, всего шесть.</p><p class="ex">Совет: в изометрии удобнее видеть всю яхту сразу.</p><div class="row"><button class="btn" id="dgo">Готов!</button></div>`);
     $('#dgo').onclick=()=>{hideDialog();st.phase='drill';st.drill={list:DRILL.slice().sort(()=>Math.random()-.5).slice(0,6),i:0,ok:0,t:20};drillStep();$('#stage').focus()}}
-  function drillStep(){const d=st.drill;d.t=20;sayT(d.list[d.i].s);hint('');sideTasks()}
+  function drillStep(){const d=st.drill,c=d.list[d.i];d.t=20;sayT(`${c.s}<span class="en line">«${c.en}»</span>`);hint('');sideTasks()}
   function drillNext(ok){const d=st.drill;if(ok)d.ok++;d.i++;
     if(d.i>=d.list.length){st.phase='end';$('#tt').hidden=true;const pass=d.ok>=4;if(pass)markDone('day1');
       endCard(pass?'День 1 пройден':'Экипаж пока путается',`Команд выполнено: ${d.ok} из 6. ${pass?'Ты знаешь яхту и быстро двигаешься по палубе. Завтра выходим в море и разбираемся с ветром.':'Включи «Подписи», походи по палубе и попробуй снова.'}`,pass);return}
@@ -151,7 +152,7 @@ function start3D(){
       if(t&&t.includes(id)){if(id==='locker')bodyM.color.set(0xf07a28);if(id==='helm')st.spin=2.4;passCheck()}
       else hint(`Это ${HS[id].n.toLowerCase()}. Сейчас нужно другое.`,'warn')}
     else if(st.phase==='drill'){const t=st.drill.list[st.drill.i].t;
-      if(id===t){hint('Есть! '+HS[id].n+'.','good');drillNext(true)}else hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}
+      if(id===t){hint(`Есть! ${hsName(id)}`,'good');drillNext(true)}else hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}
   };
   const setMode=m=>{st.mode=m;$('#tc').textContent=m==='iso'?'За персонажем':'Изометрия'};
   $('#tc').onclick=()=>setMode(st.mode==='iso'?'follow':'iso');
@@ -194,7 +195,7 @@ function start3D(){
     // ближайшая точка
     let best=null,bd=1.35;for(const id in HS){const h=HS[id].p;const d=Math.hypot(hero.position.x-h[0],hero.position.z-h[2]);if(d<bd){bd=d;best=id}}
     st.near=best;const tp=$('#tp');
-    if(best&&(st.phase==='check'||st.phase==='drill')){tp.hidden=false;tp.innerHTML=`<kbd>E</kbd>${HS[best].talk?'Поговорить: ':''}${HS[best].n}`}else tp.hidden=true;
+    if(best&&(st.phase==='check'||st.phase==='drill')){tp.hidden=false;tp.innerHTML=`<kbd>E</kbd>${HS[best].talk?'Поговорить: ':''}${hsName(best)}`}else tp.hidden=true;
     const tg=curTarget();const showRing=tg&&(st.hintOn||(st.phase==='check'&&st.taskT>7));
     ring.visible=!!showRing;if(showRing){const h=HS[tg[0]].p;ring.position.set(h[0],1.08+me.position.y,h[2]);ring.scale.setScalar(1+Math.sin(t*5)*.12)}
     // камера: плавный переход между режимами

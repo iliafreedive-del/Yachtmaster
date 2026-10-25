@@ -100,12 +100,12 @@ function startExam(){exam={i:0,score:0};show('board');say('Вопросы уро
 function renderExam(){
   const q=EXAM[exam.i];
   $('#steps').innerHTML=`<li class="now"><i>${exam.i+1}</i>Вопрос из ${EXAM.length}</li><li><i>✓</i>Верно: ${exam.score}</li>`;
-  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">IYT Bareboat · вопрос ${exam.i+1} из ${EXAM.length}</p><h3>${q.q}</h3><div class="opts">${q.o.map((o,j)=>`<button class="opt" data-j="${j}">${o}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
+  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">IYT Bareboat · вопрос ${exam.i+1} из ${EXAM.length}</p><h3>${rich(q.q)}</h3><div class="opts">${q.o.map((o,j)=>`<button class="opt" data-j="${j}">${o}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
   $('#board').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     const j=+b.dataset.j;
     $('#board').querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.j===q.a)x.classList.add('right')});
     if(j===q.a)exam.score++;else b.classList.add('wrong');
-    const ex=$('#eex');ex.hidden=false;ex.textContent=q.e;
+    const ex=$('#eex');ex.hidden=false;ex.innerHTML=rich(q.e);
     const n=$('#enx');n.hidden=false;n.focus();n.onclick=()=>{exam.i++;
       if(exam.i>=EXAM.length){const pass=exam.score>=10;if(pass)markDone('exam');
         endCard(pass?'Теория сдана':'Пока не сдано',`Верных ответов: ${exam.score} из ${EXAM.length}. ${pass?'Учебная неделя пройдена. На настоящем курсе дальше практический экзамен с инструктором IYT.':'Перечитай объяснения и попробуй снова.'}`,pass)}

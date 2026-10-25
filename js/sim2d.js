@@ -5,10 +5,10 @@ function resize(){const r=cv.getBoundingClientRect();DPR=Math.min(2,window.devic
 window.addEventListener('resize',()=>{if(sim)resize()});
 const PXKN=7;let sim=null,raf=0,lastT=0;
 $('#sheetR').addEventListener('input',e=>{if(sim&&!sim.engine)sim.boat.sheet=+e.target.value});
-const THR=[-1,-.5,0,.5,1],THRN=['Полный назад','Малый назад','Нейтраль','Малый вперёд','Полный вперёд'];
+const THR=[-1,-.5,0,.5,1],THRN=[['Полный назад','full astern'],['Малый назад','slow astern'],['Нейтраль','neutral'],['Малый вперёд','slow ahead'],['Полный вперёд','full ahead']];
 function throttleStep(d){sim.thrI=clamp(sim.thrI+d,0,4);sim.boat.thr=THR[sim.thrI]}
 function polar(a){if(a<38)return 0;if(a<50)return lerp(1.5,5.2,(a-38)/12);if(a<100)return lerp(5.2,6.6,(a-50)/50);return lerp(6.6,5.0,(a-100)/80)}
-function pointName(a){if(a<38)return['Левентик','no-go'];if(a<60)return['Бейдевинд','close-hauled'];if(a<80)return['Полный бейдевинд','close reach'];if(a<100)return['Галфвинд','beam reach'];if(a<160)return['Бакштаг','broad reach'];return['Фордевинд','run']}
+function pointName(a){if(a<38)return['Левентик','in irons'];if(a<60)return['Бейдевинд','close-hauled'];if(a<80)return['Полный бейдевинд','close reach'];if(a<100)return['Галфвинд','beam reach'];if(a<160)return['Бакштаг','broad reach'];return['Фордевинд','run']}
 function sailState(b,w){
   const rw=norm(w.from-b.h),awa=Math.abs(rw),side=rw>=0?1:-1;
   const boom=Math.min(b.sheet,Math.max(awa-4,2));const opt=clamp(awa/2-10,6,85);const diff=boom-opt;
@@ -26,25 +26,25 @@ function startSim(kind){
   const base={kind,running:false,t:0,streaks:makeStreaks(),cam:{x:0,y:0},msg:'',hold:0,step:0,tacks:0,gybes:0,nogoT:0,lastSide:0};
   if(kind==='points'){
     sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,90,80),steps:[
-      {n:'Галфвинд',lo:80,hi:100,s:'Начнём с [[галфвинд|галфвинда]]: ветер ровно в борт. Парус сейчас полощет — выбирай [[шкот]] (↑), пока метка не попадёт в зелёную зону.'},
-      {n:'Бейдевинд',lo:40,hi:58,s:'Теперь [[приводиться|приводись]]: поворачивай нос к ветру до [[бейдевинд|бейдевинда]], 40–55°. Не залезь в красный сектор! Шкот выбирай почти до упора.'},
-      {n:'Бакштаг',lo:115,hi:155,s:'Отлично. [[уваливаться|Уваливайся]]: уводи нос от ветра в [[бакштаг]], 120–150°, и трави шкот.'},
-      {n:'Фордевинд',lo:165,hi:180,s:'[[фордевинд|Фордевинд]]: ветер прямо в корму. Грот вытрави почти полностью. Не переводи ветер через корму, иначе [[гик]] перелетит.'}]});
+      {n:'Галфвинд',en:'beam reach',lo:80,hi:100,s:'Начнём с [[галфвинд|галфвинда]]: ветер ровно в борт. Парус сейчас полощет — выбирай [[шкот]] (↑), пока метка не попадёт в зелёную зону.'},
+      {n:'Бейдевинд',en:'close-hauled',lo:40,hi:58,s:'Теперь [[приводиться|приводись]]: поворачивай нос к ветру до [[бейдевинд|бейдевинда]], 40–55°. Не залезь в красный сектор! Шкот выбирай почти до упора.'},
+      {n:'Бакштаг',en:'broad reach',lo:115,hi:155,s:'Отлично. [[уваливаться|Уваливайся]]: уводи нос от ветра в [[бакштаг]], 120–150°, и трави шкот.'},
+      {n:'Фордевинд',en:'run',lo:165,hi:180,s:'[[фордевинд|Фордевинд]]: ветер прямо в корму. Грот вытрави почти полностью. Не переводи ветер через корму, иначе [[гик]] перелетит.'}]});
     sim.view3d=in3d;sim.running=true;say(sim.steps[0].s);
   }
   if(kind==='tack'){
     sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,48,14),buoy:{x:60,y:-1050}});sim.cam={x:0,y:-100};
     runQuiz([
-      {q:'Шкипер: «Приготовиться к повороту оверштаг!» Что отвечает экипаж, когда стоит на шкотах?',o:['«Готов!»','«Поворот!»','«Есть отдать якорь!»'],a:0,e:'Экипаж отвечает «Готов!», только когда стоит у своих шкотов. Без ответа шкипер не поворачивает.'},
-      {q:'Шкипер: «Поворот!» Что делает матрос на стакселе?',o:['Выбирает гика-шкот до упора','Отдаёт рабочий стаксель-шкот и выбирает шкот на другом борту','Убирает стаксель'],a:1,e:'Когда нос проходит линию ветра, старый шкот отдают, а новый быстро выбирают на другой лебёдке.'}
+      {q:'Шкипер: «Приготовиться к повороту [[оверштаг]]!» <span class="en">(Ready about!)</span> Что отвечает экипаж, когда стоит на шкотах?',o:['«Готов!» (Ready!)','«Поворот!»','«Есть отдать якорь!»'],a:0,e:'Экипаж отвечает «Готов!», только когда стоит у своих шкотов. Без ответа шкипер не поворачивает.'},
+      {q:'Шкипер: «Поворот!» <span class="en">(Lee-ho!)</span> Что делает матрос на [[стаксель|стакселе]]?',o:['Выбирает гика-шкот до упора','Отдаёт рабочий стаксель-шкот и выбирает шкот на другом борту','Убирает стаксель'],a:1,e:'Когда нос проходит линию ветра, старый шкот отдают, а новый быстро выбирают на другой лебёдке.'}
     ],()=>{sim.running=true;say('Знак лежит прямо против ветра. Иди [[бейдевинд|бейдевиндом]] и меняй [[галс]] поворотом [[оверштаг]]. Перед поворотом набери ход!');$('#stage').focus()});
   }
   if(kind==='moor'){
     sim=Object.assign(base,{engine:true,wind:{from:90,kn:8},boat:newBoat(-170,-40,90,0),thrI:2,pier:-300,nb:[{x:-36,y:-300},{x:36,y:-300}]});sim.cam={x:-60,y:-160};
     runQuiz([
-      {q:'Заходим в марину кормой. Куда вешаем кранцы?',o:['Только на нос','На оба борта и на корму','В марине кранцы не нужны'],a:1,e:'Соседи стоят вплотную, поэтому кранцы на оба борта и на корму.'},
-      {q:'Корма у причала. Что подают на берег первым?',o:['Носовой муринг','Кормовые швартовы','Якорь'],a:1,e:'Сначала кормовые швартовы, чтобы яхту не сдуло. Потом матрос берёт муринг и ведёт его на нос.'},
-      {q:'На заднем ходу корму уводит в сторону. Как это называется?',o:['Дрейф','Заброс винта','Левентик'],a:1,e:'Это заброс винта. В тренажёре, как у большинства яхт с правым винтом, корму тянет влево.'}
+      {q:'Заходим в марину кормой. Куда вешаем [[кранец|кранцы]]?',o:['Только на нос','На оба борта и на корму','В марине кранцы не нужны'],a:1,e:'Соседи стоят вплотную, поэтому кранцы на оба борта и на корму.'},
+      {q:'[[корма|Корма]] у причала. Что подают на берег первым?',o:['Носовой муринг','Кормовые швартовы','Якорь'],a:1,e:'Сначала кормовые швартовы, чтобы яхту не сдуло. Потом матрос берёт [[муринг]] и ведёт его на нос.'},
+      {q:'На заднем ходу корму уводит в сторону. Как это называется?',o:['Дрейф','Заброс винта','Левентик'],a:1,e:'Это [[заброс винта]]. В тренажёре, как у большинства яхт с правым винтом, корму тянет влево.'}
     ],()=>{sim.running=true;say('Развернись, дай задний ход и встань кормой в своё место медленнее 0,6 узла. Ветер 8 узлов с востока сносит яхту влево — бери поправку.');$('#stage').focus()});
   }
   resize();lastT=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
@@ -64,10 +64,10 @@ function update(dt){
     const target=polar(s.awa)*s.eff*(w.kn/12);b.v+=(target-b.v)*dt*(target<b.v?.5:.32);
     b.h=(b.h+b.rud*Math.min(38,7+b.v*5)*dt+360)%360;
     if(sim.lastSide&&s.side!==sim.lastSide){
-      if(s.awa<90){sim.tacks++;flash(`Поворот оверштаг! Теперь ${s.side>0?'правый':'левый'} галс: ветер дует в ${s.side>0?'правый':'левый'} борт.`,'good')}
-      else{sim.gybes++;flash('Поворот фордевинд — гик перелетел через кокпит! На настоящей яхте перед этим выбирают гика-шкот.','warn')}}
+      if(s.awa<90){sim.tacks++;flash(`Поворот оверштаг (tack)! Теперь ${s.side>0?'правый галс (starboard tack)':'левый галс (port tack)'}: ветер дует в ${s.side>0?'правый':'левый'} борт.`,'good')}
+      else{sim.gybes++;flash('Поворот фордевинд (gybe) — гик (boom) перелетел через кокпит! На настоящей яхте перед этим выбирают гика-шкот.','warn')}}
     sim.lastSide=s.side;
-    if(s.awa<38){sim.nogoT+=dt;if(sim.nogoT>4&&!sim.nogoWarned){sim.nogoWarned=true;flash('Застряли в левентике, носом к ветру. Отверни, набери ход и только потом поворачивай.','bad')}}else{sim.nogoT=0;sim.nogoWarned=false}
+    if(s.awa<38){sim.nogoT+=dt;if(sim.nogoT>4&&!sim.nogoWarned){sim.nogoWarned=true;flash('Застряли в левентике (in irons), носом к ветру. Отверни, набери ход и только потом поворачивай.','bad')}}else{sim.nogoT=0;sim.nogoWarned=false}
   } else {
     const t=b.thr>=0?b.thr*4:b.thr*2.6;b.v+=(t-b.v)*dt*.45;
     let dh=b.rud*(Math.abs(b.v)*9)*Math.sign(b.v||1)*dt;if(b.thr>0)dh+=b.rud*3*dt;if(b.thr<0&&Math.abs(b.v)<2.2)dh+=4*dt;
@@ -130,12 +130,12 @@ function draw(){
 }
 function drawNoGo(){const b=sim.boat,[X,Y]=W2S(b.x,b.y);const a=(sim.wind.from-90)*D;
   ctx.fillStyle='rgba(226,86,77,.13)';ctx.beginPath();ctx.moveTo(X,Y);ctx.arc(X,Y,110,a-38*D,a+38*D);ctx.closePath();ctx.fill();
-  ctx.fillStyle='rgba(226,86,77,.75)';ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='center';ctx.fillText('мёртвая зона',X+Math.cos(a)*124,Y+Math.sin(a)*124)}
+  ctx.fillStyle='rgba(226,86,77,.75)';ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='center';ctx.fillText('мёртвая зона · no-go zone',X+Math.cos(a)*124,Y+Math.sin(a)*124)}
 function drawBuoy(){
   const bu=sim.buoy,[X,Y]=W2S(bu.x,bu.y),b=sim.boat,[BX,BY]=W2S(b.x,b.y);
   ctx.setLineDash([4,6]);ctx.strokeStyle='rgba(242,163,58,.35)';ctx.beginPath();ctx.moveTo(BX,BY);ctx.lineTo(X,Y);ctx.stroke();ctx.setLineDash([]);
   ctx.fillStyle=C.buoy;ctx.beginPath();ctx.arc(X,Y,9,0,7);ctx.fill();ctx.strokeStyle=C.deep;ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle=C.ink;ctx.font='12px IBM Plex Sans,sans-serif';ctx.textAlign='left';ctx.fillText('Знак',X+14,Y+4);
+  ctx.fillStyle=C.ink;ctx.font='12px IBM Plex Sans,sans-serif';ctx.textAlign='left';ctx.fillText('Знак · mark',X+14,Y+4);
   if(X<0||X>W||Y<0||Y>H){const ang=Math.atan2(Y-BY,X-BX);const ax=clamp(BX+Math.cos(ang)*1e3,24,W-24),ay=clamp(BY+Math.sin(ang)*1e3,24,H-70);
     ctx.save();ctx.translate(ax,ay);ctx.rotate(ang);ctx.fillStyle=C.buoy;ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-6,-7);ctx.lineTo(-6,7);ctx.fill();ctx.restore()}}
 function drawMarina(){
@@ -143,9 +143,9 @@ function drawMarina(){
   for(let x=-400;x<=400;x+=36){const[X,Y]=W2S(x,sim.pier);ctx.fillStyle='#2f3536';ctx.beginPath();ctx.arc(X,Y-5,3,0,7);ctx.fill()}
   for(const n of sim.nb)drawHull(n.x,n.y+34,180,'#cfd6d8');for(const x of[-108,-72,72,108])drawHull(x,sim.pier+34,180,'#b9c3c6');
   const[BX,BY]=W2S(0,sim.pier);ctx.strokeStyle='rgba(242,163,58,.6)';ctx.setLineDash([4,4]);ctx.strokeRect(BX-14,BY,28,62);ctx.setLineDash([]);
-  ctx.fillStyle=C.buoy;ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='center';ctx.fillText('ВАШЕ МЕСТО',BX,BY-14);
+  ctx.fillStyle=C.buoy;ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='center';ctx.fillText('ВАШЕ МЕСТО · YOUR BERTH',BX,BY-14);
   ctx.strokeStyle='rgba(60,191,126,.35)';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(BX,BY+8);ctx.lineTo(BX,BY+140);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='rgba(60,191,126,.7)';ctx.fillText('муринг',BX+30,BY+120)}
+  ctx.fillStyle='rgba(60,191,126,.7)';ctx.fillText('муринг · lazy line',BX+44,BY+120)}
 function drawHull(x,y,h,col){const[X,Y]=W2S(x,y);ctx.save();ctx.translate(X,Y);ctx.rotate(h*D);ctx.fillStyle=col;ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(0,-23);ctx.bezierCurveTo(10,-14,11,6,9,20);ctx.lineTo(-9,20);ctx.bezierCurveTo(-11,6,-10,-14,0,-23);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(-5,-9,10,16);ctx.restore()}
 function drawBoat(b){
@@ -172,9 +172,9 @@ function drawBoat(b){
   ctx.restore();
 }
 function drawHUD(){
-  const to=(sim.wind.from+180)*D;ctx.fillStyle='rgba(10,29,42,.78)';roundRect(12,12,150,52,10);ctx.fill();
+  const to=(sim.wind.from+180)*D;ctx.fillStyle='rgba(10,29,42,.78)';roundRect(12,12,214,52,10);ctx.fill();
   ctx.save();ctx.translate(38,38);ctx.rotate(to);ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,13);ctx.moveTo(-5,7);ctx.lineTo(0,13);ctx.lineTo(5,7);ctx.stroke();ctx.restore();
-  ctx.fillStyle=C.muted;ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';ctx.fillText('ИСТИННЫЙ ВЕТЕР',60,30);
+  ctx.fillStyle=C.muted;ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';ctx.fillText('ИСТИННЫЙ ВЕТЕР · TRUE WIND',60,30);
   ctx.fillStyle=C.ink;ctx.font='500 14px IBM Plex Mono,monospace';ctx.fillText(`${sim.wind.kn} уз · ${compassName(sim.wind.from)}`,60,50);
   if(sim.msgT>0&&sim.msg){const col=sim.msgC==='bad'?C.port:sim.msgC==='warn'?C.buoy:C.stbd;ctx.font='13px IBM Plex Sans,sans-serif';
     const lines=wrap(sim.msg,Math.min(W-40,440));const h=lines.length*18+16,y=74;ctx.globalAlpha=Math.min(1,sim.msgT);ctx.fillStyle='rgba(10,29,42,.85)';roundRect(12,y,Math.min(W-24,460),h,10);ctx.fill();
@@ -191,22 +191,22 @@ function updatePanel(){
   const now=performance.now();if(now-lastPanel<100)return;lastPanel=now;const b=sim.boat;
   if(!sim.engine){
     const s=sim.ss||sailState(b,sim.wind),[pn,pe]=pointName(s.awa);
-    $('#inst').innerHTML=`<div><span>Курс</span><b>${String(Math.round(b.h)).padStart(3,'0')}°</b></div><div><span>Скорость</span><b>${b.v.toFixed(1)} уз</b></div>
-      <div><span>Ветер к курсу</span><b>${Math.round(s.awa)}°</b></div><div><span>Галс</span><b>${s.side>0?'правый':'левый'}</b></div>
-      <div style="grid-column:1/-1"><span>Курс к ветру</span><b>${pn} <small style="font-size:12px;color:var(--muted)">${pe}</small></b></div>`;
+    $('#inst').innerHTML=`<div><span>Курс · heading</span><b>${String(Math.round(b.h)).padStart(3,'0')}°</b></div><div><span>Скорость · speed</span><b>${b.v.toFixed(1)} уз</b></div>
+      <div><span>Ветер к курсу · wind angle</span><b>${Math.round(s.awa)}°</b></div><div><span>Галс · tack</span><b>${s.side>0?'правый':'левый'} <small style="font-size:12px;color:var(--muted)">${s.side>0?'starboard':'port'}</small></b></div>
+      <div style="grid-column:1/-1"><span>Курс к ветру · point of sail</span><b>${pn} <small style="font-size:12px;color:var(--muted)">${pe}</small></b></div>`;
     $('#zone').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#zone').style.width=(16/85*100)+'%';$('#mk').style.left=(s.boom/85*100)+'%';
     if(document.activeElement!==$('#sheetR'))$('#sheetR').value=Math.round(b.sheet);
-    if(sim.running){const m={nogo:['[[левентик|Левентик]]: нос в мёртвой зоне, паруса не тянут. Отверни от ветра.','bad'],luff:['Парус полощет — выбери шкот (↑).','warn'],over:['Парус перетянут, яхта тормозит — потрави шкот (↓).','warn'],good:['Парус стоит ровно, [[колдунчики]] летят.','good']}[s.st];hint(m[0],m[1])}
-    if(sim.kind==='points'){$('#taskLbl').textContent='Практика · курсы к ветру';$('#steps').innerHTML=sim.steps.map((st,i)=>`<li class="${i<sim.step?'done':i===sim.step?'now':''}"><i>${i<sim.step?'✓':i+1}</i>${st.n} · ${st.lo}–${st.hi}°</li>`).join('')}
-    if(sim.kind==='tack'){const d=Math.hypot(b.x-sim.buoy.x,b.y-sim.buoy.y)*2/185;$('#taskLbl').textContent='Практика · лавировка к знаку';
-      $('#steps').innerHTML=`<li class="now"><i>→</i>До знака ${d.toFixed(1)} кбт</li><li><i>${sim.tacks}</i>Поворотов оверштаг</li><li><i>${Math.round(sim.t)}</i>Секунд в пути</li>`}
+    if(sim.running){const m={nogo:['[[левентик|Левентик]]: нос в мёртвой зоне, паруса не тянут. Отверни от ветра.','bad'],luff:['Парус [[полощет]] — выбери [[шкот]] (↑).','warn'],over:['Парус перетянут, яхта тормозит — потрави [[шкот]] (↓).','warn'],good:['Парус стоит ровно, [[колдунчики]] летят.','good']}[s.st];hint(m[0],m[1])}
+    if(sim.kind==='points'){$('#taskLbl').textContent='Практика · курсы к ветру · points of sail';$('#steps').innerHTML=sim.steps.map((st,i)=>`<li class="${i<sim.step?'done':i===sim.step?'now':''}"><i>${i<sim.step?'✓':i+1}</i><span>${st.n} · ${st.lo}–${st.hi}°${en(st.en)}</span></li>`).join('')}
+    if(sim.kind==='tack'){const d=Math.hypot(b.x-sim.buoy.x,b.y-sim.buoy.y)*2/185;$('#taskLbl').textContent='Практика · лавировка · beating';
+      $('#steps').innerHTML=`<li class="now"><i>→</i>До знака ${d.toFixed(1)} кбт</li><li><i>${sim.tacks}</i><span>Поворотов оверштаг${en('tacks')}</span></li><li><i>${Math.round(sim.t)}</i>Секунд в пути</li>`}
   } else {
     const fy=-Math.cos(b.h*D);const dist=Math.max(0,((b.y-fy*22)-sim.pier)*2);
-    $('#inst').innerHTML=`<div><span>Курс</span><b>${String(Math.round(b.h)).padStart(3,'0')}°</b></div><div><span>Скорость</span><b>${b.v<0?'−':''}${Math.abs(b.v).toFixed(1)} уз</b></div>
-      <div style="grid-column:1/-1"><span>Рычаг газа</span><b>${THRN[sim.thrI]}</b></div><div><span>Корма до причала</span><b>${dist.toFixed(0)} м</b></div><div><span>Ветер</span><b>${sim.wind.kn} уз ${compassName(sim.wind.from)}</b></div>`;
+    $('#inst').innerHTML=`<div><span>Курс · heading</span><b>${String(Math.round(b.h)).padStart(3,'0')}°</b></div><div><span>Скорость · speed</span><b>${b.v<0?'−':''}${Math.abs(b.v).toFixed(1)} уз</b></div>
+      <div style="grid-column:1/-1"><span>Рычаг газа · throttle</span><b>${THRN[sim.thrI][0]} <small style="font-size:12px;color:var(--muted)">${THRN[sim.thrI][1]}</small></b></div><div><span>Корма до причала</span><b>${dist.toFixed(0)} м</b></div><div><span>Ветер · wind</span><b>${sim.wind.kn} уз ${compassName(sim.wind.from)}</b></div>`;
     if(sim.running){const v=Math.abs(b.v);hint(b.thr<0&&v<2.2?'На заднем ходу корму тянет влево — [[заброс винта]]. Поправляй рулём.':v>1.2?'Слишком быстро для марины. Сбавь ход.':'Ход безопасный.',v>1.2?'warn':b.thr<0?'':'good')}
-    $('#taskLbl').textContent='Практика · швартовка кормой';
-    $('#steps').innerHTML=`<li class="${b.h>150&&b.h<210?'done':'now'}"><i>1</i>Развернуться кормой к причалу</li><li class="${b.thr<0?'now':''}"><i>2</i>Задний ход, держать по центру места</li><li><i>3</i>Корма у причала, ход меньше 0,6 уз</li>`;
+    $('#taskLbl').textContent='Практика · швартовка кормой · med mooring';
+    $('#steps').innerHTML=`<li class="${b.h>150&&b.h<210?'done':'now'}"><i>1</i>Развернуться кормой к причалу</li><li class="${b.thr<0?'now':''}"><i>2</i><span>Задний ход, держать по центру места${en('go astern')}</span></li><li><i>3</i>Корма у причала, ход меньше 0,6 уз</li>`;
   }
 }
 

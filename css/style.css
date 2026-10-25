@@ -141,3 +141,9 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .hud3.msg{top:108px;left:12px;max-width:min(440px,calc(100% - 24px));padding:9px 12px 9px 14px;font-size:13.5px;line-height:1.4;border-left:3px solid var(--stbd)}
 .hud3.msg.warn{border-left-color:var(--buoy)}.hud3.msg.bad{border-left-color:var(--port)}
 .tlabel.nogo{color:#ffb3ad;transform:translate(-50%,-50%)}.tlabel.aim{color:#a8f0c8;transform:translate(-50%,-50%)}
+/* английские подписи рядом с русскими морскими терминами */
+.en{font-family:var(--f-mono);font-size:.82em;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none;font-style:normal}
+.tlabel .en,.prompt .en{color:#a9c4cf}
+.tlabel .en{display:block;font-size:10px;text-align:center;line-height:1.2}
+.steps li .en{display:block;font-size:11px}
+.say .en.line{display:block;margin-top:4px;font-size:13px;font-style:italic}

@@ -9,10 +9,10 @@ function startSail3D(){
   const R=host.getBoundingClientRect();
   const ui=document.createElement('div');
   ui.innerHTML=`<div class="tools"><button id="sc">Камера за кормой</button></div>
-    <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР</span><b id="swt"></b></div></div>
+    <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР · TRUE WIND</span><b id="swt"></b></div></div>
     <div class="hud3 hold"><span>УДЕРЖАНИЕ КУРСА</span><i><b id="shb"></b></i></div>
     <div class="hud3 msg" id="smg" hidden></div>
-    <div class="tlabel nogo" id="slN">мёртвая зона</div><div class="tlabel aim" id="slA"></div>`;
+    <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>`;
   host.appendChild(ui);
 
   const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,120,320);
@@ -97,7 +97,7 @@ function startSail3D(){
     // роза курсов
     rose.position.set(bx,.36,bz);rose.rotation.y=-w.from*D;needle.rotation.y=-norm(b.h-w.from)*D;
     const step=sim.steps&&sim.steps[sim.step];
-    if(step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').textContent=step.n}
+    if(step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').innerHTML=`${step.n}${en(step.en)}`}
     aim.forEach(m=>m.visible=!!step&&sim.running);
     // камера: изометрия над яхтой, по умолчанию ветер сверху вниз
     const wantYaw=(st.mode==='stern'?-b.h*D:0)+st.yaw;
