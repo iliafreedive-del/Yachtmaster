@@ -419,3 +419,7 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media (max-width:700px){.slide.haslab{grid-template-columns:1fr}.course{padding:16px}.snd button{grid-template-columns:90px 1fr}}
 @media (prefers-reduced-motion:reduce){.flap,.flow{animation:none}}
 .fcard .fcert{margin:-2px 0 0;font-size:12px;color:var(--stbd)}
+/* Галс · урок «Рулёжка» (js/helm3d.js): та же панель кокпита, у команд одна кнопка «Двигатель» */
+#h5thrN{min-height:26px}
+.acts.one{grid-template-columns:1fr}
+@container (max-width:460px){#h5btG .hrow{flex-direction:column}}

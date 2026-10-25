@@ -7,8 +7,10 @@ const findLesson=id=>allLessons().find(l=>l.id===id);
 function stopLabs(){labStops.forEach(f=>{try{f()}catch(e){}});labStops=[]}
 
 function startCourse(){crs.view='home';renderCourseHome()}
+/* после практики: убрать приборы, выбор лодки и подсказки клавиш */
+function courseBoard(){stopLabs();show('board');padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML=''}
 function renderCourseHome(){
-  stopLabs();show('board');
+  courseBoard();
   const total=allLessons().length,nd=allLessons().filter(l=>done['c:'+l.id]).length;
   $('#board').innerHTML=`<div class="course"><div class="chead"><p class="eyebrow">Курс · ${nd} из ${total} уроков</p><h2>Теория и практика шкипера</h2>
     <p>Уроки идут в том же порядке, что и учебный курс Bareboat Skipper Theory. В каждом — схемы, интерактивные тренажёры и контрольные вопросы. Урок засчитан, когда ответил верно на 70% вопросов.</p></div>
@@ -25,7 +27,7 @@ function openLesson(id,i){
   crs.lesson=findLesson(id);crs.i=i||0;crs.view='lesson';renderLessonSlide();
 }
 function renderLessonSlide(){
-  stopLabs();show('board');
+  courseBoard();
   const L=crs.lesson,s=L.slides[crs.i],last=crs.i===L.slides.length-1,n=L.mod.lessons.length;
   const right=s.lab?`<div class="lab" id="lab"></div>`:(s.f||'');
   const srcs=last&&L.src?`<details class="srcs"><summary>Источники урока</summary><ul>${L.src.map(x=>`<li>${x.replace(/(https?:\/\/\S+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>')}</li>`).join('')}</ul></details>`:'';
@@ -531,4 +533,93 @@ LABS.knots=el=>{
     $('#knS').innerHTML=`<p class="eyebrow">${K.n} · ${K.en} · шаг ${i+1} из ${K.s.length}</p><ol>${K.s.map((t,j)=>`<li class="${j<i?'done':j===i?'now':''}">${t}</li>`).join('')}</ol>`;
     $('#knP').disabled=i===0;$('#knN').textContent=i<K.s.length-1?'Дальше':'Следующий узел'};
   $('#knP').onclick=()=>{if(i){i--;draw()}};$('#knN').onclick=()=>{if(i<KNOTS[k].s.length-1)i++;else{k=(k+1)%KNOTS.length;i=0}draw()};draw();
+};
+
+/* ---------- колдунчики на стакселе: угол атаки паруса ---------- */
+LABS.trim=el=>{
+  el.innerHTML=`<svg viewBox="-150 -150 300 300" id="trS"></svg>${rng('trA','Вымпельный ветер к носу',20,150,1,45,'°')}${rng('trB','Угол стакселя к ДП',5,85,1,28,'°')}<p class="lo" id="trO"></p>`;
+  const tt=(x,y,a,mode,t,c)=>{ // ленточка: летит ровно, полощет или висит/крутится
+    const w=mode==='ok'?0:mode==='flap'?Math.sin(t*14+x)*9:Math.sin(t*3+y)*14+8;
+    return`<path d="M${x} ${y} q ${(Math.sin(a)*14+Math.cos(a)*w*.5).toFixed(1)} ${(Math.cos(a)*14-Math.sin(a)*w*.5).toFixed(1)} ${(Math.sin(a)*30+Math.cos(a)*w).toFixed(1)} ${(Math.cos(a)*30-Math.sin(a)*w).toFixed(1)}" stroke="${c}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`};
+  let A=45,S=28;
+  const read=()=>{A=+$('#trA').value;S=+$('#trB').value;$('#trAV').textContent=A+'°';$('#trBV').textContent=S+'°'};
+  const stop=anim(t=>{
+    const att=A-S; // угол атаки: между ветром и парусом
+    let win,lee,cls,txt;
+    if(att<4){win='flap';lee='flap';cls='bad';txt='Угол атаки меньше нуля: парус полощет целиком. Выбери шкот или уваливайся.'}
+    else if(att<10){win='flap';lee='ok';cls='warn';txt='Наветренная ленточка поднимается и крутится: парус недобран. Выбери шкот — или, в бейдевинд, чуть уваливайся.'}
+    else if(att>24){win='ok';lee='stall';cls='warn';txt='Подветренная ленточка повисла и закручивается: поток сорвался (stall). Потрави шкот — или, в бейдевинд, чуть приводись.'}
+    else{win='ok';lee='ok';cls='good';txt='Обе ленточки летят ровно назад: поток обтекает парус с обеих сторон. Так и держи.'}
+    const a=S*D,dx=Math.sin(a),dy=Math.cos(a),nx=-dy,ny=dx,lx=dx*90,ly=dy*90,px=lx*.3,py=-72+ly*.3; // стаксель от штага назад к подветренному борту; n — к ветру
+    $('#trS').innerHTML=`<g transform="rotate(${-A})">${[-60,0,60].map(x=>arw(x,-150,x,-112,'#9fd3e6',2)).join('')}</g>
+      <g transform="translate(0,20)"><g transform="scale(1.1,1.6)">${hullTop(1)}</g>
+      <path d="M0 -72 Q ${(lx*.5-nx*14).toFixed(1)} ${(-72+ly*.5-ny*14).toFixed(1)} ${lx.toFixed(1)} ${(-72+ly).toFixed(1)}" stroke="#f4f1e6" stroke-width="4" fill="none"${att<4?' class="flap"':''}/>
+      ${tt(px+nx*2,py+ny*2,a,win,t,'#e2564d')}${tt(px-nx*9,py-ny*9,a,lee,t+1,'#3cbf7e')}</g>
+      <text x="-145" y="138" class="f-s" style="fill:#e2564d">— НАВЕТРЕННАЯ · WINDWARD</text><text x="10" y="138" class="f-s" style="fill:#3cbf7e">— ПОДВЕТРЕННАЯ · LEEWARD</text>`;
+    $('#trO').innerHTML=`Угол атаки ≈ <b>${att}°</b>. <span class="${cls}">${txt}</span>`});
+  el.querySelectorAll('input').forEach(i=>i.oninput=read);read();
+  return stop;
+};
+
+/* ---------- точка вращения, циркуляция и заброс винта (вид сверху) ---------- */
+LABS.pivot=el=>{
+  el.innerHTML=`${tog('pvM',[['fwd','Вперёд, руль право'],['back','Назад, руль право'],['walk','Назад, руль прямо']],'fwd')}<svg viewBox="-150 -150 300 300" id="pvS"></svg><p class="lo" id="pvO"></p>`;
+  let mode='fwd';segOn(el,'pvM',v=>{mode=v});
+  const TX={fwd:'Ход вперёд, руль право на борт: нос идёт вправо, а <b>корма выносится влево</b>, наружу поворота. Яхта вращается вокруг [[точка вращения|точки вращения]] примерно в трети длины от носа. У причала поэтому нельзя отваливать «носом», когда корма прижата.',
+    back:'Задний ход, руль право: корма идёт вправо, туда, куда повёрнуто перо, но точка вращения уехала к корме, и широко ходит уже нос. Руль на заднем ходу работает только на скорости — струя винта на перо не попадает.',
+    walk:'Задний ход, руль прямо: корму всё равно тянет влево — [[заброс винта]] у правого винта (с кормы на ходу вперёд он крутится по часовой). Направление у своей яхты проверяют на первой же стоянке.'};
+  const stop=anim(t=>{
+    const ph=Math.max(0,t%6)/6,turn=ph*(mode==='walk'?35:70),sg=mode==='back'?-1:1,trace=[];
+    const piv=mode==='fwd'?-25:28; // точка вращения на оси корпуса, y: нос −60, корма +55
+    const P=(k,yy)=>{const a=k*D*sg,dy=yy-piv;return[-Math.sin(a)*dy,piv+Math.cos(a)*dy+(mode==='fwd'?-k*.6:k*.5)]};
+    for(let k=0;k<=turn;k+=5)trace.push(P(k,-60),P(k,55));
+    const bow=trace.filter((_,i)=>i%2===0),st=trace.filter((_,i)=>i%2===1),g=(p)=>p.map(q=>q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' L');
+    const a=turn*sg,[cx,cy]=P(turn,piv);
+    $('#pvS').innerHTML=`<path d="M${g(bow)}" stroke="#9fd3e6" stroke-width="2" fill="none" stroke-dasharray="4 4"/><path d="M${g(st)}" stroke="#f2a33a" stroke-width="2" fill="none" stroke-dasharray="4 4"/>
+      <g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) rotate(${a.toFixed(1)}) translate(0,${-piv})"><g transform="scale(1.2)">${hullTop(1)}</g>
+      <line x1="0" y1="48" x2="${mode==='walk'?0:12}" y2="62" stroke="#c9ced0" stroke-width="4"/>${arw(0,mode==='fwd'?-30:30,0,mode==='fwd'?-50:50,'#3cbf7e',2.5)}
+      <circle cx="0" cy="${piv}" r="6" fill="#e2564d"/></g>
+      <text x="-145" y="-132" class="f-s" style="fill:#9fd3e6">— СЛЕД НОСА · BOW</text><text x="-145" y="-118" class="f-s" style="fill:#f2a33a">— СЛЕД КОРМЫ · STERN</text><text x="40" y="-132" class="f-s" style="fill:#e2564d">● ТОЧКА ВРАЩЕНИЯ</text>`;
+    $('#pvO').innerHTML=rich(TX[mode])});
+  return stop;
+};
+
+/* ---------- поворот оверштаг и фордевинд по командам ---------- */
+const TACKSEQ={
+  tack:{n:'Оверштаг',en:'tack',from:45,to:-45,steps:[
+    [0,'«Приготовиться к повороту оверштаг!»','Ready about!','Шкипер смотрит вокруг и под ветер. Матрос готовит рабочий стаксель-шкот и берёт в руки ходовой (новый).'],
+    [.15,'«Готов!»','Ready!','Экипаж ответил: стаксель-шкот на лебёдке готов к отдаче.'],
+    [.25,'«Поворот!» — руль под ветер','Helm\'s a-lee! / Lee-ho!','Шкипер плавно ведёт нос к ветру. Стаксель начинает полоскать — его отдают.'],
+    [.5,'Нос проходит линию ветра','through the wind','Паруса полощут, яхта идёт по инерции. Не останавливай руль, иначе застрянешь в [[левентик|левентике]].'],
+    [.7,'Выбрать новый стаксель-шкот','sheet in the new jib sheet','Стаксель перекинулся. Пока он не набрал ветер, шкот выбирают быстро, потом дожимают лебёдкой.'],
+    [.9,'Лечь на новый галс','settle on the new tack','Руль прямо, курс бейдевинд на другом галсе, паруса подобраны.']]},
+  gybe:{n:'Фордевинд',en:'gybe',from:150,to:-150,steps:[
+    [0,'«Приготовиться к повороту фордевинд!»','Stand by to gybe!','Шкипер проверяет, что под гиком никого нет. Экипаж готовит стаксель-шкоты.'],
+    [.15,'«Готов!»','Ready!','Экипаж ответил. Головы ниже гика.'],
+    [.25,'Выбрать гика-шкот к диаметральной плоскости','centre the mainsheet','Гик подтягивают к середине, чтобы при переходе ветра он не пролетел через кокпит с размаху.'],
+    [.45,'«Поворот!» — корма проходит линию ветра','Gybe-ho!','Ветер переходит на другой борт, грот перекидывается — гик выбран, поэтому он переходит коротко.'],
+    [.65,'Потравить гика-шкот, перекинуть стаксель','ease the main, switch the jib','Грот травят на новый галс, стаксель-шкот перекладывают на другой борт.'],
+    [.9,'Лечь на новый курс','settle on the new course','Бакштаг на другом галсе, паруса стоят.']]}};
+LABS.tackseq=el=>{
+  el.innerHTML=`${tog('tsK',[['tack','Оверштаг · tack'],['gybe','Фордевинд · gybe']],'tack')}<svg viewBox="-150 -150 300 300" id="tsS"></svg>${rng('tsP','Ход манёвра',0,100,1,0,'%')}<div class="row"><button class="btn ghost" id="tsPlay">▶ Показать</button></div><ol class="lo" id="tsO"></ol>`;
+  let kind='tack',play=false;
+  segOn(el,'tsK',v=>{kind=v;$('#tsP').value=0;draw()});
+  $('#tsPlay').onclick=()=>{play=!play;if(play&&+$('#tsP').value>=100)$('#tsP').value=0;$('#tsPlay').textContent=play?'❚❚ Пауза':'▶ Показать'};
+  const draw=()=>{
+    const K=TACKSEQ[kind],p=+$('#tsP').value/100;$('#tsPV').textContent=Math.round(p*100)+'%';
+    const e=clamp((p-.25)/.6,0,1),s=e*e*(3-2*e);
+    const a=kind==='tack'?K.from+(K.to-K.from)*s:(K.from+(360+K.to-K.from)*s)%360,twa=norm(a),side=twa>=0?1:-1,abs=Math.abs(twa);
+    const sheet=kind==='gybe'&&p>=.25&&p<.65?5:clamp((abs-35)*.55+8,5,85),flap=abs<35;
+    const lee=-side,bA=lee*sheet*D,jA=lee*Math.min(sheet*.8,70)*D;
+    $('#tsS').innerHTML=`${[-90,-45,0,45,90].map(x=>arw(x,-150,x,-118,'#9fd3e6',2)).join('')}<text x="0" y="-126" text-anchor="middle" class="f-s" style="fill:#9fd3e6">ВЕТЕР · WIND</text>
+      <g transform="translate(0,15) rotate(${-twa})"><g transform="scale(1.05,1.45)">${hullTop(1)}</g>
+      <line x1="0" y1="-14" x2="${(Math.sin(bA)*58).toFixed(1)}" y2="${(-14+Math.cos(bA)*58).toFixed(1)}" stroke="#8b8574" stroke-width="5" stroke-linecap="round"/>
+      <path${flap?' class="flap"':''} d="M0 -14 Q ${(Math.sin(bA)*29-lee*6).toFixed(1)} ${(-14+Math.cos(bA)*29).toFixed(1)} ${(Math.sin(bA)*58).toFixed(1)} ${(-14+Math.cos(bA)*58).toFixed(1)}" stroke="#f4f1e6" stroke-width="3" fill="none"/>
+      <path${flap?' class="flap"':''} d="M0 -62 Q ${(Math.sin(jA)*20).toFixed(1)} ${(-62+Math.cos(jA)*24).toFixed(1)} ${(Math.sin(jA)*42).toFixed(1)} ${(-62+Math.cos(jA)*44).toFixed(1)}" stroke="#f4f1e6" stroke-width="2.5" fill="none"/></g>
+      <text x="0" y="146" text-anchor="middle" class="f-t">${side>0?'правый галс · starboard tack':'левый галс · port tack'} · ${Math.round(abs)}° к ветру</text>`;
+    const cur2=K.steps.reduce((c,x,i)=>p>=x[0]?i:c,0);
+    $('#tsO').innerHTML=K.steps.map((x,i)=>`<li class="${i===cur2?'good':i<cur2?'keys':''}"><b>${x[1]}</b> ${en(x[2])}${i===cur2?`<br>${rich(x[3])}`:''}</li>`).join('')};
+  $('#tsP').oninput=()=>{play=false;$('#tsPlay').textContent='▶ Показать';draw()};draw();
+  let last=0;const stop=anim(t=>{if(!play){last=t;return}const v=Math.min(100,+$('#tsP').value+(t-last)*9);last=t;$('#tsP').value=v;draw();if(v>=100){play=false;$('#tsPlay').textContent='▶ Показать'}});
+  return stop;
 };
