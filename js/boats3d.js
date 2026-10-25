@@ -17,8 +17,25 @@ function boatFor(kind){const t=boatType();return !/moor/.test(kind)&&!BOATS[t].s
 
 /* ---------- набор деталей: всё одного цвета сливается в один меш, такелаж — в один LineSegments ---------- */
 const MAT3={};let RIG3=null;
-function mat3(c){return MAT3[c]||(MAT3[c]=c==='glass'?M3(0x1b3140,{roughness:.2,metalness:.5,side:THREE.DoubleSide})
-  :c==='steel'?M3(0xdfe4e6,{roughness:.3,metalness:.55,side:THREE.DoubleSide}):M3(+c,{side:THREE.DoubleSide}))}
+/* тик: доски вдоль лодки с тёмными швами, текстура рисуется на canvas */
+function teakTex(){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  for(let i=0;i<8;i++){const l=40+((i*37)%8);x.fillStyle=`hsl(30,${26+(i%3)*4}%,${l}%)`;x.fillRect(i*32,0,32,256);
+    x.fillStyle='rgba(90,60,30,.18)';for(let j=0;j<6;j++)x.fillRect(i*32+4+j*4,0,1,256);
+    x.fillStyle='#2c241c';x.fillRect(i*32,0,3,256);x.fillRect(i*32,((i*97)%256),32,3)}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
+/* солнечная панель: тёмно-синие ячейки в серебристой сетке */
+function solarTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle='#c9d0d4';x.fillRect(0,0,128,128);
+  for(let i=0;i<4;i++)for(let j=0;j<6;j++){x.fillStyle=(i+j)%2?'#1c2f63':'#203670';x.fillRect(4+i*31,3+j*20.8,28,18.5)}
+  return new THREE.CanvasTexture(c)}
+/* материалы по ключу: число — цвет; teak, solar — с текстурой (UV по плану сверху), glass, steel, screen, deck */
+function mat3(c){if(MAT3[c])return MAT3[c];const ds={side:THREE.DoubleSide};
+  return MAT3[c]=c==='glass'?M3(0x1b3140,{roughness:.12,metalness:.6,envMapIntensity:1.3,side:THREE.DoubleSide})
+  :c==='steel'?M3(0xe8ecee,{roughness:.22,metalness:.85,envMapIntensity:1.2,side:THREE.DoubleSide})
+  :c==='teak'?M3(0xffffff,{map:teakTex(),roughness:.85,side:THREE.DoubleSide})
+  :c==='solar'?M3(0xffffff,{map:solarTex(),roughness:.25,metalness:.3,side:THREE.DoubleSide})
+  :c==='screen'?M3(0x0d2a2e,{emissive:0x1f8f8a,emissiveIntensity:.55,roughness:.3,side:THREE.DoubleSide})
+  :c==='deck'?M3(0xe9e7df,{roughness:.95,side:THREE.DoubleSide}):M3(+c,ds)}
+const TEXK={teak:1.05,solar:0};
 function kit3(){
   const P={},L=[],m4=new THREE.Matrix4(),e=new THREE.Euler(),q=new THREE.Quaternion(),up=new THREE.Vector3(0,1,0),v=new THREE.Vector3(),one=new THREE.Vector3(1,1,1);
   const put=(c,a)=>(P[c]=P[c]||[]).push(a);
@@ -33,6 +50,10 @@ function kit3(){
     build(parent){
       for(const c in P){let n=0;P[c].forEach(a=>n+=a.length);const arr=new Float32Array(n);n=0;P[c].forEach(a=>{arr.set(a,n);n+=a.length});
         const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(arr,3));g.computeVertexNormals();
+        if(c in TEXK){const uv=new Float32Array(arr.length/3*2),f=TEXK[c];
+          // тик — проекция сверху, метр на тайл; панель — каждая грань целиком (по рамке ±x,±z)
+          for(let i=0,j=0;i<arr.length;i+=3,j+=2){uv[j]=f?arr[i]*f:(arr[i]>0?1:0);uv[j+1]=f?arr[i+2]*f:(arr[i+2]>0?1:0)}
+          g.setAttribute('uv',new THREE.BufferAttribute(uv,2))}
         const m=new THREE.Mesh(g,mat3(c));m.castShadow=m.receiveShadow=true;parent.add(m)}
       if(L.length){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(L,3));parent.add(new THREE.LineSegments(g,RIG3||(RIG3=new THREE.LineBasicMaterial({color:0x7d878b}))))}
       return parent}};
@@ -97,9 +118,9 @@ function lifelines(k,pts,y0,y1){[1,-1].forEach(s=>{const P=pts.map(([x,z])=>[s*x
 /* штурвал: обод, спицы, ступица; группу вращает helm() */
 function wheelGroup(g,r,x,y,z,tilt){
   const w=new THREE.Group();w.position.set(x,y,z);if(tilt)w.rotation.x=tilt;g.add(w);
-  const wk=kit3();wk.add(new THREE.TorusGeometry(r,.04,6,22),0x2f3335,0,0,0);
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;wk.rod([0,0,0],[Math.cos(a)*r,Math.sin(a)*r,0],.022,'steel')}
-  wk.add(new THREE.CylinderGeometry(.07,.07,.12,8),'steel',0,0,0,Math.PI/2).build(w);
+  const wk=kit3();wk.add(new THREE.TorusGeometry(r,.035,8,28),0x1c1f21,0,0,0);
+  for(let i=0;i<5;i++){const a=i*Math.PI*2/5+Math.PI/2;wk.rod([Math.cos(a)*.08,Math.sin(a)*.08,.03],[Math.cos(a)*r,Math.sin(a)*r,0],.02,0x1c1f21)}
+  wk.add(new THREE.CylinderGeometry(.08,.09,.12,10),'steel',0,0,.02,Math.PI/2).build(w);
   g.userData.wheel=w;g.userData.helm=rud=>{w.rotation.z=-rud*1.6};return w}
 
 /* ---------- круизная яхта 40 футов (шлюп). Габариты и раскладка палубы — те же, что ждёт День 1 ---------- */
@@ -111,29 +132,39 @@ function makeCruiser(o){
       for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([.94*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}
       return p.map(([f,y])=>[f,Math.max(y,b)])},
     col:y=>y>.81?W:y>.69?band:y>.37?W:y>.27?band:bot});
-  const dg=deckFrom(hullHalfW,-6,6,.4);dg.scale(.97,1,.985);k.add(dg,teak,0,1.01,0);
+  const dg=deckFrom(hullHalfW,-6,6,.4);dg.scale(.97,1,.985);k.add(dg,o.teakDeck?'teak':'deck',0,1.01,0);
   // киль с бульбой и перо руля
   k.add(prismZY([[-1,.1],[.7,.1],[.35,-1.95],[-.45,-1.95]],.16),bot,0,0,0);
   const bulb=new THREE.SphereGeometry(1,10,6);bulb.scale(.24,.2,.95);k.add(bulb,bot,0,-2.02,-.1);
   k.add(prismZY([[5.05,.4],[5.55,.4],[5.45,-1.15],[5.15,-1.15]],.08),bot,0,0,0);
   // рубка с окнами, люками и поручнями
   k.add(prismZY([[-2.6,1],[1.55,1],[1.55,1.6],[-1.6,1.66],[-2.6,1.3]],2.3),0xfbfaf6,0,0,0);
-  [1,-1].forEach(s=>{k.box(.02,.16,1.5,'glass',s*1.155,1.42,-1.05).box(.02,.16,.7,'glass',s*1.155,1.42,.55);
-    k.rod([s*.8,1.68,-1.4],[s*.8,1.68,.7],.025,teak);
-    const hw=hullHalfW(-1.2)*.996+.012;k.box(.02,.12,1.7,'glass',s*hw,.9,-1.2).box(.02,.1,.45,'glass',s*(hullHalfW(-3.1)*.996+.012),.9,-3.1)});
+  [1,-1].forEach(s=>{k.box(.02,.13,2.6,'glass',s*1.155,1.4,-.6).box(.02,.09,.5,'glass',s*1.155,1.4,1.05);
+    k.rod([s*.85,1.71,-1.5],[s*.85,1.71,-.2],.022,'steel');
+    // длинное окно и иллюминаторы в корпусе, привальный брус
+    k.box(.02,.1,2.6,'glass',s*(hullHalfW(-1.1)*.997+.012),.9,-1.1).box(.02,.08,.5,'glass',s*(hullHalfW(-3.3)*.996+.012),.9,-3.3);
+    for(let z=-5;z<5.8;z+=1)k.rod([s*(hullHalfW(z)*.999+.02),1.0,z],[s*(hullHalfW(z+1)*.999+.02),1.0,Math.min(z+1,5.9)],.03,0x9aa3a6,4)});
   k.box(1.7,.03,.82,'glass',0,1.495,-2.12,-.39);
-  k.box(.62,.04,.62,'glass',0,1.68,-.9).box(.52,.03,.52,'glass',0,1.68,.4);
-  k.box(.75,.12,.75,0xfbfaf6,0,1.07,-4).box(.6,.02,.6,'glass',0,1.14,-4);
+  // люки: носовой, на рубке, над салоном; две солнечные панели
+  [[-4.1,.7,1.07],[-3.2,.55,1.05],[-1.9,.55,1.66],[-1.0,.55,1.67]].forEach(([z,w,y])=>k.box(w+.06,.05,w+.06,0xd9dee0,0,y,z).box(w,.03,w,'glass',0,y+.03,z));
+  [-.45,.45].forEach(x=>k.box(.66,.03,1.05,'solar',x,1.665,.2).box(.7,.02,1.09,0xc9d0d4,x,1.65,.2));
+  // вход в каюту, приборы над ним, стопоры и цветные фалы к мачте
   k.box(.72,.5,.04,0x2b2f31,0,1.3,1.57);
+  [-.55,.55].forEach(x=>k.box(.28,.2,.04,0x15191b,x,1.42,1.575).box(.22,.15,.01,'screen',x,1.42,1.6));
+  [[-.42,0x2a6fa8],[-.3,0xe2564d],[-.18,0x3cbf7e],[.18,0xf2c23a],[.3,0xeeeeee],[.42,0x2a6fa8]].forEach(([x,c])=>{k.box(.09,.07,.18,0x2b2f31,x,1.69,1.38);k.rod([x,1.67,1.48],[x*.3,1.67,-2.55],.011,c,4).rod([x,1.67,1.48],[x*1.4,1.62,1.95],.013,c,4)});
   // спрейхуд над входом в каюту
   k.add(prismZY([[.65,1.62],[1.62,1.62],[1.62,2.0],[1.15,2.12],[.65,1.9]],2.0),o.cover||0x2a5a8c,0,0,0);
   k.box(1.6,.02,.3,'glass',0,1.98,1.25,-.4);
   // кокпит: пайол, банки, комингсы, лебёдки, стопоры
-  k.box(2.2,.02,2.8,teak,0,1.02,3.2);
-  k.box(.5,.45,2.6,W,-1.3,1.22,3.2).box(.5,.45,2.6,W,1.3,1.22,3.2).box(.46,.04,2.5,teak,-1.3,1.46,3.2).box(.46,.04,2.5,teak,1.3,1.46,3.2);
-  [1,-1].forEach(s=>{k.box(.08,.42,2.8,W,s*1.62,1.21,3.1);
-    k.add(new THREE.CylinderGeometry(.13,.16,.28,10),0x555a5c,s*1.55,1.5,2.4).add(new THREE.CylinderGeometry(.1,.12,.2,10),0x555a5c,s*.95,1.72,1.3)});
-  [-.35,-.15,.15,.35].forEach(x=>k.box(.12,.08,.2,0x333333,x,1.63,1.45));
+  k.box(2.2,.02,2.8,'teak',0,1.025,3.2).box(3.2,.02,1.0,'teak',0,1.025,5.3);
+  k.box(.5,.45,2.6,W,-1.3,1.22,3.2).box(.5,.45,2.6,W,1.3,1.22,3.2).box(.46,.04,2.5,'teak',-1.3,1.465,3.2).box(.46,.04,2.5,'teak',1.3,1.465,3.2);
+  const winch=(x,y,z,r)=>k.add(new THREE.CylinderGeometry(r*.85,r*1.15,.14,12),'steel',x,y,z).add(new THREE.CylinderGeometry(r*.7,r*.85,.16,12),'steel',x,y+.15,z).add(new THREE.CylinderGeometry(r*.45,r*.6,.06,10),0x2b2f31,x,y+.26,z);
+  [1,-1].forEach(s=>{k.box(.08,.42,2.8,W,s*1.62,1.21,3.1).box(.3,.06,2.8,W,s*1.7,1.44,3.1);
+    winch(s*1.6,1.47,2.4,.15);winch(s*1.6,1.47,3.9,.12);winch(s*.95,1.67,1.3,.11)});
+  // стол в кокпите: тумба и тиковые створки
+  k.box(.2,.55,.9,W,0,1.3,3.2).box(.48,.05,1.25,'teak',0,1.6,3.2);[1,-1].forEach(s=>k.box(.04,.4,1.2,'teak',s*.27,1.4,3.2));k.rod([-.2,1.66,2.6],[.2,1.66,2.6],.015,'steel');
+  // спасательная подкова на кормовом релинге и плот в контейнере на транце
+  k.add(new THREE.TorusGeometry(.26,.07,6,12,Math.PI*1.6),0xf07a28,1.25,1.5,5.92,0,0,Math.PI*1.2).box(.5,.3,.35,0xf4f2ec,-1.2,1.2,5.65);
   // носовой релинг, кормовой релинг, стойки лееров
   const st=[[.62,-4.9],...[-4.2,-2.4,-.6,1.2,3.2].map(z=>[hullHalfW(z)-.1,z]),[1.75,4.9]];
   lifelines(k,st,1.04,1.74);
@@ -142,19 +173,24 @@ function makeCruiser(o){
   k.add(new THREE.SphereGeometry(.06,6,4),0xe2564d,-.64,1.8,-4.9).add(new THREE.SphereGeometry(.06,6,4),0x3cbf7e,.64,1.8,-4.9).add(new THREE.SphereGeometry(.06,6,4),0xffffff,0,1.36,6);
   // нос: брашпиль, якорь на роульсе; корма: купальная платформа и трап
   k.box(.5,.3,.4,0x3b3f41,0,1.18,-5).box(.16,.1,.7,0x555a5c,0,1.05,-6.05).add(new THREE.ConeGeometry(.16,.3,4),0x555a5c,0,.92,-6.35,Math.PI);
-  k.box(3.3,.08,.55,teak,0,.42,6.27).box(.02,.5,.02,'steel',.5,.7,6.5);
+  k.box(3.3,.08,.55,'teak',0,.42,6.27).box(.02,.5,.02,'steel',.5,.7,6.5);
   [.55,.75,.95].forEach(y=>k.box(.38,.02,.06,'steel',.5,y-.25,6.52));
   [[.75,-4.6],[-.75,-4.6],[-1.45,5.6],[1.45,5.6],[1.9,0],[-1.9,0]].forEach(([x,z])=>k.box(.3,.08,.1,0x555555,x,1.06,z));
   addRig(g,k,o,RIG_CRUISER,[1.95,1.05,-2.6],[[.6,1.1,5.95],[-.6,1.1,5.95]]);
   // румпель (малая яхта) или штурвал с тумбой и компасом
   if(o.tiller){const w=new THREE.Group();w.position.set(0,1.25,5.4);g.add(w);kit3().rod([0,0,0],[0,.05,-1.6],.04,teak,6).rod([0,-.3,0],[0,.05,0],.05,0x2f3335).build(w);
     g.userData.wheel=w;g.userData.helm=rud=>{w.rotation.y=rud*.5}}
-  else{wheelGroup(g,.5,0,1.85,4.7);k.add(new THREE.CylinderGeometry(.06,.07,.85,6),0x777777,0,1.45,4.6).add(new THREE.SphereGeometry(.11,8,6,0,Math.PI*2,0,Math.PI/2),'glass',0,1.88,4.45).rod([-.3,1.9,4.3],[.3,1.9,4.3],.02,'steel')}
+  else{
+    // два штурвала, у каждого тумба с плоттером и приборами, как на чартерных яхтах 40+ футов
+    const ws=[1,-1].map(s=>{k.box(.16,.8,.2,W,s*.85,1.42,4.62).box(.36,.26,.08,0x15191b,s*.85,1.92,4.5,-.5).box(.3,.2,.02,'screen',s*.85,1.93,4.54,-.5)
+      .add(new THREE.SphereGeometry(.08,8,6,0,Math.PI*2,0,Math.PI/2),'glass',s*.85,2.1,4.4).rod([s*.6,1.95,4.42],[s*1.1,1.95,4.42],.018,'steel');
+      return wheelGroup(g,.5,s*.85,1.88,4.82)});
+    g.userData.wheel=ws[0];g.userData.wheels=ws;g.userData.helm=rud=>ws.forEach(w=>{w.rotation.z=-rud*1.6})}
   if(o.outboard){k.box(.5,.4,.3,0x2b2f31,.7,.85,6.3).box(.12,.7,.12,0x2b2f31,.7,.4,6.35)}
-  if(o.full){k.box(.46,.05,.8,0xf07a28,-1.3,1.485,3.6).add(new THREE.CylinderGeometry(.09,.09,.45,8),0xcc2222,.75,1.35,1.75)}
+  if(o.full){k.box(.46,.05,.8,0xf07a28,-1.3,1.5,3.6).add(new THREE.CylinderGeometry(.09,.09,.45,8),0xcc2222,.75,1.35,1.75)}
   k.build(g);
   g.userData.parts=[[0,9,-2.8,'Мачта','mast'],[0,2.6,0,'Гик','boom'],[0,8.5,-4.4,'Штаг','forestay'],[1.4,7,-2.4,'Ванты','shrouds'],[0,8,1.5,'Ахтерштаг','backstay'],
-    [0,1.7,-.5,'Рубка','coachroof'],[0,1.9,1.2,'Спрейхуд','sprayhood'],[0,1.6,3.3,'Кокпит','cockpit'],[0,2.4,4.7,o.tiller?'Румпель':'Штурвал',o.tiller?'tiller':'wheel'],
+    [0,1.7,-.5,'Рубка','coachroof'],[0,1.9,1.2,'Спрейхуд','sprayhood'],[0,1.6,3.3,'Кокпит','cockpit'],[o.tiller?0:.85,2.5,4.8,o.tiller?'Румпель':'Штурвалы',o.tiller?'tiller':'twin wheels'],[0,1.8,.2,'Солнечные панели','solar panels'],[0,1.75,3.2,'Стол кокпита','cockpit table'],
     [1.55,1.7,2.4,'Лебёдка','winch'],[2.1,1.8,1.2,'Леера','lifelines'],[0,1.9,-5.4,'Носовой релинг','pulpit'],[0,1.3,-5.9,'Якорь','anchor'],
     [0,.55,6.4,'Купальная платформа','swim platform'],[0,-1.2,-.2,'Киль','keel'],[0,-.6,5.3,'Перо руля','rudder blade']];
   return g}
@@ -175,7 +211,7 @@ function makeCat(o){
     k.box(.02,.2,3.2,'glass',s*(X+hw(0)*.99+.012),1.0,0).box(.02,.14,.9,'glass',s*(X+hw(-3)*.99+.012),1.0,-3);
     k.add(prismZY([[-1.5,.05],[2.5,.05],[1.8,-.55],[-.5,-.55]],.14),bot,s*X,0,0).add(prismZY([[5.2,.25],[5.65,.25],[5.55,-.75],[5.28,-.75]],.07),bot,s*X,0,0);
     // ступени на транцах
-    k.box(1.1,.06,.5,teak,s*X,.95,5.75).box(1.1,.06,.5,teak,s*X,.6,6.05);
+    k.box(1.1,.06,.5,'teak',s*X,.95,5.75).box(1.1,.06,.5,'teak',s*X,.6,6.05);
     k.rail([[s*X-.25,deck+.02,-5.2],[s*X,deck+.6,-5.6],[s*X+.25,deck+.02,-5.2]],.022,'steel');
     lifelines(k,[-4.6,-2.5,0,2.5,4.6].map(z=>[X+hw(z)-.08,z]),deck+.02,deck+.7);
     k.add(new THREE.SphereGeometry(.06,6,4),s>0?0x3cbf7e:0xe2564d,s*(X+hw(-4.6)-.08),deck+.76,-4.6);
@@ -190,8 +226,8 @@ function makeCat(o){
   k.box(5.6,.1,3.2,0xfbfaf6,0,2.62,3.9);[1,-1].forEach(s=>k.rod([s*2.55,deck,5.3],[s*2.55,2.6,5.3],.05,W,6));
   k.box(1.0,.03,.7,'glass',-1.2,2.66,-.8).box(1.0,.03,.7,'glass',1.2,2.66,-.8);
   // кокпит: пайол, кормовой диван, стол, пост рулевого по правому борту
-  k.box(3.6,.02,2.9,teak,0,deck+.01,3.95).box(3.4,.42,.5,W,0,deck+.21,5.25).box(3.2,.05,.45,0xe9e1cf,0,deck+.45,5.25);
-  k.box(1.2,.05,.8,teak,-.6,deck+.7,3.8).rod([-.6,deck,3.8],[-.6,deck+.7,3.8],.05,'steel');
+  k.box(3.6,.02,2.9,'teak',0,deck+.01,3.95).box(3.4,.42,.5,W,0,deck+.21,5.25).box(3.2,.05,.45,0xe9e1cf,0,deck+.45,5.25);
+  k.box(1.2,.05,.8,'teak',-.6,deck+.7,3.8).rod([-.6,deck,3.8],[-.6,deck+.7,3.8],.05,'steel');
   k.box(.8,.6,.5,W,2.15,deck+.3,2.75).box(.7,.04,.4,0x2f3335,2.15,deck+.62,2.65);
   k.add(new THREE.CylinderGeometry(.12,.15,.26,10),0x555a5c,1.6,deck+.45,4.5).add(new THREE.CylinderGeometry(.12,.15,.26,10),0x555a5c,-1.6,deck+.45,4.5);
   [[X+.4,-5.4],[-X-.4,-5.4],[X,5.5],[-X,5.5]].forEach(([x,z])=>k.box(.3,.08,.1,0x555555,x,deck+.05,z));
@@ -212,7 +248,7 @@ function makeMotor(o){
     prof:z=>{const s=sh(z),b=yb(z),p=[[1,s+.06],[1,s],[1,1.25],[.99,.95],[.97,.75],[.955,.6],[.9,.45]];
       [.35,.7,1].forEach(t=>p.push([.9*(1-t),.45-(.45-b)*t**.9]));return p.map(([f,y])=>[f,Math.max(y,b)])},
     col:y=>y>.76?W:y>.59?band:y>.44?W:bot});
-  const dg=deckFrom(hw,-6.6,6.6,.4);dg.scale(.97,1,.985);k.add(dg,teak,0,deck+.01,0);
+  const dg=deckFrom(hw,-6.6,6.6,.4);dg.scale(.97,1,.985);k.add(dg,'teak',0,deck+.01,0);
   // окна в корпусе и круглые иллюминаторы
   [1,-1].forEach(s=>{k.box(.02,.2,3.4,'glass',s*(hw(-.8)*.995+.012),1.12,-.8);
     [-4.1,-3.5].forEach(z=>k.add(new THREE.CylinderGeometry(.11,.11,.03,10),'glass',s*(hw(z)*.99+.01),1.1,z,0,0,Math.PI/2))});
@@ -230,8 +266,8 @@ function makeMotor(o){
   k.add(new THREE.CylinderGeometry(.36,.36,.18,14),0xf2f2f2,0,4.02,2.8).rod([.9,3.9,2.8],[.9,4.7,2.8],.02,'steel').add(new THREE.SphereGeometry(.05,6,4),0xffffff,.9,4.72,2.8);
   wheelGroup(g,.24,.7,3.45,.7,-.5);
   // кокпит, кормовая банка, купальная платформа со ступенями
-  k.box(3.7,.02,3.1,teak,0,deck+.02,5).box(3.4,.4,.5,W,0,deck+.2,6.15).box(3.3,.05,.45,0xe9e1cf,0,deck+.42,6.15);
-  k.box(3.9,.12,1.0,teak,0,.6,7.1);[.85,1.15].forEach((y,i)=>k.box(.9,.06,.3,teak,1.4,y,6.75-i*.25));
+  k.box(3.7,.02,3.1,'teak',0,deck+.02,5).box(3.4,.4,.5,W,0,deck+.2,6.15).box(3.3,.05,.45,0xe9e1cf,0,deck+.42,6.15);
+  k.box(3.9,.12,1.0,'teak',0,.6,7.1);[.85,1.15].forEach((y,i)=>k.box(.9,.06,.3,'teak',1.4,y,6.75-i*.25));
   // носовой релинг, утки, якорь
   lifelines(k,[[.5,-5.9],[1.2,-5.1],[1.75,-3.8],[1.95,-2.6]].map(([x,z])=>[x,z]),deck+.4,deck+1.05);
   k.rail([[-.5,deck+1.05,-5.9],[0,deck+1.05,-6.2],[.5,deck+1.05,-5.9]],.022,'steel');

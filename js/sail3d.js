@@ -19,14 +19,15 @@ function startSail3D(boatId){
 
   const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,120,320);
   const cam=new THREE.PerspectiveCamera(30,R.width/R.height,.5,900);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.8));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.9);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+  scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.5));
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
   {const c=sun.shadow.camera;c.left=-22;c.right=22;c.top=22;c.bottom=-22;c.near=1;c.far=120}sun.shadow.bias=-.0008;
   scene.add(sun,sun.target);
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:380,hor:0xcfe9ef});
 
   /* вода: волны бегут по ветру, высота считается в мировых координатах, плоскость едет за яхтой */
   const wg=new THREE.PlaneGeometry(520,520,72,72);wg.rotateX(-Math.PI/2);
-  const water=new THREE.Mesh(wg,M3(0x1d7590,{roughness:.55}));water.receiveShadow=true;scene.add(water);
+  const water=new THREE.Mesh(wg,M3(0x1d7590,{roughness:.55,envMapIntensity:.35}));water.receiveShadow=true;scene.add(water);
   const deep=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1a6a83}));deep.position.y=-1.2;scene.add(deep);
 
   /* штрихи ветра на воде */
@@ -116,7 +117,7 @@ function startSail3D(boatId){
     buoys.forEach(g=>{const u=g.userData;let rx=u.x-bx,rz=u.z-bz;rx=((rx+BT/2)%BT+BT)%BT-BT/2;rz=((rz+BT/2)%BT+BT)%BT-BT/2;u.x=bx+rx;u.z=bz+rz;
       g.position.set(u.x,Math.sin(t*1.4+u.p)*.15,u.z);g.rotation.z=Math.sin(t*1.1+u.p)*.06});
     foam.forEach((m,i)=>{const f=b.wake[b.wake.length-1-i];if(!f||f.a<=0){m.visible=false;return}m.visible=true;m.position.set(f.x*K3,.34,f.y*K3);m.scale.setScalar(.35+(1-f.a)*1.1);m.material.opacity=f.a*.45});
-    horizon.position.set(bx,0,bz);
+    horizon.position.set(bx,0,bz);skyD.dome.position.set(bx,0,bz);skyD.clouds.position.set(bx,0,bz);
     // роза курсов
     rose.position.set(bx,.36,bz);rose.rotation.y=-w.from*D;needle.rotation.y=-norm(b.h-w.from)*D;
     const step=sim.steps&&sim.steps[sim.step];
