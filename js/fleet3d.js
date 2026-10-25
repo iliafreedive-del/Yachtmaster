@@ -31,7 +31,7 @@ function startFleet(){
     $('#fs').hidden=!P.sail;$('#fs').textContent=st.sails?'Убрать паруса':'Поднять паруса';
     const chosen=boatType()===st.id;
     $('#fc').innerHTML=`<p class="fmk">${f.mk} · ${f.yr}</p><h3>${f.n}${en(f.en)}</h3><div class="fspec">${f.spec.map(([r,e,v])=>`<div><span>${r} · ${e}</span><b>${v}</b></div>`).join('')}</div>
-      ${f.dz&&f.dz!=='—'?`<p class="fdz">Проект: ${f.dz}</p>`:''}<button class="btn${chosen?' ghost':''}" id="fpick" ${chosen?'disabled':''}>${chosen?'✓ Выбрана для практики':'Выбрать для практики'}</button>${P.sail?'':'<p class="fnote">Только для марины (День 4): парусов нет.</p>'}`;
+      ${f.dz&&f.dz!=='—'?`<p class="fdz">Проект: ${f.dz}</p>`:''}<p class="fcert">✓ Bareboat Skipper: ${String(P.lenM).replace('.',',')} м из допустимых 24 м${P.sail?'':' · моторный допуск уточнить'}</p><button class="btn${chosen?' ghost':''}" id="fpick" ${chosen?'disabled':''}>${chosen?'✓ Выбрана для практики':'Выбрать для практики'}</button>${P.sail?'':'<p class="fnote">Только для марины (День 4): парусов нет.</p>'}`;
     $('#fpick').onclick=()=>{setBoatType(st.id);build();hint(`Готово: ${f.n} пойдёт в практику${P.sail?' Дней 2–4':' Дня 4'}.`,'good')};
     say(f.t);hint('');
     // в боковой панели: как узнать лодку, что внутри, как ведёт себя в тренажёре
