@@ -13,11 +13,12 @@ function startFleet(){
 
   const scene=new THREE.Scene(),sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,60,160);
   const cam=new THREE.PerspectiveCamera(36,R.width/R.height,.3,400);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.8));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.95);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.5));
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
   {const c=sun.shadow.camera;c.left=-14;c.right=14;c.top=20;c.bottom=-14;c.near=1;c.far=80}sun.shadow.bias=-.0006;scene.add(sun);
+  scene.environment=skyEnv(renderer);skyDome(scene,{r:150,hor:0xcfe9ef});
   const wg=new THREE.PlaneGeometry(220,220,60,60);wg.rotateX(-Math.PI/2);
-  const water=new THREE.Mesh(wg,M3(0x2a8ea6,{transparent:true,opacity:.82,roughness:.4}));water.receiveShadow=true;scene.add(water);
+  const water=new THREE.Mesh(wg,M3(0x22809a,{transparent:true,opacity:.84,roughness:.3,envMapIntensity:.6}));water.receiveShadow=true;scene.add(water);
   const deep=new THREE.Mesh(new THREE.PlaneGeometry(600,600).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1a6a83}));deep.position.y=-3.2;scene.add(deep);
 
   const st={on:true,renderer,id:boatType(),sails:false,labels:true,yaw:.75,pitch:.3,dist:30,auto:true,t:0,boat:null,raf:0};F3=st;
