@@ -23,7 +23,7 @@ function padMode(m){ // null | 'walk' | 'sail' | 'motor'
   $('#padSteer').hidden=!(m==='sail'||m==='motor');$('#padSail').hidden=!(m==='sail'||m==='motor');
   $('#padUp').textContent=m==='motor'?'Газ ▲':'Выбрать';$('#padDown').textContent=m==='motor'?'Назад ▼':'Травить';
 }
-function stopAll(){sim=null;stop3D();stopSail3D();hideDialog();for(const k in keys)keys[k]=false}
+function stopAll(){sim=null;stop3D();stopSail3D();stopMoor3D();hideDialog();for(const k in keys)keys[k]=false}
 
 function openChapter(id){
   stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
@@ -53,8 +53,10 @@ function startPractice(p){
   const backLink=`<br><button class="back" id="toBrief">Вернуться к брифингу</button>`;
   if(p==='exam'){startExam()}
   else if(p==='deck3d'){if(window.THREE)start3D();else no3D()}
+  // День 4: сначала мастер-класс, после него — практика; без WebGL — прежняя 2D-швартовка
+  else if(p==='moor3d'){moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
   else startSim(p);
-  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',exam:''}[p]||'')+backLink;
+  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> вид сверху. Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
   $('#toBrief').onclick=()=>openChapter(cur);
 }
 
