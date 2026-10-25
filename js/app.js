@@ -60,7 +60,10 @@ function startPractice(p){
   else startSim(p);
   $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (у штурвала, за кормой, сверху). Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
   $('#toBrief').onclick=()=>openChapter(cur);
+  focusStage();
 }
+/* на телефоне и в альбомной ориентации сцена занимает весь экран: прокручиваем к ней, вкладки остаются выше */
+function focusStage(){if(innerWidth<700||innerHeight<600)$('#stage').scrollIntoView({block:'start'})}
 
 /* ---------- dialogs ---------- */
 function showDialog(html){$('#dlgCard').innerHTML=rich(html);$('#dlg').hidden=false}

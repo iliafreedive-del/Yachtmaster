@@ -13,6 +13,7 @@ function sailGrid(rows,cols){
   const g=new THREE.BufferGeometry(),n=(rows+1)*(cols+1),idx=[];
   g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(n*3),3));
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const a=r*(cols+1)+c,b=a+1,d=a+cols+1,e=d+1;idx.push(a,d,b,b,d,e)}
+  const uv=[];for(let r=0;r<=rows;r++)for(let c=0;c<=cols;c++)uv.push(c/cols,r/rows);g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
   g.setIndex(idx);g.userData={rows,cols};return g;
 }
 /* boomDeg и jibDeg — углы от диаметральной плоскости, side — борт, откуда дует ветер (+1 правый),
