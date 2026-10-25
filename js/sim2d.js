@@ -8,7 +8,7 @@ $('#sheetR').addEventListener('input',e=>{if(sim&&!sim.engine)sim.boat.sheet=+e.
 const THR=[-1,-.5,0,.5,1],THRN=['Полный назад','Малый назад','Нейтраль','Малый вперёд','Полный вперёд'];
 function throttleStep(d){sim.thrI=clamp(sim.thrI+d,0,4);sim.boat.thr=THR[sim.thrI]}
 function polar(a){if(a<38)return 0;if(a<50)return lerp(1.5,5.2,(a-38)/12);if(a<100)return lerp(5.2,6.6,(a-50)/50);return lerp(6.6,5.0,(a-100)/80)}
-function pointName(a){if(a<38)return['Левентик','no-go'];if(a<60)return['Бейдевинд','close-hauled'];if(a<80)return['Полный бейдевинд','close reach'];if(a<100)return['Галфвинд','beam reach'];if(a<160)return['Бакштаг','broad reach'];return['Фордевинд','run']}
+function pointName(a){if(a<38)return['Левентик','no-go'];if(a<60)return['Бейдевинд','close-hauled'];if(a<80)return['Полный бейдевинд','close reach'];if(a<=100)return['Галфвинд','beam reach'];if(a<160)return['Бакштаг','broad reach'];return['Фордевинд','run']}
 function sailState(b,w){
   const rw=norm(w.from-b.h),awa=Math.abs(rw),side=rw>=0?1:-1;
   const boom=Math.min(b.sheet,Math.max(awa-4,2));const opt=clamp(awa/2-10,6,85);const diff=boom-opt;
@@ -20,15 +20,17 @@ function newBoat(x,y,h,sheet){return{x,y,h,v:0,sheet:sheet??60,rud:0,thr:0,wake:
 function makeStreaks(){const a=[];for(let i=0;i<70;i++)a.push({x:Math.random(),y:Math.random(),l:.4+Math.random()*.6});return a}
 
 function startSim(kind){
-  show('canvas');$('#instBox').hidden=false;$('#trimBox').hidden=kind==='moor';padMode(kind==='moor'?'motor':'sail');
+  // День 2 идёт в 3D, если браузер тянет WebGL; иначе — прежняя 2D-карта
+  const want3d=kind==='points'&&window.THREE;show(want3d?'three':'canvas');const in3d=want3d&&startSail3D();if(want3d&&!in3d)show('canvas');
+  $('#instBox').hidden=false;$('#trimBox').hidden=kind==='moor';padMode(kind==='moor'?'motor':'sail');
   const base={kind,running:false,t:0,streaks:makeStreaks(),cam:{x:0,y:0},msg:'',hold:0,step:0,tacks:0,gybes:0,nogoT:0,lastSide:0};
   if(kind==='points'){
     sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,90,80),steps:[
-      {n:'Галфвинд',lo:80,hi:100,s:'Начнём с [[галфвинд|галфвинда]]: ветер ровно в борт. Парус сейчас полощет — выбирай [[шкот]] (↑), пока метка не попадёт в зелёную зону.'},
+      {n:'Галфвинд',lo:80,hi:100,s:'Начнём с [[галфвинд|галфвинда]]: ветер ровно в борт. Поставь яхту так, чтобы белая стрелка была в зелёном секторе, и выбирай [[шкот]] (↑), пока метка трима не попадёт в зелёную зону.'},
       {n:'Бейдевинд',lo:40,hi:58,s:'Теперь [[приводиться|приводись]]: поворачивай нос к ветру до [[бейдевинд|бейдевинда]], 40–55°. Не залезь в красный сектор! Шкот выбирай почти до упора.'},
       {n:'Бакштаг',lo:115,hi:155,s:'Отлично. [[уваливаться|Уваливайся]]: уводи нос от ветра в [[бакштаг]], 120–150°, и трави шкот.'},
       {n:'Фордевинд',lo:165,hi:180,s:'[[фордевинд|Фордевинд]]: ветер прямо в корму. Грот вытрави почти полностью. Не переводи ветер через корму, иначе [[гик]] перелетит.'}]});
-    sim.running=true;say(sim.steps[0].s);
+    sim.view3d=in3d;sim.running=true;say(sim.steps[0].s);
   }
   if(kind==='tack'){
     sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,48,14),buoy:{x:60,y:-1050}});sim.cam={x:0,y:-100};
@@ -50,7 +52,7 @@ function startSim(kind){
 function loop(now){
   const dt=Math.min(.05,(now-lastT)/1000);lastT=now;
   if(!sim)return;
-  if(sim.running)update(dt);draw();updatePanel();
+  if(sim.running)update(dt);if(sim.view3d&&S3)S3.render(dt);else draw();updatePanel();
   raf=requestAnimationFrame(loop);
 }
 function update(dt){
