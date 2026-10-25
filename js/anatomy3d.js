@@ -60,8 +60,9 @@ function startAnatomy(){
 
   /* ---------- корпус: тот же лофт, что у makeCruiser ---------- */
   const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):lerp(-.22,.88,(-z/6)**2.4),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
-  const prof=z=>{const s=sh(z),b=yb(z),p=[[1,s+.07],[1,s],[.996,.8],[.99,.7],[.975,.5],[.96,.36],[.94,.28]];
-    for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([.94*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}return p.map(([f,y])=>[f,Math.max(y,b)])};
+  // скула в кормовой половине, как у makeCruiser
+  const prof=z=>{const s=sh(z),b=yb(z),ch=clamp((z+1)/5,0,1),p=[[1,s+.07],[1,s],[.996,.8],[.99,.7],[.985-.01*ch,.5+.08*ch],[.96-.06*ch,.36],[.94-.1*ch,.28]];
+    for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}return p.map(([f,y])=>[f,Math.max(y,b)])};
   {const k=kit3();loftHull(k,{z0:-6,z1:6,dz:.4,half:hullHalfW,prof,col:y=>y>.81?W:y>.69?band:y>.37?W:y>.27?band:bot});
     [1,-1].forEach(s=>{k.box(.02,.1,2.6,'glass',s*(hullHalfW(-1.1)*.997+.012),.9,-1.1).box(.02,.08,.5,'glass',s*(hullHalfW(-3.3)*.996+.012),.9,-3.3);
       for(let z=-5;z<5.8;z+=1)k.rod([s*(hullHalfW(z)*.999+.02),1.0,z],[s*(hullHalfW(z+1)*.999+.02),1.0,Math.min(z+1,5.9)],.03,0x9aa3a6,4)});
