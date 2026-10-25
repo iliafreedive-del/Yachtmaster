@@ -2,7 +2,7 @@
 let F3=null;
 function stopFleet3D(){if(!F3)return;F3.on=false;cancelAnimationFrame(F3.raf);F3.ro&&F3.ro.disconnect();F3.renderer.dispose();try{F3.renderer.forceContextLoss()}catch(e){}$('#three').innerHTML='';F3=null}
 function startFleet(){
-  show('three');padMode(null);$('#instBox').hidden=true;
+  show('three');padMode(null);$('#instBox').hidden=true;focusStage();
   $('#keysHelp').innerHTML='Мышь или палец — повернуть лодку, колесо — приблизить. Выбранная лодка пойдёт в практику Дней 2–4.';
   const host=$('#three');host.innerHTML='';
   const renderer=window.THREE&&makeRenderer(host);if(!renderer){no3D();return}
@@ -14,7 +14,7 @@ function startFleet(){
   const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:240}).getHex();
   const cam=new THREE.PerspectiveCamera(36,R.width/R.height,.3,400);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.5));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(gfxQ()==="high"?2048:1024,gfxQ()==="high"?2048:1024);
   {const c=sun.shadow.camera;c.left=-14;c.right=14;c.top=20;c.bottom=-14;c.near=1;c.far=80}sun.shadow.bias=-.0006;scene.add(sun);
   scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300,hor:sky,top:0x6fa7c4});
   const sea=makeOcean(scene,{R:280,sun:[-14,30,12],wind:{from:35,kn:9},foam:.25,sky});
