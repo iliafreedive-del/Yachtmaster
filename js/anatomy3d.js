@@ -39,7 +39,8 @@ function startAnatomy(){
   const scene=new THREE.Scene(),sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,90,220);
   const cam=new THREE.PerspectiveCamera(38,R.width/R.height,.1,500);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.55));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);const lowQ=typeof gfxQ==='function'&&gfxQ()==='low';if(lowQ)renderer.setPixelRatio(Math.min(1.5,devicePixelRatio||1));
+  sun.castShadow=true;sun.shadow.mapSize.set(lowQ?1024:2048,lowQ?1024:2048);
   {const c=sun.shadow.camera;c.left=-14;c.right=14;c.top=20;c.bottom=-14;c.near=1;c.far=80}sun.shadow.bias=-.0006;scene.add(sun);
   const fill=new THREE.DirectionalLight(0xdfefff,.25);fill.position.set(12,8,-10);scene.add(fill);
   if(typeof skyEnv==='function'){scene.environment=skyEnv(renderer);skyDome(scene,{r:200,hor:0xcfe9ef})}
@@ -338,7 +339,7 @@ function startAnatomy(){
       if((!st.labels&&!isSel)||n>=max&&!isSel||occ[id]&&!isSel){return}
       const p=anchorOf(id);if(!p)return;v3.copy(p);Y.localToWorld(v3).project(cam);if(v3.z>1)return;
       const x=(v3.x+1)/2*W,y=(1-v3.y)/2*H;if(x<4||x>W-4||y<4||y>H-4)return;
-      const w=el.offsetWidth||90,h=el.offsetHeight||30,g=10;
+      if(!el._w){const hd=el.hidden;el.hidden=false;el._w=el.offsetWidth;el._h=el.offsetHeight;el.hidden=hd}const w=el._w||90,h=el._h||30,g=10;
       const cand=[[x-w/2,y-h-g],[x+g,y-h/2],[x-w-g,y-h/2],[x-w/2,y+g],[x+g,y-h-g],[x-w-g,y-h-g],[x+g,y+g],[x-w-g,y+g]];
       let ok=null;for(const[cx,cy]of cand){if(cx<4||cy<4||cx+w>W-4||cy+h>H-4)continue;const r=[cx-2,cy-2,cx+w+2,cy+h+2];if(!taken.some(t=>r[0]<t[2]&&r[2]>t[0]&&r[1]<t[3]&&r[3]>t[1])){ok=[cx,cy,r];break}}
       if(!ok)return;taken.push(ok[2]);n++;shown[id]=1;
@@ -457,7 +458,7 @@ function startAnatomy(){
   el.addEventListener('pointerleave',()=>{if(st.hov){st.hov=null;paint()}});
   host.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!pultBox.hidden)togglePult(false);else select(null)}});
 
-  st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
+  st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;for(const k in labEl)labEl[k]._w=0;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
 
   update();renderLayers();renderSide();paint();
   let last=performance.now();
@@ -490,4 +491,4 @@ function startAnatomy(){
   const open0=openChapter,stop0=stopAll;
   stopAll=function(){stop0();stopAnat3D()};
   openChapter=function(id){if(id!=='anatomy')return open0(id);
-    stopAll();cur=id;renderTabs();padMode(null);$('#keysHelp').innerHTML='';hint('');if(!startAnatomy())no3D()}})();
+    stopAll();cur=id;phase='anatomy';renderTabs();padMode(null);$('#keysHelp').innerHTML='';hint('');if(!startAnatomy())no3D();if(typeof focusStage==='function')focusStage()}})();
