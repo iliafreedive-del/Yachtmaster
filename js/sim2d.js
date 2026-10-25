@@ -20,7 +20,9 @@ function newBoat(x,y,h,sheet){return{x,y,h,v:0,sheet:sheet??60,rud:0,thr:0,wake:
 function makeStreaks(){const a=[];for(let i=0;i<70;i++)a.push({x:Math.random(),y:Math.random(),l:.4+Math.random()*.6});return a}
 
 function startSim(kind){
-  show('canvas');$('#instBox').hidden=false;$('#trimBox').hidden=kind==='moor';padMode(kind==='moor'?'motor':'sail');
+  // День 2 идёт в 3D, если браузер тянет WebGL; иначе — прежняя 2D-карта
+  const want3d=kind==='points'&&window.THREE;show(want3d?'three':'canvas');const in3d=want3d&&startSail3D();if(want3d&&!in3d)show('canvas');
+  $('#instBox').hidden=false;$('#trimBox').hidden=kind==='moor';padMode(kind==='moor'?'motor':'sail');
   const base={kind,running:false,t:0,streaks:makeStreaks(),cam:{x:0,y:0},msg:'',hold:0,step:0,tacks:0,gybes:0,nogoT:0,lastSide:0};
   if(kind==='points'){
     sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,90,80),steps:[
@@ -28,7 +30,7 @@ function startSim(kind){
       {n:'Бейдевинд',lo:40,hi:58,s:'Теперь [[приводиться|приводись]]: поворачивай нос к ветру до [[бейдевинд|бейдевинда]], 40–55°. Не залезь в красный сектор! Шкот выбирай почти до упора.'},
       {n:'Бакштаг',lo:115,hi:155,s:'Отлично. [[уваливаться|Уваливайся]]: уводи нос от ветра в [[бакштаг]], 120–150°, и трави шкот.'},
       {n:'Фордевинд',lo:165,hi:180,s:'[[фордевинд|Фордевинд]]: ветер прямо в корму. Грот вытрави почти полностью. Не переводи ветер через корму, иначе [[гик]] перелетит.'}]});
-    sim.running=true;say(sim.steps[0].s);
+    sim.view3d=in3d;sim.running=true;say(sim.steps[0].s);
   }
   if(kind==='tack'){
     sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,48,14),buoy:{x:60,y:-1050}});sim.cam={x:0,y:-100};
@@ -50,7 +52,7 @@ function startSim(kind){
 function loop(now){
   const dt=Math.min(.05,(now-lastT)/1000);lastT=now;
   if(!sim)return;
-  if(sim.running)update(dt);draw();updatePanel();
+  if(sim.running)update(dt);if(sim.view3d&&S3)S3.render(dt);else draw();updatePanel();
   raf=requestAnimationFrame(loop);
 }
 function update(dt){

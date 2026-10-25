@@ -130,3 +130,14 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .f-ln{stroke:var(--muted);fill:none} .f-ink{fill:var(--ink)} .f-mut{fill:var(--muted)} .f-buoy{fill:var(--buoy)} .f-port{fill:var(--port)} .f-stbd{fill:var(--stbd)}
 .f-t{font-family:var(--f-body);font-size:12px;fill:var(--ink)} .f-s{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+/* 3D-море Дня 2: ветер, удержание курса, сообщения, подписи на розе курсов */
+.hud3{position:absolute;z-index:3;background:rgba(10,29,42,.8);border-radius:10px;color:var(--ink)}
+.hud3 span{display:block;font-family:var(--f-mono);font-size:10px;color:var(--muted);letter-spacing:.04em}
+.hud3.wind{top:52px;left:12px;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px}
+.hud3.wind b{font-family:var(--f-mono);font-weight:500;font-size:14px}
+.hud3.hold{top:12px;right:12px;width:min(220px,40%);padding:7px 10px 9px}
+.hud3.hold i{display:block;height:8px;margin-top:5px;border-radius:4px;background:var(--panel);overflow:hidden}
+.hud3.hold b{display:block;height:100%;width:0;background:var(--stbd);border-radius:4px}
+.hud3.msg{top:108px;left:12px;max-width:min(440px,calc(100% - 24px));padding:9px 12px 9px 14px;font-size:13.5px;line-height:1.4;border-left:3px solid var(--stbd)}
+.hud3.msg.warn{border-left-color:var(--buoy)}.hud3.msg.bad{border-left-color:var(--port)}
+.tlabel.nogo{color:#ffb3ad;transform:translate(-50%,-50%)}.tlabel.aim{color:#a8f0c8;transform:translate(-50%,-50%)}

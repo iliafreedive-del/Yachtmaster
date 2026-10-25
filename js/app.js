@@ -23,7 +23,7 @@ function padMode(m){ // null | 'walk' | 'sail' | 'motor'
   $('#padSteer').hidden=!(m==='sail'||m==='motor');$('#padSail').hidden=!(m==='sail'||m==='motor');
   $('#padUp').textContent=m==='motor'?'Газ ▲':'Выбрать';$('#padDown').textContent=m==='motor'?'Назад ▼':'Травить';
 }
-function stopAll(){sim=null;stop3D();hideDialog();for(const k in keys)keys[k]=false}
+function stopAll(){sim=null;stop3D();stopSail3D();hideDialog();for(const k in keys)keys[k]=false}
 
 function openChapter(id){
   stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
@@ -47,13 +47,14 @@ function renderSlide(){
   $('#steps').innerHTML=c.slides.map((x,i)=>`<li class="${i<slideI?'done':i===slideI?'now':''}"><i>${i<slideI?'✓':i+1}</i>${x.h}</li>`).join('')+(c.practice?`<li><i>▶</i>${c.practice==='exam'?'Тест':'Практика'}</li>`:'');
   say({prolog:'Сначала разберёмся, зачем мы здесь и как пройдёт неделя.',day1:'Сегодня знакомимся с яхтой. Нажимай на подчёркнутые слова, если что-то непонятно.',day2:'Сегодня главное — понять ветер. Без этого паруса не поставить.',day3:'Сегодня учимся ходить против ветра и поворачивать.',day4:'Сегодня марина. Самое нервное для новичка, но мы разберём всё по шагам.',exam:'Последний рывок. Тут проверяется теория.'}[cur]);
 }
+function no3D(){padMode(null);show('board');$('#board').innerHTML='<div class="exam"><div class="card"><h3>3D-палуба не загрузилась</h3><p>Браузер не смог запустить 3D-движок. Обнови страницу или открой её в другом браузере. Если не помогло, включи в настройках браузера аппаратное ускорение (WebGL).</p></div></div>'}
 function startPractice(p){
   phase='practice';
   const backLink=`<br><button class="back" id="toBrief">Вернуться к брифингу</button>`;
   if(p==='exam'){startExam()}
-  else if(p==='deck3d'){if(window.THREE)start3D();else{show('board');$('#board').innerHTML='<div class="exam"><div class="card"><h3>3D-палуба не загрузилась</h3><p>Браузер не смог загрузить 3D-движок. Обнови страницу или открой её в другом браузере.</p></div></div>'}}
+  else if(p==='deck3d'){if(window.THREE)start3D();else no3D()}
   else startSim(p);
-  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',exam:''}[p]||'')+backLink;
+  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',exam:''}[p]||'')+backLink;
   $('#toBrief').onclick=()=>openChapter(cur);
 }
 
