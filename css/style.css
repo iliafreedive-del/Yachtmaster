@@ -10,6 +10,9 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
+/* Страница не масштабируется щипком и двойным тапом: прокрутка пальцем остаётся, щипок отдаём 3D-сценам (у canvas touch-action:none) */
+html{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html.pwa body{padding-top:max(18px,env(safe-area-inset-top,0px))}
 body{background:var(--deep);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 28px}
 .wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
@@ -19,6 +22,22 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .brand p{margin:6px 0 0;color:var(--muted);font-size:13.5px}
 .prog{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .prog b{color:var(--ink)}
+.hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fs-btn{font:inherit;font-size:12.5px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.fs-btn[aria-pressed="true"]{border-color:var(--buoy)}
+.fs-tip{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:40;
+  display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--buoy);border-radius:12px;padding:8px 8px 8px 12px;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.fs-tip span{flex:1}
+.fs-tip button{font:inherit;border-radius:8px;cursor:pointer;padding:6px 10px}
+.fs-how{background:var(--buoy);color:#1b1206;border:0;font-weight:600}
+.fs-x{background:transparent;color:var(--muted);border:0}
+.fs-sheet{position:fixed;inset:0;z-index:50;background:rgba(6,18,27,.78);display:flex;align-items:flex-end;justify-content:center;padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+.fs-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:460px;width:100%;display:flex;flex-direction:column;gap:10px}
+.fs-card h3{margin:0;font-family:var(--f-display);font-size:18px}
+.fs-card p,.fs-card ol{margin:0}
+.fs-card ol{padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.fs-ico{display:inline-block;color:#4ea3ff;font-weight:700}
+.fs-note{color:var(--muted);font-size:13px}
 nav{display:flex;flex-wrap:wrap;gap:6px}
 nav button{font:inherit;font-size:13.5px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;
   padding:7px 14px;cursor:pointer;display:flex;gap:7px;align-items:center}

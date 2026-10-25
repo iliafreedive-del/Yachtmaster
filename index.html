@@ -2,7 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a1d2a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Галс">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>Тренажёр Галс</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -16,7 +24,10 @@
       <h1>Гал<span>с</span></h1>
       <p>Учебная неделя шкипера по программе IYT International Bareboat Skipper</p>
     </div>
-    <div class="prog" id="prog"></div>
+    <div class="hdr-r">
+      <div class="prog" id="prog"></div>
+      <button class="fs-btn" id="fsBtn" type="button" hidden aria-label="Полноэкранный режим">⛶ <span>Весь экран</span></button>
+    </div>
   </header>
   <nav id="tabs"></nav>
   <div class="grid">
@@ -95,6 +106,7 @@
 <script src="js/moor3d.js"></script>
 <script src="js/helm3d.js"></script>
 <script src="js/course.js"></script>
+<script src="js/fullscreen.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
