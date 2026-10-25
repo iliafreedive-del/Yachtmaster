@@ -55,7 +55,7 @@ function startFleet(){
     const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight,wide=W>560;
     // на широком экране лодка правее центра, чтобы карточка характеристик её не закрывала
     if(wide)cam.setViewOffset(W,H,-W*.17,0,W,H);else cam.clearViewOffset();
-    const dist=st.dist*Math.max(1,1/cam.aspect)**.6,ty=st.id==='motor'?2.4:st.id==='sloop'?3.2:4.6;
+    const dist=st.dist*Math.max(1,1/cam.aspect)**.6,ty=st.id==='motor'?3.2:st.id==='sloop'?3.2:4.6;
     cam.position.set(Math.sin(st.yaw)*Math.cos(st.pitch)*dist,ty+Math.sin(st.pitch)*dist,Math.cos(st.yaw)*Math.cos(st.pitch)*dist);cam.lookAt(0,ty*.7,0);
     renderer.render(scene,cam);
     if(st.labels){
