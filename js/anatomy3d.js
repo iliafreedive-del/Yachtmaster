@@ -423,15 +423,13 @@ function startAnatomy(){
   dragScroll(lay);
   /* карточка начинается под рядами кнопок: на широком экране слои идут в два ряда */
   function topSync(){const e=st.cut?$('#anCut'):lay;if(!e||e.hidden)return;host.style.setProperty('--antop',(e.offsetTop+e.offsetHeight+8)+'px')}
-  function renderLayers(){const all=ANAT_LAYERS.every(l=>st.layers[l.id]);
+  function renderLayers(){const all=ANAT_LAYERS.every(l=>l.id==='dims'||st.layers[l.id]);
     lay.innerHTML=`<button data-l="*" aria-pressed="${all}">Все</button>`+ANAT_LAYERS.map(l=>`<button data-l="${l.id}" aria-pressed="${st.layers[l.id]}" style="--lc:${AN_LAYER_C[l.id]}"><i></i>${l.n}</button>`).join('');
     topSync();
     lay.querySelectorAll('button').forEach(b=>b.onclick=()=>{const l=b.dataset.l;
       if(l==='*'){const on=!ANAT_LAYERS.filter(x=>x.id!=='dims').every(x=>st.layers[x.id]);ANAT_LAYERS.forEach(x=>st.layers[x.id]=x.id==='dims'?st.layers.dims:on||x.id==='dims')}
       else st.layers[l]=!st.layers[l];
       if(st.sel&&!st.layers[ANAT[st.sel].l])select(null);paint();renderLayers();renderSide()})}
-  /* на телефоне долгое нажатие на слой оставляет только его */
-  lay.addEventListener('dblclick',e=>{const b=e.target.closest('button');if(!b||b.dataset.l==='*')return;ANAT_LAYERS.forEach(x=>st.layers[x.id]=x.id===b.dataset.l);if(st.sel&&!st.layers[ANAT[st.sel].l])select(null);paint();renderLayers();renderSide()});
   const q=$('#anQ'),res=$('#anRes');
   const norm2=s=>s.toLowerCase().replace(/ё/g,'е');
   function search(){const s=norm2(q.value.trim());if(!s){res.hidden=true;return}
@@ -485,10 +483,10 @@ function startAnatomy(){
   const VIEWS=[['iso','3/4','3/4',.85,.28],['side','Сбоку','side',Math.PI/2,.03],['top','Сверху','top',0,1.5],['bottom','Снизу','bottom',1.2,-.62],['front','Спереди','bow',Math.PI,.12],['back','Сзади','stern',0,.12]];
   const vm=$('#anVm'),vb=$('#anViewB');
   function setView(k){const v=VIEWS.find(x=>x[0]===k)||VIEWS[0],I=st.cut&&INTERIOR[st.cut.type];
-    let tgt=I?anV(...I.cam.tgt):k==='bottom'?anV(0,-.5,.4):k==='top'?anV(0,2,0):anV(0,6.2,0),dist=I?I.cam.dist:k==='bottom'?20:k==='top'?40:34;
+    const LV=I&&I.levels[st.cut.lv];let tgt=I?anV(...(LV.tgt||I.cam.tgt)):k==='bottom'?anV(0,-.5,.4):k==='top'?anV(0,2,0):anV(0,6.2,0),dist=I?LV.dist||I.cam.dist:k==='bottom'?20:k==='top'?40:34;
     if(I&&st.cut.half&&k==='iso'){st.fly={tgt,dist,k:0,yaw:st.cut.half<0?1.35:-1.35,pitch:.32};return}
     if(k==='bottom'&&!st.cut){st.noWater=true;renderVm()}
-    st.fly={tgt,dist,k:0,yaw:v[3]+Math.round((st.cam.yaw-v[3])/(Math.PI*2))*Math.PI*2,pitch:I&&k==='iso'?.75:v[4]}}
+    st.fly={tgt,dist,k:0,yaw:v[3]+Math.round((st.cam.yaw-v[3])/(Math.PI*2))*Math.PI*2,pitch:I&&k==='iso'?(I.levels[st.cut.lv].pitch||.75):v[4]}}
   function renderVm(){vm.innerHTML=VIEWS.map(v=>`<button data-v="${v[0]}">${v[1]}<span class="en">${v[2]}</span></button>`).join('')+
       `<button data-w aria-pressed="${!!st.noWater}"${st.cut?' disabled':''}>Без воды<span class="en">hide water</span></button>`;
     vm.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{setView(b.dataset.v);vmOpen(false)});
@@ -500,8 +498,10 @@ function startAnatomy(){
   /* ---------- «Разрез»: лодка флота без палубы или без половины корпуса, отсеки внутри (js/content/interiors.js) ---------- */
   const CUT_C={cabin:'#7fb3d5',heads:'#6fd0b5',galley:'#f2a33a',saloon:'#d9b77e',nav:'#b49be0',steps:'#d9d3c3',eng:'#ef7a5a',tankF:'#e3c75a',tankW:'#4aa3df',helm:'#9fb4c2',locker:'#c4a374'};
   /* предметы: высота по умолчанию, цвет, подъём над полом (то, что стоит на столешнице) */
-  const IT={floor:[.03,0xcdb28a],bunk:[.42,0xe9e4d8],locker:[.9,0xa77f52],wc:[.42,0xf4f4f0],cnt:[.85,0xa77f52],seat:[.42,0x2f5f8a],tbl:[.72,0x9a6f45],panel:[.2,0x1a1f22,.78],
-    stove:[.05,0x2b2f31,.85],sink:[.03,0xc9d1d6,.85],fridge:[.04,0xf4f4f0,.85],shw:[.9,0xe8eef0],steps:[.9,0xa77f52],eng:[.6,0xb8412e],tankF:[.4,0xc9a43a],tankW:[.3,0x3d8fd0],helmw:[0,0x2b2f31,.95]};
+  const IT={floor:[.03,0xcdb28a],bunk:[.42,0xe9e4d8],locker:[.9,0xa77f52],wc:[.42,0xf4f4f0],cnt:[.85,0x8a6a45],seat:[.42,0x2f5f8a],tbl:[.72,0x9a6f45],panel:[.2,0x1a1f22,.78],
+    stove:[.05,0x2b2f31,.85],sink:[.03,0xc9d1d6,.85],fridge:[.04,0xf4f4f0,.85],shw:[.9,0xe8eef0],steps:[.9,0xa77f52],eng:[.6,0xb8412e],tankF:[.4,0xb39a4a],tankW:[.3,0x3d7fb0],helmw:[0,0x2b2f31,.95]};
+  /* каюты и гальюны — закрытые помещения: у них прозрачные переборки с цветной кромкой */
+  const CLOSED={cabin:1,heads:1};
   const cutG=new THREE.Group();cutG.visible=false;scene.add(cutG);
   const plL=new THREE.Plane(anV(0,-1,0),1),plH=new THREE.Plane(anV(-1,0,0),100),planes=[plL,plH];
   renderer.localClippingEnabled=true;
@@ -515,16 +515,37 @@ function startAnatomy(){
     const rooms=I.rooms.map(r=>{const g=new THREE.Group();g.userData.room=r.id;cutG.add(g);const mats=[];
       const mat=(c,o)=>{const m=clipM(M3(c,Object.assign({roughness:.75},o||{})));m.userData={em:0,ei:1};mats.push(m);return m};
       const box=(w,h,l,c,x,y,z,o)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,l),mat(c,o));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m};
+      const cyl=(r0,r1,h,c,x,y,z,o)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r0,r1,h,16),mat(c,o));m.position.set(x,y,z);m.castShadow=true;g.add(m);return m};
+      const flat=(w,l,c,x,y,z,op)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,l).rotateX(-Math.PI/2),mat(c,{transparent:true,opacity:op,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));m.position.set(x,y,z);m.receiveShadow=true;g.add(m);return m};
+      const fp=[1e9,1e9,-1e9,-1e9];// след отсека на полу: x0,z0,x1,z1
       r.it.forEach(([t,x,z,w,l,o])=>{const d=IT[t],y0=r.y+(o&&o.y0!==undefined?o.y0:d[2]||0),h=o&&o.h||d[0];w=w||.4;l=l||.5;
-        if(t==='bunk'){box(w,h-.14,l,0xa77f52,x,y0+(h-.14)/2,z);box(w-.04,.14,l-.04,0x8fb8d8,x,y0+h-.07,z)}
-        else if(t==='tbl'){box(w,.05,l,d[1],x,y0+h,z);box(.08,h,.08,0x6a5035,x,y0+h/2,z)}
-        else if(t==='steps'){const n=4;for(let i=0;i<n;i++)box(w,h*(i+1)/n,l/n,d[1],x,y0+h*(i+1)/n/2,z+l/2-(i+.5)*l/n)}
-        else if(t==='shw'){box(w,.05,l,d[1],x,y0+.025,z);box(w,h,l,0xbfe3ef,x,y0+h/2,z,{transparent:true,opacity:.22,depthWrite:false})}
-        else if(t==='wc'){box(.36,.36,.42,d[1],x,y0+.18,z);box(.4,.04,.46,0xe6e6e0,x,y0+.38,z)}
+        if(t!=='helmw'&&t!=='panel'){fp[0]=Math.min(fp[0],x-w/2);fp[1]=Math.min(fp[1],z-l/2);fp[2]=Math.max(fp[2],x+w/2);fp[3]=Math.max(fp[3],z+l/2)}
+        const out=x>.05?1:x<-.05?-1:0;// к какому борту прислонено
+        if(t==='bunk'){box(w,h-.16,l,0x8a6a45,x,y0+(h-.16)/2,z);box(w-.04,.16,l-.04,0xdfe7ee,x,y0+h-.08,z);box(w-.08,.02,l*.55,0x4f86b8,x,y0+h+.005,z+l*.18);
+          // подушки у изголовья, к носу
+          if(l>.8){const n=w>1?2:1;for(let k=0;k<n;k++)box(Math.min(.5,(w-.16)/n-.04),.09,.28,0xffffff,x+(n>1?(k-.5)*(w-.1)/2:0),y0+h+.045,z-l/2+.22)}}
+        else if(t==='seat'){const along=l>=w;box(w,h-.12,l,0x6a5035,x,y0+(h-.12)/2,z);box(w-.02,.12,l-.02,d[1],x,y0+h-.06,z);
+          if(along)box(.12,.36,l-.04,d[1],x+(out||1)*(w/2-.06),y0+h+.18,z);else box(w-.04,.36,.12,d[1],x,y0+h+.18,z-l/2+.06)}
+        else if(t==='tbl'){box(w,.05,l,d[1],x,y0+h,z);[[1,0],[-1,0]].forEach(([s])=>box(.02,.05,l,0x6a5035,x+s*w/2,y0+h+.04,z));box(.08,h,.08,0x6a5035,x,y0+h/2,z)}
+        else if(t==='steps'){const n=4;for(let i=0;i<n;i++){const hh=h*(i+1)/n;box(w,hh,l/n,d[1],x,y0+hh/2,z+l/2-(i+.5)*l/n);box(w,.02,.03,0x2b2f31,x,y0+hh+.01,z+l/2-(i+1)*l/n+.015)}}
+        else if(t==='shw'){box(w,.05,l,0xf4f6f6,x,y0+.025,z);box(w,h,l,0xbfe3ef,x,y0+h/2,z,{transparent:true,opacity:.18,depthWrite:false});cyl(.05,.05,.02,0xc9d1d6,x,y0+h-.05,z)}
+        else if(t==='wc'){box(.3,.3,.18,d[1],x,y0+.15,z-.16);cyl(.17,.13,.32,d[1],x,y0+.16,z+.04);const s=new THREE.Mesh(new THREE.TorusGeometry(.14,.03,6,16),mat(0xe6e6e0));s.rotation.x=Math.PI/2;s.position.set(x,y0+.34,z+.04);g.add(s)}
+        else if(t==='sink'){box(w,.02,l,0x9aa3a6,x,y0+.012,z);box(w*.75,.021,l*.7,0x4a5357,x,y0+.014,z);cyl(.015,.015,.18,0xc9d1d6,x-out*w*.42,y0+.1,z)}
+        else if(t==='stove'){box(w,.05,l,0x1f2325,x,y0+.025,z);[[-.25,-.25],[.25,.25],[.25,-.25],[-.25,.25]].forEach(([a,b])=>{const m=new THREE.Mesh(new THREE.TorusGeometry(Math.min(w,l)*.13,.012,5,12),mat(0x9aa3a6));m.rotation.x=Math.PI/2;m.position.set(x+a*w,y0+.055,z+b*l);g.add(m)})}
+        else if(t==='fridge'){box(w,.04,l,d[1],x,y0+.02,z);box(w*.3,.02,.04,0x9aa3a6,x,y0+.05,z+l/2-.06)}
         else if(t==='helmw'){const m=new THREE.Mesh(new THREE.TorusGeometry(.2,.025,6,16),mat(d[1]));m.position.set(x,y0,z);m.rotation.x=-.35;g.add(m)}
-        else if(t==='eng'){box(w,h,l,d[1],x,y0+h/2,z);box(w*.6,.08,l*.7,0x2b2f31,x,y0+h+.04,z)}
-        else if(t==='cnt'){box(w,h-.04,l,d[1],x,y0+(h-.04)/2,z);box(w+.02,.04,l+.02,0xe4ddcd,x,y0+h-.02,z)}
+        else if(t==='eng'){box(w,h*.75,l,d[1],x,y0+h*.375,z);box(w*.7,h*.25,l*.8,0x5a6266,x,y0+h*.875,z);cyl(h*.22,h*.22,.05,0x2b2f31,x,y0+h*.4,z-l/2-.03).rotation.x=Math.PI/2}
+        else if(t==='cnt'){box(w,h-.04,l,d[1],x,y0+(h-.04)/2,z);box(w+.02,.04,l+.02,0xece6d8,x,y0+h-.02,z)}
+        else if(t==='tankF'||t==='tankW'){box(w,h,l,d[1],x,y0+h/2,z,{roughness:.4,metalness:t==='tankF'?.3:0});cyl(.05,.05,.06,0x2b2f31,x,y0+h+.03,z)}
+        else if(t==='locker'){box(w,h,l,d[1],x,y0+h/2,z);box(.02,h*.7,l*.6,0x6a5035,x-out*w/2,y0+h/2,z)}
+        else if(t==='floor'){}
         else box(w,h,l,d[1],x,y0+h/2,z)});
+      // пол отсека цветом зоны и кромка: видно, где кончается одно помещение и начинается другое
+      if(fp[0]<1e8){const pd=.05,x0=fp[0]-pd,z0=fp[1]-pd,x1=fp[2]+pd,z1=fp[3]+pd,W=x1-x0,L=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2,col=new THREE.Color(CUT_C[r.t]).getHex(),yf=r.y+.012+I.rooms.indexOf(r)*.002;
+        flat(W,L,col,cx,yf,cz,.6);
+        if(CLOSED[r.t]){const wh=1.0,wm={transparent:true,opacity:.16,depthWrite:false};
+          [[W,.025,cx,z0],[W,.025,cx,z1],[.025,L,x0,cz],[.025,L,x1,cz]].forEach(([a,b,px,pz])=>{box(a,wh,b,0xffffff,px,r.y+wh/2,pz,wm);box(a+.01,.04,b+.01,col,px,r.y+wh,pz)})}
+        else[[W,.03,cx,z0],[W,.03,cx,z1],[.03,L,x0,cz],[.03,L,x1,cz]].forEach(([a,b,px,pz])=>box(a,.02,b,col,px,yf+.01,pz))}
       const bb=new THREE.Box3().setFromObject(g),c=bb.getCenter(anV(0,0,0));
       const el=document.createElement('button');el.className='an-tl';el.dataset.room=r.id;el.style.setProperty('--lc',CUT_C[r.t]);el.innerHTML=`${r.n}<span class="en">${r.en}</span>`;
       el.onclick=e=>{e.stopPropagation();cutSelect(r.id,true)};labs.appendChild(el);
@@ -542,7 +563,7 @@ function startAnatomy(){
       <button data-h aria-pressed="${!!c.half}">${hl}<span class="en">half hull</span></button></div>`;
     cutBox.querySelectorAll('.an-cr').forEach(dragScroll);topSync();
     cutBox.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{if(b.dataset.b===c.type)return;cutSelect(null);cutBuild(b.dataset.b);setView('iso');say(cutIntro())});
-    cutBox.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{c.lv=+b.dataset.lv;cutLevel();renderCut();cutSide()});
+    cutBox.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{c.lv=+b.dataset.lv;cutLevel();renderCut();cutSide();setView('iso')});
     cutBox.querySelector('[data-h]').onclick=()=>{c.half=c.half===0?-1:c.half<0?1:0;cutLevel();renderCut();cutSide();setView('iso')}}
   const cutIntro=()=>{const I=INTERIOR[st.cut.type];return`<b>${I.n}</b>, ${I.v}. Палуба снята, видно, что где внутри. Нажми на отсек: каюту, гальюн, камбуз, моторный отсек. Кнопка «Половина корпуса» разрежет лодку вдоль. ${en('cutaway')}`};
   function cutSide(){const c=st.cut;$('#taskLbl').textContent='Отсеки · compartments';
