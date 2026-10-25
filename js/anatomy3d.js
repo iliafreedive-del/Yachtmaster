@@ -108,7 +108,7 @@ function startAnatomy(){
   {const k=kit3();k.rail([[-.62,1.74,-4.9],[-.32,1.74,-5.5],[.32,1.74,-5.5],[.62,1.74,-4.9]],.028,steel).rod([-.32,1.04,-5.5],[-.32,1.74,-5.5],.028,steel).rod([.32,1.04,-5.5],[.32,1.74,-5.5],.028,steel)
     .rod([-.62,1.04,-4.9],[-.62,1.74,-4.9],.028,steel).rod([.62,1.04,-4.9],[.62,1.74,-4.9],.028,steel);k.build(part('pulpit').g)}
   {const k=kit3();[1,-1].forEach(s=>k.rail([[s*1.75,1.74,4.9],[s*1.76,1.74,5.85],[s*.7,1.74,5.85]],.028,steel).rod([s*1.76,1.04,5.85],[s*1.76,1.74,5.85],.028,steel).rod([s*.7,1.04,5.85],[s*.7,1.74,5.85],.028,steel));
-    k.add(new THREE.TorusGeometry(.26,.07,6,12,Math.PI*1.6),0xf07a28,1.25,1.5,5.92,0,0,Math.PI*1.2).build(part('pushpit').g)}
+    if(typeof horseshoe==='function')horseshoe(k,1.25,1.45,5.92,.3);k.build(part('pushpit').g)}
   {const k=kit3();k.add(new THREE.SphereGeometry(.07,8,6),0xe2564d,-.66,1.8,-4.9).add(new THREE.SphereGeometry(.07,8,6),0x3cbf7e,.66,1.8,-4.9)
     .add(new THREE.SphereGeometry(.07,8,6),0xffffff,0,1.36,6.02).box(.1,.08,.06,0xffffff,0,8.6,-2.9);k.build(part('sidelights').g)}
   {const k=kit3();[1,-1].forEach(s=>k.rail([[s*1.5,1.035,2.0],[s*1.85,1.035,-1.2],[s*1.55,1.035,-3.4],[s*.7,1.035,-4.7]],.018,0xe8c64a));k.build(part('jackstay').g)}
