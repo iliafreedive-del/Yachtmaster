@@ -30,11 +30,14 @@ function startFleet(){
     $('#fb').querySelectorAll('button').forEach(b=>b.onclick=()=>{st.id=b.dataset.b;build()});
     $('#fs').hidden=!P.sail;$('#fs').textContent=st.sails?'Убрать паруса':'Поднять паруса';
     const chosen=boatType()===st.id;
-    $('#fc').innerHTML=`<h3>${f.n}${en(f.en)}</h3><div class="fspec">${f.spec.map(([r,e,v])=>`<div><span>${r} · ${e}</span><b>${v}</b></div>`).join('')}</div>
-      <button class="btn${chosen?' ghost':''}" id="fpick" ${chosen?'disabled':''}>${chosen?'✓ Выбрана для практики':'Выбрать для практики'}</button>${P.sail?'':'<p class="fnote">Только для марины (День 4): парусов нет.</p>'}`;
-    $('#fpick').onclick=()=>{setBoatType(st.id);build();hint(`Готово: ${f.n.toLowerCase()} пойдёт в практику${P.sail?' Дней 2–4':' Дня 4'}.`,'good')};
+    $('#fc').innerHTML=`<p class="fmk">${f.mk} · ${f.yr}</p><h3>${f.n}${en(f.en)}</h3><div class="fspec">${f.spec.map(([r,e,v])=>`<div><span>${r} · ${e}</span><b>${v}</b></div>`).join('')}</div>
+      ${f.dz&&f.dz!=='—'?`<p class="fdz">Проект: ${f.dz}</p>`:''}<button class="btn${chosen?' ghost':''}" id="fpick" ${chosen?'disabled':''}>${chosen?'✓ Выбрана для практики':'Выбрать для практики'}</button>${P.sail?'':'<p class="fnote">Только для марины (День 4): парусов нет.</p>'}`;
+    $('#fpick').onclick=()=>{setBoatType(st.id);build();hint(`Готово: ${f.n} пойдёт в практику${P.sail?' Дней 2–4':' Дня 4'}.`,'good')};
     say(f.t);hint('');
-    $('#taskLbl').textContent='Ходовые качества · handling';$('#steps').innerHTML=f.h.map(x=>`<li class="now"><i>•</i><span>${rich(x)}</span></li>`).join('');
+    // в боковой панели: как узнать лодку, что внутри, как ведёт себя в тренажёре
+    const sec=(t,list)=>`<li class="sec">${t}</li>`+list.map(x=>`<li class="now"><i>•</i><span>${rich(x)}</span></li>`).join('');
+    $('#taskLbl').textContent='Паспорт лодки · boat profile';
+    $('#steps').innerHTML=sec('Как узнать · how to spot it',f.look)+sec('Внутри · below deck',f.inside)+sec('В тренажёре · handling',f.h);
     st.dist=st.id==='sloop'?24:st.id==='cat'?34:st.id==='motor'?27:32;
   }
   build();

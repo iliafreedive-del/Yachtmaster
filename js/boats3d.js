@@ -6,10 +6,10 @@
    hl/hw — полудлина и полуширина в единицах 2D-карты; eng — под мотором: fwd/back — полный ход вперёд/назад, уз;
    walk — заброс винта, drift — снос ветром, turn — поворотливость, spin — разворот на месте двумя моторами, °/с */
 const BOATS={
-  cruiser:{sail:true,noGo:38,speed:1,accel:1,turn:1,heel:1,hl:22,hw:10,lenM:12,beamM:4.2,eng:{fwd:4,back:2.6,walk:4,drift:.55,turn:1,spin:0}},
-  cat:{sail:true,noGo:45,speed:1.08,accel:.8,turn:.7,heel:.2,hl:22,hw:15,lenM:12,beamM:6.6,eng:{fwd:4.4,back:3,walk:0,drift:.75,turn:.9,spin:7}},
-  motor:{sail:false,noGo:38,speed:0,accel:0,turn:0,heel:0,hl:24,hw:11,lenM:13.5,beamM:4.3,eng:{fwd:6,back:3.4,walk:1.2,drift:.8,turn:1.1,spin:6}},
-  sloop:{sail:true,noGo:40,speed:.85,accel:1.5,turn:1.5,heel:1.3,hl:15,hw:7,lenM:8.4,beamM:2.9,eng:{fwd:3.2,back:2.2,walk:0,drift:.45,turn:1.4,spin:0}}};
+  cruiser:{sail:true,noGo:38,speed:1,accel:1,turn:1,heel:1,hl:22,hw:10,lenM:12.35,beamM:3.99,eng:{fwd:4,back:2.6,walk:4,drift:.55,turn:1,spin:0}},
+  cat:{sail:true,noGo:45,speed:1.08,accel:.8,turn:.7,heel:.2,hl:22,hw:15,lenM:11.74,beamM:6.76,eng:{fwd:4.4,back:3,walk:0,drift:.75,turn:.9,spin:7}},
+  motor:{sail:false,noGo:38,speed:0,accel:0,turn:0,heel:0,hl:24,hw:11,lenM:13.43,beamM:4.2,eng:{fwd:6,back:3.4,walk:1.2,drift:.8,turn:1.1,spin:6}},
+  sloop:{sail:true,noGo:40,speed:.85,accel:1.5,turn:1.5,heel:1.3,hl:15,hw:7,lenM:8.58,beamM:3,eng:{fwd:3.2,back:2.2,walk:2.5,drift:.45,turn:1.4,spin:0}}};
 function boatType(){try{const t=localStorage.getItem('gals-boat');if(BOATS[t])return t}catch(e){}return'cruiser'}
 function setBoatType(t){try{localStorage.setItem('gals-boat',t)}catch(e){}}
 /* лодка для упражнения: на парусных днях моторная яхта не годится, берём круизную */
@@ -340,13 +340,14 @@ function makeMotor(o){
 /* ---------- малая яхта 28 футов: отдельная модель, не уменьшенная копия 40-футовой ----------
    Чем такие лодки отличаются от современной чартерной 40-футовой (в стилизованном виде):
    нос с наклонным форштевнем и свесом, заметный подъём палубы к носу (седловатость), узкий транец без купальной платформы,
-   высокая короткая рубка с овальными иллюминаторами вместо длинных окон, глубокий кокпит, румпель и навесной руль на транце
-   вместо штурвалов, подвесной мотор на кронштейне, дробная оснастка с одной парой краспиц, гика-шкот на погоне в кокпите. */
+   высокая короткая рубка с овальными иллюминаторами вместо длинных окон, глубокий кокпит, румпель
+   вместо штурвалов, дробная оснастка с одной парой краспиц, гика-шкот на погоне в кокпите. Прототип — Beneteau First 285 (Group Finot, 1985–93):
+   руль-перо под корпусом, стационарный дизель. */
 const RIG_SLOOP={mast:[0,1.36,-.9],mastH:10.2,mastR:.72,spr:[.5],sprW:[.8],pivot:[0,2.2,-.9],mainH:8.5,foot:3.3,sheet:[2.45,.9],
   tack:[0,.98,-4.05],head:[0,10,-1.05],clewY:1.4,jibL:2.7,top:[0,11.56,-.9],stay:[0,.95,-4.15],staytop:[0,10.2,-.95]};
 function makeSloop(o){
   const g=new THREE.Group(),k=kit3(),band=o.band||0x1f4f7a,bot=o.bottom||0x2a4f9a,W=0xf7f5ef,teak=0xc29a68;
-  const T=[[-4.3,0],[-3.4,.75],[-2.2,1.2],[-.6,1.42],[.6,1.45],[2.5,1.36],[4.2,1.1]];
+  const T=[[-4.3,0],[-3.4,.78],[-2.2,1.24],[-.6,1.47],[.6,1.5],[2.5,1.4],[4.2,1.12]];
   const hs=z=>{for(let i=1;i<T.length;i++)if(z<=T[i][0]){const[a,b]=T[i-1],[c,d]=T[i];return b+(d-b)*(z-a)/(c-a)}return 1.1};
   const sh=z=>z<0?.82+.2*(-z/4.3)**2:.82+.06*(z/4.2)**2;
   const yb=z=>z<0?lerp(-.32,.55,(-z/4.3)**2.2):lerp(-.32,.3,(z/4.2)**1.6);
@@ -379,16 +380,16 @@ function makeSloop(o){
   [[-.2,0xe2564d],[-.1,0x3cbf7e],[.1,0xf2c23a],[.2,0x2a6fa8]].forEach(([x,c])=>k.rod([x,1.38,.95],[x*.4,1.38,-.85],.01,c,4));
   // небольшой спрейхуд
   if(o.cover!==false)k.add(prismZY([[.55,1.3],[1.15,1.3],[1.15,1.62],[.8,1.7],[.55,1.55]],1.5),o.cover||0x2a5a8c,0,0,0);
-  // киль-плавник, навесной руль на транце с румпелем
+  // киль-плавник с небольшой бульбой
   k.add(prismZY([[-.6,-.25],[.5,-.25],[.25,-1.45],[-.45,-1.45]],.12),bot,0,0,0);
   const bulb=new THREE.SphereGeometry(1,10,6);bulb.scale(.13,.12,.6);k.add(bulb,bot,0,-1.5,-.15);
-  const tl=new THREE.Group();tl.position.set(0,0,4.32);g.add(tl);
-  kit3().add(prismZY([[0,.85],[.4,.78],[.62,-.2],[.35,-.95],[0,-.95]],.07),bot,0,0,0).box(.12,.2,.14,0x2f3335,0,.95,.05)
-    .rod([0,1.0,.05],[0,1.12,-1.55],.035,teak,6).add(new THREE.SphereGeometry(.05,6,4),0x1c1f21,0,1.12,-1.58).build(tl);
-  [.2,.75].forEach(y=>k.box(.06,.05,.1,'steel',0,y,4.24));
+  // руль-перо под корпусом (spade) на баллере, румпель из кокпита; винт и вал стационарного дизеля
+  const tl=new THREE.Group();tl.position.set(0,0,3.45);g.add(tl);
+  kit3().add(prismZY([[-.12,.18],[.32,.18],[.26,-1.05],[-.06,-1.05]],.06),bot,0,0,0).add(new THREE.CylinderGeometry(.06,.06,.15,8),0x2f3335,0,.53,0)
+    .rod([0,.58,0],[0,.72,-1.35],.035,teak,6).add(new THREE.SphereGeometry(.05,6,4),0x1c1f21,0,.72,-1.38).build(tl);
   g.userData.wheel=tl;g.userData.helm=rud=>{tl.rotation.y=rud*.5};
-  // подвесной мотор на откидном кронштейне по левому борту транца
-  k.box(.3,.06,.25,'steel',-.6,.78,4.35).box(.38,.34,.34,0x2b2f31,-.6,.95,4.5).box(.36,.06,.32,0x8a9296,-.6,1.13,4.5).box(.1,.75,.1,0x2b2f31,-.6,.42,4.52).box(.12,.1,.3,0x2b2f31,-.6,.04,4.5);
+  k.rod([0,-.12,1.0],[0,-.33,2.25],.025,'steel').add(new THREE.CylinderGeometry(.03,.03,.06,6),'steel',0,-.34,2.3,Math.PI/2).box(.04,.32,.08,0xc9a64a,0,-.34,2.33,0,.6,0).box(.04,.32,.08,0xc9a64a,0,-.34,2.33,0,-.6,0);
+  k.add(new THREE.CylinderGeometry(.04,.04,.03,8),0x2b2f31,.5,.5,4.22,Math.PI/2);
   // носовой релинг, кормовой релинг из двух половин, стойки лееров, кормовой трап, огни
   const st=[[.55,-3.5],...[-2.4,-1,.4,1.8,3.2].map(z=>[hs(z)-.08,z]),[1.0,4.0]];
   lifelines(k,st.map(([x,z])=>[x,z]),.84,1.45);
@@ -403,7 +404,7 @@ function makeSloop(o){
   if(o.full){k.box(.4,.05,.7,0xf07a28,-.72,.7,3.1)}
   k.build(g);g.userData.wl=.2;g.userData.hulls=[{cx:0,half:hs,z0:-3.5,len:3.6,wl:.22}];
   g.userData.parts=[[0,7,-.9,'Мачта','mast'],[0,2.4,.6,'Гик','boom'],[0,6,-2.6,'Штаг (дробная оснастка)','fractional forestay'],[1,5.5,-.8,'Ванты','shrouds'],[0,6,2,'Ахтерштаг','backstay'],
-    [0,1.55,-.4,'Рубка с иллюминаторами','coachroof & portlights'],[0,1.75,.9,'Спрейхуд','sprayhood'],[0,.9,2.6,'Кокпит','cockpit'],[0,1.3,3.4,'Румпель','tiller'],[0,.3,4.7,'Навесной руль','transom-hung rudder'],
-    [-.6,1.3,4.5,'Подвесной мотор','outboard engine'],[1.05,1.3,1.9,'Лебёдка','winch'],[0,1.05,1.45,'Погон гика-шкота','mainsheet traveller'],[1.3,1.4,-1.8,'Леера','lifelines'],[0,1.7,-4,'Носовой релинг','pulpit'],[.6,.6,4.4,'Кормовой трап','stern ladder'],[0,-1.2,-.1,'Киль','fin keel']];
+    [0,1.55,-.4,'Рубка с иллюминаторами','coachroof & portlights'],[0,1.75,.9,'Спрейхуд','sprayhood'],[0,.9,2.6,'Кокпит','cockpit'],[0,1.2,2.6,'Румпель','tiller'],[0,-.6,3.6,'Перо руля','spade rudder'],
+[0,-.3,2.3,'Винт стационарного дизеля','propeller'],[1.05,1.3,1.9,'Лебёдка','winch'],[0,1.05,1.45,'Погон гика-шкота','mainsheet traveller'],[1.3,1.4,-1.8,'Леера','lifelines'],[0,1.7,-4,'Носовой релинг','pulpit'],[.6,.6,4.4,'Кормовой трап','stern ladder'],[0,-1.2,-.1,'Киль','fin keel']];
   return g}
 function makeBoat(type,o){o=o||{};return(type==='cat'?makeCat:type==='motor'?makeMotor:type==='sloop'?makeSloop:makeCruiser)(o)}
