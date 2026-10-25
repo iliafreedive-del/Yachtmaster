@@ -23,7 +23,7 @@ function makeStreaks(){const a=[];for(let i=0;i<70;i++)a.push({x:Math.random(),y
 function startSim(kind){
   // День 2 идёт в 3D, если браузер тянет WebGL; иначе — прежняя 2D-карта
   const boatId=boatFor(kind),P=BOATS[boatId];
-  const want3d=kind==='points'&&window.THREE;show(want3d?'three':'canvas');const in3d=want3d&&startSail3D(boatId);if(want3d&&!in3d)show('canvas');
+  const want3d=(kind==='points'||kind==='tack')&&window.THREE;show(want3d?'three':'canvas');const in3d=want3d&&startSail3D(boatId,kind);if(want3d&&!in3d)show('canvas');
   boatPicker(kind,boatId);
   $('#instBox').hidden=false;$('#trimBox').hidden=kind==='moor';padMode(kind==='moor'?'motor':'sail');
   const base={kind,boatId,P,running:false,t:0,streaks:makeStreaks(),cam:{x:0,y:0},msg:'',hold:0,step:0,tacks:0,gybes:0,nogoT:0,lastSide:0};
@@ -36,7 +36,7 @@ function startSim(kind){
     sim.view3d=in3d;sim.running=true;say(sim.steps[0].s);
   }
   if(kind==='tack'){
-    sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,48,14),buoy:{x:60,y:-1050}});sim.cam={x:0,y:-100};
+    sim=Object.assign(base,{wind:{from:0,kn:12},boat:newBoat(0,0,48,14),buoy:{x:60,y:-1050},view3d:in3d});sim.cam={x:0,y:-100};
     runQuiz([
       {q:'Шкипер: «Приготовиться к повороту [[оверштаг]]!» <span class="en">(Ready about!)</span> Что отвечает экипаж, когда стоит на шкотах?',o:['«Готов!» (Ready!)','«Поворот!»','«Есть отдать якорь!»'],a:0,e:'Экипаж отвечает «Готов!», только когда стоит у своих шкотов. Без ответа шкипер не поворачивает.'},
       {q:'Шкипер: «Поворот!» <span class="en">(Lee-ho!)</span> Что делает матрос на [[стаксель|стакселе]]?',o:['Выбирает гика-шкот до упора','Отдаёт рабочий стаксель-шкот и выбирает шкот на другом борту','Убирает стаксель'],a:1,e:'Когда нос проходит линию ветра, старый шкот отдают, а новый быстро выбирают на другой лебёдке.'}
