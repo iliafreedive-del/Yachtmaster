@@ -11,16 +11,13 @@ function startFleet(){
   ui.innerHTML=`<div class="tools fleet" id="fb"></div><div class="tools fleet2"><button id="fs">Паруса</button><button id="fl" aria-pressed="true">Подписи</button></div><div class="fcard" id="fc"></div><div id="flab"></div>`;
   host.appendChild(ui);
 
-  const scene=new THREE.Scene(),sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,60,160);
+  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:240}).getHex();
   const cam=new THREE.PerspectiveCamera(36,R.width/R.height,.3,400);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.5));
   const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
   {const c=sun.shadow.camera;c.left=-14;c.right=14;c.top=20;c.bottom=-14;c.near=1;c.far=80}sun.shadow.bias=-.0006;scene.add(sun);
-  scene.environment=skyEnv(renderer);skyDome(scene,{r:150,hor:0xcfe9ef});
-  const wg=new THREE.PlaneGeometry(220,220,60,60);wg.rotateX(-Math.PI/2);
-  const water=new THREE.Mesh(wg,M3(0x22809a,{transparent:true,opacity:.84,roughness:.3,envMapIntensity:.6}));water.receiveShadow=true;scene.add(water);
-  const deep=new THREE.Mesh(new THREE.PlaneGeometry(600,600).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1a6a83}));deep.position.y=-3.2;scene.add(deep);
-
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300,hor:sky,top:0x6fa7c4});
+  const sea=makeOcean(scene,{R:280,sun:[-14,30,12],wind:{from:35,kn:9},foam:.25,sky});
   const st={on:true,renderer,id:boatType(),sails:false,labels:true,yaw:.75,pitch:.3,dist:30,auto:true,t:0,boat:null,raf:0};F3=st;
   const labels=$('#flab');
   function build(){
@@ -50,8 +47,8 @@ function startFleet(){
   function frame(now){
     if(!st.on)return;const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;const t=st.t;
     if(st.auto)st.yaw+=dt*.12;
-    const p=wg.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,Math.sin(x*.18+t*1.3)*.08+Math.sin(z*.23-t*.9)*.06)}p.needsUpdate=true;
-    const b=st.boat;b.position.y=Math.sin(t*1.2)*.05;b.rotation.z=Math.sin(t*.9)*.012;b.rotation.x=Math.sin(t*.7)*.008;
+    sea.update(t,0,0);skyD.clouds.rotation.y=t*.004;
+    const b=st.boat,P=BOATS[st.id],r=sea.float(b,0,0,0,P.lenM/2,P.beamM/2,t,dt,b.userData.wl||0);b.rotation.order='YXZ';b.rotation.set(r.p,0,r.r);
     const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight,wide=W>560;
     // на широком экране лодка правее центра, чтобы карточка характеристик её не закрывала
     if(wide)cam.setViewOffset(W,H,-W*.17,0,W,H);else cam.clearViewOffset();

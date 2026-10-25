@@ -11,18 +11,19 @@ function start3D(){
   const labelsBox=document.createElement('div');host.appendChild(labelsBox);
 
   /* ---------- сцена: low-poly диорама марины ---------- */
-  const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,70,190);
+  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:220}).getHex(),hq=gfxQ()==='high';
   const cam=new THREE.PerspectiveCamera(55,R.width/R.height,.1,500);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
   const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-18,30,14);sun.castShadow=true;
-  sun.shadow.mapSize.set(2048,2048);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
+  sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
   scene.add(sun);scene.add(sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,parent)=>mesh3(geo,mat,x,y,z,parent||scene);
   // дно и вода
   const bed=new THREE.PlaneGeometry(320,320,40,40);bed.rotateX(-Math.PI/2);
   {const p=bed.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,-2.6+Math.sin(x*.21)*.35+Math.cos(z*.17)*.35+Math.sin((x+z)*.07)*.4)}}
   mesh(bed,M(0x2f8f88),0,0,0);
-  const water=new THREE.Mesh(new THREE.PlaneGeometry(320,320,56,56),M(0x23899e,{transparent:true,opacity:.86,roughness:.18,metalness:.1,envMapIntensity:.7}));water.rotation.x=-Math.PI/2;water.position.y=.15;water.receiveShadow=true;scene.add(water);
+  // вода в марине: мелкая рябь, сквозь неё видно дно; за маяком — зыбь открытого моря
+  const sea=makeOcean(scene,{R:200,y:.15,sun:[-18,30,14],wind:{from:300,kn:7},calm:.2,opacity:.78,foam:0,rip:.8,deep:0x1a5f69,shal:0x2b8a84,sky}),water=sea.mesh;
   // набережная, город, холмы
   mesh(new THREE.BoxGeometry(62,4,26),M(0xa89c82),0,-1,25);
   for(let x=-26;x<=26;x+=6.5){if(Math.abs(x)<1)continue;mesh(new THREE.CylinderGeometry(.06,.06,2.6,6),M(0x3b4247),x,2.3,13.4);mesh(new THREE.SphereGeometry(.22,8,6),M(0xfff3c4,{emissive:0x332a10}),x,3.65,13.4)}
@@ -83,7 +84,7 @@ function start3D(){
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.5,.05,8,28),new THREE.MeshBasicMaterial({color:0xf2a33a}));ring.rotation.x=Math.PI/2;ring.visible=false;scene.add(ring);
 
   /* ---------- детали марины: небо, пальмы, утки, колонки, круги, кафе, тузик, лодки на рейде, люди ---------- */
-  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300});
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300,hor:sky,top:0x6fa7c4});
   [[-24,15],[-12,15.5],[3,15.2],[17,15.6],[25,14.8],[-36,-12],[-38,14],[-41,4]].forEach(([x,z],i)=>{const p=makePalm(4.4+(i%3)*.9,.9);p.position.set(x,x<-30?.4:1,z);p.rotation.y=i*1.3;scene.add(p)});
   const dk=kit3();
   for(let x=-24;x<=24;x+=4.5)cleat3(dk,x+.6,1,9.15);
@@ -200,8 +201,9 @@ function start3D(){
     }
     // покачивание
     if(st.spin>0){st.spin-=dt;me.userData.helm(Math.sin((2.4-st.spin)*2.6)*1.4)}
-    me.rotation.z=Math.sin(t*.8)*.012;me.position.y=Math.sin(t*1.1)*.03;
-    others.forEach((o,i)=>{o.rotation.z=Math.sin(t*.7+i)*.012;o.position.y=Math.sin(t*1.0+i*1.7)*.03});
+    sea.update(t,hero.position.x,hero.position.z);
+    {const r=sea.float(me,me.position.x,me.position.z,0,6,2.2,t,dt,.15);me.rotation.x=r.p;me.rotation.z=r.r}
+    others.forEach(o=>{const r=sea.float(o,o.position.x,o.position.z,0,5,2,t,dt,.15);o.rotation.x=r.p;o.rotation.z=r.r});
     free.rotation.z=.12+Math.sin(t*.9)*.03;free.position.y=Math.sin(t*1.2)*.08;
     free2.rotation.z=-.1+Math.sin(t*.8)*.03;
     hero.position.y=onDeck()?1+me.position.y:1;
@@ -229,8 +231,6 @@ function start3D(){
     const fov=st.mode==='iso'?32:55;if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*k;cam.updateProjectionMatrix()}
     // тени следуют за героем
     sun.position.set(hero.position.x-18,30,hero.position.z+14);sun.target.position.copy(hero.position);
-    // волны
-    const pos=water.geometry.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);pos.setZ(i,Math.sin(x*.2+t*1.2)*.09+Math.cos(y*.23+t*.9)*.09)}pos.needsUpdate=true;
     renderer.render(scene,cam);
     const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;
     for(const id in HS){const d=labels[id];const sh=st.labels||id===best;if(!sh){d.hidden=true;continue}

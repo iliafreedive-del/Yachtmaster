@@ -235,3 +235,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .task3 li em.trim s{position:absolute;top:0;bottom:0;background:rgba(60,191,126,.55);border-radius:4px}
 .task3 li em.trim u{position:absolute;top:-3px;width:4px;height:16px;margin-left:-2px;background:var(--buoy);border-radius:2px}
 .task3 .tt b .en{display:inline;font-size:.72em;color:var(--muted);letter-spacing:0;text-transform:none;margin-left:6px}
+/* вода и атмосфера: мягкая виньетка над 3D-сценой, переключатель качества графики */
+.three::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 45%,transparent 58%,rgba(6,22,30,.32) 100%)}
+.keys.gfx button{font:inherit;font-size:12px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin-left:4px;cursor:pointer}
+.keys.gfx button[aria-pressed="true"]{background:var(--panel2);color:var(--ink);border-color:var(--muted)}

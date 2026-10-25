@@ -1,10 +1,11 @@
-/* Галс · День 2 — курсы к ветру в 3D: открытое море, изометрическая камера над яхтой.
+/* Галс · Дни 2 и 3 в 3D: открытое море, камера над яхтой. День 2 — курсы к ветру (kind 'points'),
+   День 3 — лавировка к знаку против ветра поворотами оверштаг (kind 'tack').
    Физика, задания и приборы — общие с 2D-симулятором (sim2d.js), здесь только картинка. */
 let S3=null;
 const K3=.28; // метров сцены на единицу 2D-симулятора: корпус 12 м против 43 единиц
 function stopSail3D(){if(!S3)return;S3.ro&&S3.ro.disconnect();S3.off&&S3.off();S3.renderer.dispose();try{S3.renderer.forceContextLoss()}catch(e){}$('#three').innerHTML='';S3=null}
-function startSail3D(boatId){
-  const P=BOATS[boatId];
+function startSail3D(boatId,kind){
+  const P=BOATS[boatId],tack=kind==='tack',LAY=P.noGo+12; // лейлайн: лучший угол к ветру по поляре тренажёра
   const host=$('#three');host.innerHTML='';host.hidden=false;
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
@@ -17,30 +18,28 @@ function startSail3D(boatId){
     <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>`;
   host.appendChild(ui);
 
-  const scene=new THREE.Scene();const sky=0xcfe9ef;scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,120,320);
-  const cam=new THREE.PerspectiveCamera(30,R.width/R.height,.5,900);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.5));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:110,far:420}).getHex();
+  const cam=new THREE.PerspectiveCamera(30,R.width/R.height,.5,900),hq=gfxQ()==='high';
+  scene.add(new THREE.HemisphereLight(0xfff3e0,0x2f5f6a,.55));
+  const sun=new THREE.DirectionalLight(0xffe9c8,.9);sun.castShadow=true;sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);
   {const c=sun.shadow.camera;c.left=-22;c.right=22;c.top=22;c.bottom=-22;c.near=1;c.far=120}sun.shadow.bias=-.0008;
   scene.add(sun,sun.target);
-  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:380,hor:0xcfe9ef});
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:380,hor:sky,top:0x6fa7c4});
 
-  /* вода: волны бегут по ветру, высота считается в мировых координатах, плоскость едет за яхтой */
-  const wg=new THREE.PlaneGeometry(520,520,72,72);wg.rotateX(-Math.PI/2);
-  const water=new THREE.Mesh(wg,M3(0x1d7590,{roughness:.55,envMapIntensity:.35}));water.receiveShadow=true;scene.add(water);
-  const deep=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1a6a83}));deep.position.y=-1.2;scene.add(deep);
-
-  /* штрихи ветра на воде */
-  const TILE=180,streakG=new THREE.PlaneGeometry(.16,1).rotateX(-Math.PI/2),streakM=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.45,depthWrite:false});
-  const streaks=[];for(let i=0;i<110;i++){const m=new THREE.Mesh(streakG,streakM);const l=2+Math.random()*4;m.scale.z=l;
-    m.userData={x:(Math.random()-.5)*TILE,z:(Math.random()-.5)*TILE,s:.8+Math.random()*.5};scene.add(m);streaks.push(m)}
-  /* кильватерная пена */
-  const foamG=new THREE.CircleGeometry(1,10).rotateX(-Math.PI/2);
-  const foam=[];for(let i=0;i<70;i++){const m=new THREE.Mesh(foamG,new THREE.MeshBasicMaterial({color:0xf4fbfb,transparent:true,opacity:0,depthWrite:false}));m.visible=false;scene.add(m);foam.push(m)}
+  /* вода: волны и рябь бегут по ветру, сетка едет за яхтой; ветер виден по ряби, порывам и редким штрихам в воздухе */
+  const sea=makeOcean(scene,{R:340,sun:[-25,45,18],wind:{from:0,kn:12},foam:.55,sky}),wisps=makeWisps(scene,{op:.5});let seaKey='';
+  const wake=makeWake(scene,sea,{w0:.5,spread:3.4}),wakePts=[];
   /* буи-ориентиры, чтобы был виден ход */
   const BT=260,buoys=[];
-  for(let i=0;i<12;i++){const g=new THREE.Group();mesh3(new THREE.CylinderGeometry(.55,.75,1.4,10),M3(0xf2c23a),0,.3,0,g);mesh3(new THREE.ConeGeometry(.35,.9,8),M3(0xf2c23a),0,1.4,0,g);
+  for(let i=0;i<(tack?8:12);i++){const g=new THREE.Group(),bc=tack?0xeeeeea:0xf2c23a;mesh3(new THREE.CylinderGeometry(.55,.75,1.4,10),M3(bc),0,.3,0,g);mesh3(new THREE.ConeGeometry(.35,.9,8),M3(bc),0,1.4,0,g);if(tack)g.scale.setScalar(.6);
     g.userData={x:(Math.random()-.5)*BT,z:(Math.random()-.5)*BT,p:Math.random()*6};g.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(g);buoys.push(g)}
+  /* День 3: надувной гоночный знак и лейлайны — пунктиры от знака, с которых знак берётся одним галсом */
+  let mark=null;
+  if(tack){mark=new THREE.Group();const mk=kit3();
+    mk.add(new THREE.CylinderGeometry(.9,1,2.2,16),0xf07a28,0,.9,0).add(new THREE.CylinderGeometry(.92,.92,.35,16),0xffffff,0,1.4,0).add(new THREE.CylinderGeometry(.6,.9,.4,16),0xf07a28,0,2.2,0).build(mark);
+    mark.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(mark);
+    const lk=kit3();[-1,1].forEach(sd=>{const a=(180+sd*LAY)*D;for(let d=6;d<420;d+=9)lk.box(.35,.06,4,0xf2c23a,Math.sin(a)*d,0,-Math.cos(a)*d,0,-a,0)});
+    mark.userData.lay=lk.build(new THREE.Group());scene.add(mark.userData.lay)}
   /* горизонт: острова и чужие яхты едут вместе с камерой, как задник */
   const horizon=new THREE.Group();scene.add(horizon);
   [[0,250,40,14,0x7ea55a],[70,270,28,10,0x6d9550],[150,240,34,16,0x8fb066],[215,260,24,9,0x7ea55a],[290,250,38,12,0x6d9550]].forEach(([b,r,sx,sy,c])=>{
@@ -66,20 +65,27 @@ function startSail3D(boatId){
   const me=makeBoat(boatId,{band:0x1f4f7a,full:true,rig:true});me.rotation.order='YXZ';scene.add(me);
   const vane=new THREE.Group();vane.position.set(...me.userData.rig.d.top);me.add(vane);
   mesh3(new THREE.BoxGeometry(.06,.06,1.4),M3(0x333333),0,0,0,vane);mesh3(new THREE.ConeGeometry(.16,.4,6),M3(0xe2564d),0,0,-.8,vane).rotation.x=-Math.PI/2;
-  me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+  me.traverse(o=>{if(o.isMesh&&!(o.material&&o.material.isShaderMaterial)){o.castShadow=true;o.receiveShadow=true}});
+  const bow=makeBowFoam(me);
 
-  const st={renderer,mode:'north',yaw:0,camYaw:0,dist:58,aimStep:-1,heel:0,t:0};S3=st;
+  const st={renderer,mode:'north',yaw:0,camYaw:0,dist:tack?44:46,aimStep:-1,heel:0,t:0,d0:0};S3=st;
   const setMode=m=>{st.mode=m;$('#sc').textContent=m==='stern'?'Камера: за кормой':'Камера: север ↑'};
   $('#sc').onclick=()=>setMode(st.mode==='stern'?'north':'stern');
   const onKey=e=>{if(S3===st&&e.code==='KeyC'&&$('#dlg').hidden)setMode(st.mode==='stern'?'north':'stern')};
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
-  dragCamera(renderer.domElement,dx=>{st.yaw-=dx*.006},dy=>{st.dist=clamp(st.dist+dy*.04,30,95)});
+  dragCamera(renderer.domElement,dx=>{st.yaw-=dx*.006},dy=>{st.dist=clamp(st.dist+dy*.04,18,95)});
   st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
 
   const v3=new THREE.Vector3(),tgt=new THREE.Vector3(),look=new THREE.Vector3();let first=true;
   const place=(el,x,y,z)=>{v3.set(x,y,z).project(cam);if(v3.z>1||Math.abs(v3.x)>1.1||Math.abs(v3.y)>1.1){el.hidden=true;return}
     el.hidden=false;el.style.left=((v3.x+1)/2*renderer.domElement.clientWidth)+'px';el.style.top=((1-v3.y)/2*renderer.domElement.clientHeight)+'px'};
 
+  // метка, которая за краем экрана прижимается к краю со стрелкой
+  const placeEdge=(el,x,y,z)=>{v3.set(x,y,z).project(cam);const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;let X=v3.x,Y=v3.y;
+    // сверху экрана HUD ветра и карточка задания, поэтому верхний край ниже
+    if(v3.z>1){X=-X;Y=-Y}const top=cam.aspect<1?.12:.58,off=v3.z>1||Math.abs(X)>.92||Y>top+.02||Y<-.8,m=Math.max(Math.abs(X)/.9,Y>0?Y/top:-Y/.78,1);if(off){X/=m;Y/=m}
+    el.hidden=false;el.style.left=((X+1)/2*W)+'px';el.style.top=((1-Y)/2*H)+'px';
+    el.innerHTML=(off?`<b style="display:inline-block;transform:rotate(${Math.atan2(-Y,X)/D+90}deg)">▲</b> `:'')+`Знак · ${Math.round(Math.hypot(x-me.position.x,z-me.position.z))} м${en('windward mark')}`};
   // карточка задания: что сделать прямо сейчас, с галочками по шагам
   const li=(id,ok,txt)=>{const e=$('#'+id);e.className=ok?'ok':'';e.querySelector('i').textContent=ok?'✓':id.slice(2);e.querySelector('span').innerHTML=txt};
   const taskCard=(step,s,dt)=>{
@@ -97,36 +103,55 @@ function startSail3D(boatId){
     $('#stz').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#stz').style.width=(16/85*100)+'%';$('#stm').style.left=(s.boom/85*100)+'%';
     $('#st3').className=sim.hold>0?'now':'';$('#shb').style.width=(clamp(sim.hold/2.5,0,1)*100)+'%';
   };
+  // День 3: карточка лавировки — галс, лейлайн, поворот, расстояние до знака
+  const tackCard=(s,dt)=>{
+    const b=sim.boat,w=sim.wind,card=$('#stk');if(!sim.running&&!sim.tacks){card.hidden=false}
+    const mx=sim.buoy.x*K3,mz=sim.buoy.y*K3,bx=b.x*K3,bz=b.y*K3,d=Math.hypot(mx-bx,mz-bz);if(!st.d0)st.d0=d;
+    const brg=Math.atan2(mx-bx,-(mz-bz))/D,rel=norm(brg-w.from),side=s.side,toMark=Math.abs(norm(brg-b.h));
+    $('#stn').textContent=sim.running?`Лавировка · поворотов: ${sim.tacks}`:'Готово';$("#stc").innerHTML=`Дойди до знака против ветра${en('beat to the windward mark')}`;
+    const beat=s.awa>=P.noGo&&s.awa<=LAY+12,sailOk=s.eff>.6&&s.st!=='nogo';
+    li('st1',beat&&sailOk,s.st==='nogo'?(b.v>1.5?'Нос проходит линию ветра — не останавливай руль':'Мало хода в мёртвой зоне: отверни от ветра и разгонись'):
+      !beat?`Приведись к ветру: держи ${P.noGo+5}–${LAY+8}° (белая стрелка у края красного сектора)`:
+      !sailOk?(s.boom>s.opt?'Бейдевинд есть, но парус полощет: <b>«Выбрать» ↑</b>':'Парус перетянут: <b>«Травить» ↓</b>'):'Бейдевинд, парус стоит — яхта идёт острее к ветру');
+    const fetch=rel*side>=LAY-2,over=rel*side>LAY+12,dir=side>0?'вправо ▶':'◀ влево';
+    li('st2',toMark<10&&beat,s.st==='nogo'?'Поворот оверштаг идёт… стаксель перекладывается на другой борт':
+      toMark<10&&beat?'Знак прямо по курсу — держи бейдевинд до него':
+      over?`Ты пересёк лейлайн — поворачивай оверштаг сейчас: руль <b>${dir}</b>, к ветру`:
+      fetch?`Ты на лейлайне (жёлтый пунктир) — <b>поворот оверштаг!</b> Руль <b>${dir}</b> и держи, пока нос не пройдёт ветер`:
+      'Иди этим галсом до лейлайна — жёлтого пунктира от знака. Там поворот оверштаг');
+    $('#st3').querySelector('span').textContent=`До знака ${Math.round(d)} м`;$('#st3').className=d<25?'now':'';
+    $('#shb').style.width=(clamp(1-d/st.d0,0,1)*100)+'%';$('#stz').parentNode.hidden=true;
+  };
   st.render=dt=>{
     const b=sim.boat,w=sim.wind,s=sim.ss||sailState(b,w,P.noGo);st.t+=dt;const t=st.t;
     const bx=b.x*K3,bz=b.y*K3,to=(w.from+180)*D,wdx=Math.sin(to),wdz=-Math.cos(to);
     // яхта: курс, крен на подветренный борт, лёгкая качка
     const heelT=s.side*.3*P.heel*s.eff*clamp((180-s.awa)/140,0,1)*(w.kn/12);st.heel+=(heelT-st.heel)*Math.min(1,dt*1.5);
-    me.position.set(bx,Math.sin(t*1.3)*.08,bz);me.rotation.set(Math.sin(t*1.1)*.012,-b.h*D,st.heel+Math.sin(t*.9)*.01);
+    if(seaKey!==w.from+':'+w.kn){seaKey=w.from+':'+w.kn;sea.setWind(w.from,w.kn)}
+    sea.update(t,bx,bz);const r=sea.float(me,bx,bz,b.h,P.lenM/2,P.beamM/2,t,dt,me.userData.wl||0);me.position.x=bx;me.position.z=bz;
+    me.rotation.set(r.p,-b.h*D,st.heel+r.r);
     me.userData.helm(b.rud);
     const ss=s.st,camber=ss==='good'?.11:ss==='over'?.07:ss==='luff'?.03:0,flap=ss==='nogo'?.07:ss==='luff'?.05:0;
     trimSails(me.userData.rig,s.boom,Math.min(s.boom*.85+4,Math.max(s.awa-6,2)),s.side,camber,flap,t);
-    vane.rotation.y=-s.rw*D;
-    // вода
-    const p=wg.attributes.position;water.position.set(bx,0,bz);
-    for(let i=0;i<p.count;i++){const x=p.getX(i)+bx,z=p.getZ(i)+bz,d=x*wdx+z*wdz;p.setY(i,Math.sin(d*.2-t*1.6)*.22+Math.sin(x*.29-z*.17+t*1.1)*.07)}p.needsUpdate=true;
-    const drift=sim.running?w.kn*dt:0;
-    streaks.forEach(m=>{const u=m.userData;u.x+=wdx*drift*u.s;u.z+=wdz*drift*u.s;
-      let rx=u.x-bx,rz=u.z-bz;rx=((rx+TILE/2)%TILE+TILE)%TILE-TILE/2;rz=((rz+TILE/2)%TILE+TILE)%TILE-TILE/2;u.x=bx+rx;u.z=bz+rz;
-      m.position.set(u.x,.32,u.z);m.rotation.y=-to})
+    telltales(me.userData.rig,ss,t);vane.rotation.y=-s.rw*D;bow.update(b.v*.5144,t);
+    // ветер в воздухе и кильватер
+    wisps.update(dt,[bx,bz],w.from,sim.running?w.kn:w.kn*.5,st.dist/40);
+    wakePts.length=0;b.wake.forEach(f=>wakePts.push([f.x*K3,f.y*K3,f.a]));
+    wake.update(wakePts,[bx-Math.sin(b.h*D)*P.lenM*.48,bz+Math.cos(b.h*D)*P.lenM*.48],t);
     buoys.forEach(g=>{const u=g.userData;let rx=u.x-bx,rz=u.z-bz;rx=((rx+BT/2)%BT+BT)%BT-BT/2;rz=((rz+BT/2)%BT+BT)%BT-BT/2;u.x=bx+rx;u.z=bz+rz;
-      g.position.set(u.x,Math.sin(t*1.4+u.p)*.15,u.z);g.rotation.z=Math.sin(t*1.1+u.p)*.06});
-    foam.forEach((m,i)=>{const f=b.wake[b.wake.length-1-i];if(!f||f.a<=0){m.visible=false;return}m.visible=true;m.position.set(f.x*K3,.34,f.y*K3);m.scale.setScalar(.35+(1-f.a)*1.1);m.material.opacity=f.a*.45});
+      g.position.set(u.x,sea.height(u.x,u.z,t)-.25,u.z);g.rotation.z=Math.sin(t*1.1+u.p)*.08});
+    if(mark){const mx=sim.buoy.x*K3,mz=sim.buoy.y*K3;mark.position.set(mx,sea.height(mx,mz,t)-.3,mz);mark.rotation.z=Math.sin(t*1.2)*.06;
+      mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D}
     horizon.position.set(bx,0,bz);skyD.dome.position.set(bx,0,bz);skyD.clouds.position.set(bx,0,bz);
     // роза курсов
     rose.position.set(bx,.36,bz);rose.rotation.y=-w.from*D;needle.rotation.y=-norm(b.h-w.from)*D;
     const step=sim.steps&&sim.steps[sim.step];
-    if(step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').innerHTML=`${step.n}${en(step.en)}`}
-    aim.forEach(m=>m.visible=!!step&&sim.running);
+    if(!tack&&step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').innerHTML=`${step.n}${en(step.en)}`}
+    aim.forEach(m=>m.visible=!tack&&!!step&&sim.running);
     // камера: изометрия над яхтой, по умолчанию ветер сверху вниз
     const wantYaw=(st.mode==='stern'?-b.h*D:0)+st.yaw;
     if(first)st.camYaw=wantYaw;else st.camYaw+=norm((wantYaw-st.camYaw)/D)*D*Math.min(1,dt*2.5);
-    const pit=.92,k=first?1:1-Math.exp(-dt*4),dist=st.dist*Math.max(1,1/cam.aspect)**.7;first=false;
+    const pit=.8,k=first?1:1-Math.exp(-dt*4),dist=st.dist*Math.max(1,1/cam.aspect)**.7;first=false;
     // яхта чуть ниже центра, чтобы карточка задания сверху её не закрывала
     const lead=cam.aspect<1?6:5;tgt.set(bx-Math.sin(st.camYaw)*lead,1.5,bz-Math.cos(st.camYaw)*lead);
     v3.set(tgt.x+Math.sin(st.camYaw)*Math.cos(pit)*dist,1.5+Math.sin(pit)*dist,tgt.z+Math.cos(st.camYaw)*Math.cos(pit)*dist);
@@ -136,10 +161,11 @@ function startSail3D(boatId){
     // HUD
     const Y=st.camYaw,up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
     $('#swa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#swt').textContent=`${w.kn} уз · ${compassName(w.from)}`;
-    taskCard(step,s,dt);
+    if(tack)tackCard(s,dt);else taskCard(step,s,dt);
     const mg=$('#smg');if(sim.msgT>0&&sim.msg){mg.hidden=false;mg.textContent=sim.msg;mg.className='hud3 msg '+(sim.msgC||'');mg.style.opacity=Math.min(1,sim.msgT)}else mg.hidden=true;
     const nb=w.from*D;place($('#slN'),bx+Math.sin(nb)*14.5,.4,bz-Math.cos(nb)*14.5);
-    if(step&&sim.running){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
+    if(tack)placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3);
+    else if(step&&sim.running){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
   };
   return true;
 }
