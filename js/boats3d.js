@@ -153,6 +153,13 @@ function addRig(g,k,o,d,chain,back){
     }
   }
 }
+/* спасательная подкова (horseshoe lifebuoy) в держателе на кормовом релинге: «U» проёмом вниз, светоотражающие полосы, лампа-маячок.
+   Плоскость подковы смотрит назад (по +Z); r — внешний радиус */
+function horseshoe(k,x,y,z,r){const t=new THREE.TorusGeometry(r*.72,r*.28,8,18,Math.PI*1.7);t.scale(1,1,.7);
+  k.add(t,0xf2c23a,x,y,z,0,0,-Math.PI*.35);
+  [-.6,0,.6].forEach(a=>{const b=a*Math.PI*.45+Math.PI/2;k.box(r*.3,r*.12,r*.42,0xf4f4f0,x+Math.cos(b)*r*.72,y+Math.sin(b)*r*.72,z,0,0,b)});
+  [-1,1].forEach(sd=>k.rod([x+sd*r*.55,y+r*.95,z-.06],[x+sd*r*.55,y-r*.2,z-.06],.012,'steel'));
+  k.add(new THREE.CylinderGeometry(.035,.035,.14,8),0xf07a28,x+r*1.05,y-r*.2,z).add(new THREE.SphereGeometry(.03,6,4),0xffffff,x+r*1.05,y-r*.2+.09,z)}
 /* релинги и леера: стойки от y0 до y1 в точках pts (по одному борту, x>0), зеркально на другой борт */
 function lifelines(k,pts,y0,y1){[1,-1].forEach(s=>{const P=pts.map(([x,z])=>[s*x,z]);
   P.forEach(([x,z])=>k.rod([x,y0,z],[x,y1,z],.022,'steel'));
@@ -207,7 +214,7 @@ function makeCruiser(o){
   // стол в кокпите: тумба и тиковые створки
   k.box(.2,.55,.9,W,0,1.3,3.2).box(.48,.05,1.25,'teak',0,1.6,3.2);[1,-1].forEach(s=>k.box(.04,.4,1.2,'teak',s*.27,1.4,3.2));k.rod([-.2,1.66,2.6],[.2,1.66,2.6],.015,'steel');
   // спасательная подкова на кормовом релинге и плот в контейнере на транце
-  k.add(new THREE.TorusGeometry(.26,.07,6,12,Math.PI*1.6),0xf07a28,1.25,1.5,5.92,0,0,Math.PI*1.2).box(.5,.3,.35,0xf4f2ec,-1.2,1.2,5.65);
+  horseshoe(k,1.25,1.45,5.92,.3);k.box(.5,.3,.35,0xf4f2ec,-1.2,1.2,5.65);
   // носовой релинг, кормовой релинг, стойки лееров
   const st=[[.62,-4.9],...[-4.2,-2.4,-.6,1.2,3.2].map(z=>[hullHalfW(z)-.1,z]),[1.75,4.9]];
   lifelines(k,st,1.04,1.74);
@@ -397,7 +404,7 @@ function makeSloop(o){
   [1,-1].forEach(s=>k.rail([[s*1.0,1.45,4.0],[s*1.0,1.45,4.18],[s*.3,1.45,4.18]],.022,'steel').rod([s*1.0,.9,4.18],[s*1.0,1.45,4.18],.022,'steel').rod([s*.3,.9,4.18],[s*.3,1.45,4.18],.022,'steel'));
   k.rod([.5,.88,4.2],[.5,-.3,4.38],.018,'steel').rod([.72,.88,4.2],[.72,-.3,4.38],.018,'steel');[.6,.25,-.1].forEach(y=>k.box(.24,.02,.05,'steel',.61,y,4.2+(.88-y)*.15));
   k.add(new THREE.SphereGeometry(.05,6,4),0xe2564d,-.24,1.56,-4.05).add(new THREE.SphereGeometry(.05,6,4),0x3cbf7e,.24,1.56,-4.05).add(new THREE.SphereGeometry(.05,6,4),0xffffff,0,1.5,4.18);
-  k.add(new THREE.TorusGeometry(.22,.06,6,12,Math.PI*1.6),0xf07a28,-.85,1.25,4.12,0,0,Math.PI*1.2);
+  horseshoe(k,-.7,1.18,4.24,.26);
   // привальный брус и бортовые утки
   [1,-1].forEach(s=>{for(let z=-4;z<4.1;z+=.8)k.rod([s*(hs(z)+.015),sh(z)+.03,z],[s*(hs(Math.min(z+.8,4.2))+.015),sh(Math.min(z+.8,4.2))+.03,Math.min(z+.8,4.2)],.025,0x9aa3a6,4);k.box(.2,.05,.07,0x5c6164,s*1.2,.88,0)});
   addRig(g,k,o,RIG_SLOOP,[1.3,.88,-.8],[[0,.92,4.2]]);
