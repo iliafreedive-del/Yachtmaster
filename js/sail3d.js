@@ -3,7 +3,8 @@
 let S3=null;
 const K3=.28; // метров сцены на единицу 2D-симулятора: корпус 12 м против 43 единиц
 function stopSail3D(){if(!S3)return;S3.ro&&S3.ro.disconnect();S3.off&&S3.off();S3.renderer.dispose();try{S3.renderer.forceContextLoss()}catch(e){}$('#three').innerHTML='';S3=null}
-function startSail3D(){
+function startSail3D(boatId){
+  const P=BOATS[boatId];
   const host=$('#three');host.innerHTML='';host.hidden=false;
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
@@ -51,13 +52,13 @@ function startSail3D(){
   const sector=(b1,b2,r1,r2,col,op)=>{const g=new THREE.RingGeometry(r1,r2,32,1,(90-b2)*D,(b2-b1)*D).rotateX(-Math.PI/2);
     const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,depthWrite:false,side:THREE.DoubleSide}));rose.add(m);return m};
   sector(0,360,12.6,12.9,0xffffff,.5);
-  sector(-38,38,8,12.6,0xff5a4e,.55);
+  sector(-P.noGo,P.noGo,8,12.6,0xff5a4e,.55);
   let aim=[];const setAim=(lo,hi)=>{aim.forEach(m=>{rose.remove(m);m.geometry.dispose()});aim=[sector(lo,hi,8,12.6,0x4fe39a,.5),sector(-hi,-lo,8,12.6,0x4fe39a,.5)]};
   const needle=new THREE.Mesh(new THREE.PlaneGeometry(.35,5.2).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));needle.geometry.translate(0,0,-10.3);rose.add(needle);
 
   /* наша яхта с подвижным такелажем и флюгером на топе мачты */
-  const me=makeYacht({band:0x1f4f7a,full:true,rig:true});me.rotation.order='YXZ';scene.add(me);
-  const vane=new THREE.Group();vane.position.set(0,16.1,-2.8);me.add(vane);
+  const me=makeBoat(boatId,{band:0x1f4f7a,full:true,rig:true});me.rotation.order='YXZ';scene.add(me);
+  const vane=new THREE.Group();vane.position.set(...me.userData.rig.d.top);me.add(vane);
   mesh3(new THREE.BoxGeometry(.06,.06,1.4),M3(0x333333),0,0,0,vane);mesh3(new THREE.ConeGeometry(.16,.4,6),M3(0xe2564d),0,0,-.8,vane).rotation.x=-Math.PI/2;
   me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
 
@@ -74,12 +75,12 @@ function startSail3D(){
     el.hidden=false;el.style.left=((v3.x+1)/2*renderer.domElement.clientWidth)+'px';el.style.top=((1-v3.y)/2*renderer.domElement.clientHeight)+'px'};
 
   st.render=dt=>{
-    const b=sim.boat,w=sim.wind,s=sim.ss||sailState(b,w);st.t+=dt;const t=st.t;
+    const b=sim.boat,w=sim.wind,s=sim.ss||sailState(b,w,P.noGo);st.t+=dt;const t=st.t;
     const bx=b.x*K3,bz=b.y*K3,to=(w.from+180)*D,wdx=Math.sin(to),wdz=-Math.cos(to);
     // яхта: курс, крен на подветренный борт, лёгкая качка
-    const heelT=s.side*.3*s.eff*clamp((180-s.awa)/140,0,1)*(w.kn/12);st.heel+=(heelT-st.heel)*Math.min(1,dt*1.5);
+    const heelT=s.side*.3*P.heel*s.eff*clamp((180-s.awa)/140,0,1)*(w.kn/12);st.heel+=(heelT-st.heel)*Math.min(1,dt*1.5);
     me.position.set(bx,Math.sin(t*1.3)*.08,bz);me.rotation.set(Math.sin(t*1.1)*.012,-b.h*D,st.heel+Math.sin(t*.9)*.01);
-    me.userData.wheel.rotation.z=-b.rud*1.6;
+    me.userData.helm(b.rud);
     const ss=s.st,camber=ss==='good'?.11:ss==='over'?.07:ss==='luff'?.03:0,flap=ss==='nogo'?.07:ss==='luff'?.05:0;
     trimSails(me.userData.rig,s.boom,Math.min(s.boom*.85+4,Math.max(s.awa-6,2)),s.side,camber,flap,t);
     vane.rotation.y=-s.rw*D;
