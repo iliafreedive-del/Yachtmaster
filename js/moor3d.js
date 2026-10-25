@@ -318,8 +318,9 @@ function startMoor3D(mode){
     const aft=st.thrI<2||st.u<-.2,fov=st.view==='helm'?66:50;if(cam.fov!==fov){cam.fov=fov;cam.updateProjectionMatrix()}
     if(st.view==='helm'){
       const wy=-(st.h+(aft?180:0))*D+st.yaw;if(first)st.camYaw=wy;else st.camYaw+=norm((wy-st.camYaw)/D)*D*Math.min(1,dt*3);
-      const[ex,ez]=m4w(st,0,aft?B.L*.98:B.L*.95),tilt=-.14-(st.camPit-.6)*.8,kk=first?1:1-Math.exp(-dt*12);first=false;
-      v3.set(ex,2.75,ez);want.set(ex-Math.sin(st.camYaw)*20,2.75+tilt*20,ez-Math.cos(st.camYaw)*20);
+      // глаза шкипера: у кормовых штурвалов яхты или на посту флайбриджа моторной (userData.eye)
+      const ey=me.userData.eye,[ex,ez]=ey?m4w(st,ey[0],ey[2]):m4w(st,0,aft?B.L*.98:B.L*.95),eh=ey?ey[1]:2.75,tilt=-.14-(st.camPit-.6)*.8,kk=first?1:1-Math.exp(-dt*12);first=false;
+      v3.set(ex,eh,ez);want.set(ex-Math.sin(st.camYaw)*20,eh+tilt*20,ez-Math.cos(st.camYaw)*20);
       cam.position.lerp(v3,kk);look.lerp(want,kk);cam.lookAt(look);
     }else{
     if(st.view==='top'){want.set(st.x*.5,0,st.z*.5+10);st.camYaw+=norm(-st.camYaw/D)*D*Math.min(1,dt*3)}
