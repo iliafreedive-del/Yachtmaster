@@ -435,3 +435,33 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .msg{margin:0;padding-left:20px;display:grid;gap:6px;font-size:13.5px}
 .chat{display:grid;gap:6px;max-height:320px;overflow:auto}.chat p{margin:0;padding:7px 10px;border-radius:10px;font-size:13.5px;background:var(--panel2)}
 .chat p.me{border-left:3px solid var(--buoy)}.chat p.them{border-left:3px solid var(--stbd)}
+/* Флот как автосалон: название сверху, витрина миниатюр снизу, сворачиваемые характеристики справа, светлая студия */
+.fhead{position:absolute;top:14px;left:16px;z-index:3;pointer-events:none;max-width:58%}
+.fhead h2{margin:2px 0 0;font-family:var(--f-display);font-weight:600;font-size:clamp(20px,3.2vw,30px);line-height:1.1}
+.fhead .fmk{margin:0;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--buoy)}
+.fhead .fen{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.three.studio .fhead h2{color:#13232c}.three.studio .fhead .fen{color:#56707c}.three.studio .fhead .fmk{color:#b8680b}
+.three .tools.fleet2{top:12px;bottom:auto;left:auto;right:12px;flex-wrap:wrap;justify-content:flex-end;max-width:45%}
+.three.studio .tools button{background:rgba(255,255,255,.88);color:#13232c;border-color:#c9d2d6}
+.three.studio .tools button[aria-pressed="true"]{background:var(--buoy);border-color:var(--buoy)}
+.three.studio::after{background:radial-gradient(ellipse at 50% 45%,transparent 62%,rgba(30,50,60,.10) 100%)}
+.fcard{left:auto;right:12px;top:58px;bottom:auto;width:min(300px,calc(100% - 24px));max-height:calc(100% - 232px)}
+.ftog{font:inherit;font-size:12.5px;background:none;border:0;color:var(--ink);text-align:left;padding:0;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.ftog span{color:var(--buoy)}
+.fbody{display:flex;flex-direction:column;gap:10px}
+.fthumbs{position:absolute;left:12px;right:12px;bottom:12px;z-index:3;display:flex;gap:8px;justify-content:center;overflow-x:auto;scrollbar-width:none;padding:2px}
+.fthumbs button{flex:0 0 auto;width:150px;font:inherit;text-align:left;background:rgba(10,29,42,.82);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:5px 5px 6px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.fthumbs img{width:100%;aspect-ratio:5/3;object-fit:cover;border-radius:6px;display:block;margin-bottom:3px}
+.fthumbs b{font-size:12.5px;font-weight:600;padding:0 2px}.fthumbs span{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);padding:0 2px}
+.fthumbs button[aria-pressed="true"]{border-color:var(--buoy);box-shadow:0 0 0 2px var(--buoy) inset}
+.three.studio .fthumbs button{background:rgba(255,255,255,.92);color:#13232c;border-color:#cfd7db}.three.studio .fthumbs span{color:#5d7480}
+.f360{position:absolute;left:16px;top:116px;z-index:3;margin:0;font-family:var(--f-mono);font-size:11.5px;background:rgba(10,29,42,.72);color:var(--ink);padding:4px 10px;border-radius:999px;pointer-events:none;white-space:nowrap}
+@media (max-width:560px){
+  .fthumbs{justify-content:flex-start}.fthumbs button{width:112px}.fthumbs b{font-size:11.5px}
+  .fcard{left:12px;right:12px;width:auto;top:auto;bottom:128px;max-height:calc(100% - 210px)}
+  .f360{top:auto;bottom:240px;left:50%;transform:translateX(-50%)}
+  .fhead{max-width:52%}.fhead h2{font-size:19px}
+}
+.fthumbs b,.fthumbs span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:560px){.fcard{bottom:132px}}
+.three:not(.studio) .fhead{background:rgba(10,29,42,.72);padding:8px 12px;border-radius:10px}
