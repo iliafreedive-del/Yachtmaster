@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тренажёр Галс</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Гал<span>с</span></h1>
+      <p>Учебная неделя шкипера по программе IYT International Bareboat Skipper</p>
+    </div>
+    <div class="prog" id="prog"></div>
+  </header>
+  <nav id="tabs"></nav>
+  <div class="grid">
+    <div class="stage" id="stage" tabindex="0" aria-label="Учебная зона">
+      <canvas id="cv"></canvas>
+      <div class="three" id="three" hidden></div>
+      <div class="board" id="board" hidden></div>
+      <div class="pad" id="pad" hidden>
+        <div class="g cross" id="padMove">
+          <span></span><button data-k="up" aria-label="Вперёд">▲</button><span></span>
+          <button data-k="left" aria-label="Влево">◀</button><button data-k="down" aria-label="Назад">▼</button><button data-k="right" aria-label="Вправо">▶</button>
+        </div>
+        <div class="g" id="padSteer"><button data-k="left" aria-label="Руль влево">◀ Лево</button><button data-k="right" aria-label="Руль вправо">Право ▶</button></div>
+        <div class="g" id="padSail"><button data-k="up" id="padUp">Выбрать</button><button data-k="down" id="padDown">Травить</button></div>
+        <div class="g" id="padAct"><button data-k="act" class="act">Действие</button></div>
+      </div>
+      <div class="dlg" id="dlg" hidden><div class="card" id="dlgCard"></div></div>
+    </div>
+    <aside class="side">
+      <div class="box">
+        <p class="lbl">Шкипер Олег</p>
+        <div class="skipper"><div class="ava">ОЛ</div><div><p class="say" id="say"></p><p class="hint" id="hint"></p></div></div>
+      </div>
+      <div class="box" id="instBox" hidden>
+        <p class="lbl">Приборы</p>
+        <div class="inst" id="inst"></div>
+        <div class="trim" id="trimBox">
+          <p class="lbl" style="margin:0 0 6px">Трим грота · угол гика</p>
+          <div class="bar"><div class="zone" id="zone"></div><div class="mk" id="mk"></div></div>
+          <div class="scale"><span>0° выбран</span><span>45°</span><span>85° вытравлен</span></div>
+          <label class="keys" for="sheetR">Гика-шкот</label>
+          <input type="range" id="sheetR" min="0" max="85" step="1" value="60">
+        </div>
+      </div>
+      <div class="box" id="taskBox">
+        <p class="lbl" id="taskLbl">План</p>
+        <ul class="steps" id="steps"></ul>
+      </div>
+      <p class="keys" id="keysHelp"></p>
+    </aside>
+  </div>
+</div>
+<div class="pop" id="pop" hidden role="dialog" aria-live="polite"></div>
+<script src="js/core.js"></script>
+<script src="js/content/glossary.js"></script>
+<script src="js/content/figures.js"></script>
+<script src="js/content/chapters.js"></script>
+<script src="js/content/exam.js"></script>
+<script src="js/app.js"></script>
+<script src="js/deck3d.js"></script>
+<script src="js/sim2d.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
