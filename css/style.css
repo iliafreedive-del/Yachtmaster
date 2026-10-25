@@ -282,4 +282,9 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .tools button{padding:8px 12px}
   .slidenav .btn{padding:12px 20px}
   .chips button{padding:8px 13px}
+  .keys.gfx button{padding:6px 10px}
 }
+/* вода и атмосфера: мягкая виньетка над 3D-сценой, переключатель качества графики */
+.three::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 45%,transparent 58%,rgba(6,22,30,.32) 100%)}
+.keys.gfx button{font:inherit;font-size:12px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin-left:4px;cursor:pointer}
+.keys.gfx button[aria-pressed="true"]{background:var(--panel2);color:var(--ink);border-color:var(--muted)}

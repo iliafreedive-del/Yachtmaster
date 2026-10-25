@@ -13,6 +13,7 @@ function sailGrid(rows,cols){
   const g=new THREE.BufferGeometry(),n=(rows+1)*(cols+1),idx=[];
   g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(n*3),3));
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const a=r*(cols+1)+c,b=a+1,d=a+cols+1,e=d+1;idx.push(a,d,b,b,d,e)}
+  const uv=[];for(let r=0;r<=rows;r++)for(let c=0;c<=cols;c++)uv.push(c/cols,r/rows);g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
   g.setIndex(idx);g.userData={rows,cols};return g;
 }
 /* boomDeg и jibDeg — углы от диаметральной плоскости, side — борт, откуда дует ветер (+1 правый),
@@ -39,13 +40,10 @@ function trimSails(rig,boomDeg,jibDeg,side,camber,flap,t){
     p.needsUpdate=true;g.computeVertexNormals()}
 }
 function makeMotorboat(band){const m=makeBoat('motor',{band});m.scale.setScalar(.8);return m}
-/* телефоны, планшеты и слабые компьютеры: меньше пикселей и проще тени, чтобы не грелось и не тормозило */
-const LOWGFX=matchMedia('(pointer:coarse)').matches||(navigator.deviceMemory||8)<=4||(navigator.hardwareConcurrency||8)<=4;
-const SHADOW=LOWGFX?1024:2048;
 /* WebGL-рендерер или null, если браузер не даёт контекст */
 function makeRenderer(host){
-  try{const r=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});r.setPixelRatio(Math.min(LOWGFX?1.5:2,devicePixelRatio||1));const R=host.getBoundingClientRect();r.setSize(R.width,R.height);
-    r.shadowMap.enabled=true;r.shadowMap.type=LOWGFX?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;host.appendChild(r.domElement);return r}catch(e){console.warn('WebGL недоступен',e);return null}
+  try{const r=new THREE.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(2,devicePixelRatio||1));const R=host.getBoundingClientRect();r.setSize(R.width,R.height);
+    r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;host.appendChild(r.domElement);return r}catch(e){console.warn('WebGL недоступен',e);return null}
 }
 /* перетаскивание камеры мышью или пальцем; onDrag(dx,dy), onZoom(dy) */
 function dragCamera(el,onDrag,onZoom){
