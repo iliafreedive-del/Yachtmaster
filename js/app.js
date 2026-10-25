@@ -100,12 +100,27 @@ function endCard(title,text,ok){
 /* =========================== ГЛОССАРИЙ (вкладка) =========================== */
 function renderGloss(){
   show('board');
-  const list=Object.values(G).sort((a,b)=>a[0].localeCompare(b[0],'ru'));
-  $('#board').innerHTML=`<div class="gloss"><label class="keys" for="gq">Поиск по словарю</label><input id="gq" type="search" placeholder="например, галс"><div class="gl" id="gl"></div></div>`;
-  const draw=q=>{$('#gl').innerHTML=list.filter(g=>!q||(g[0]+g[1]+g[2]).toLowerCase().includes(q)).map(g=>`<div><b>${g[0]}</b><em>${g[1]}</em><p>${g[2]}</p></div>`).join('')};
+  const sort=ks=>ks.slice().sort((a,b)=>G[a][0].localeCompare(G[b][0],'ru'));
+  // тема каждого ключа — первая, где он встречается; ключи без темы уходят в «Прочее»
+  const home={};GT.forEach(t=>t.sub.forEach(s=>s.k.forEach(k=>{if(G[k]&&!home[k])home[k]=t})));
+  const rest=sort(Object.keys(G).filter(k=>!home[k]));
+  const topics=[{id:'all',n:'Все',en:'A–Я',sub:[{n:'Все термины по алфавиту',en:'A–Z',k:sort(Object.keys(G))}]},...GT,...(rest.length?[{id:'rest',n:'Прочее',en:'Other',sub:[{n:'Прочее',en:'Other',k:rest}]}]:[])];
+  const cnt=t=>new Set(t.sub.flatMap(s=>s.k.filter(k=>G[k]))).size;
+  let cur='boat';try{const v=localStorage.getItem('gloss-topic');if(topics.some(t=>t.id===v))cur=v}catch(e){}
+  const card=(k,tag)=>{const g=G[k];return `<div><b>${g[0]}</b><em>${g[1]}</em>${tag&&home[k]?`<small class="gtag">${home[k].n}</small>`:''}<p>${g[2]}</p></div>`};
+  $('#board').innerHTML=`<div class="gloss"><label class="keys" for="gq">Поиск по словарю</label><input id="gq" type="search" placeholder="например, галс"><div class="chips gtabs" id="gtabs" role="tablist">${topics.map(t=>`<button role="tab" data-t="${t.id}">${t.n} <span class="gc">${cnt(t)}</span></button>`).join('')}</div><div id="gl"></div></div>`;
+  const draw=q=>{
+    $('#gtabs').hidden=!!q;
+    if(q){const hit=sort(Object.keys(G).filter(k=>(G[k][0]+G[k][1]+G[k][2]).toLowerCase().includes(q)));
+      $('#gl').innerHTML=hit.length?`<p class="gnote">Найдено: ${hit.length}</p><div class="gl">${hit.map(k=>card(k,1)).join('')}</div>`:'<p class="gnote">Ничего не нашлось.</p>';return}
+    const t=topics.find(x=>x.id===cur);
+    $('#gtabs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===cur));
+    $('#gl').innerHTML=t.sub.map(s=>{const ks=s.k.filter(k=>G[k]);return `<details class="gsub" open><summary>${s.n} ${en(s.en)} <span class="gc">${ks.length}</span></summary><div class="gl">${ks.map(k=>card(k)).join('')}</div></details>`}).join('');
+  };
+  $('#gtabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;cur=b.dataset.t;try{localStorage.setItem('gloss-topic',cur)}catch(e){}draw('')};
   draw('');$('#gq').oninput=e=>draw(e.target.value.trim().toLowerCase());
-  say('Здесь все морские слова из курса. Возвращайся сюда, когда что-то забудешь.');
-  $('#taskLbl').textContent='Словарь';$('#steps').innerHTML=`<li class="now"><i>${list.length}</i>терминов</li>`;
+  say('Здесь все морские слова из курса, по темам. Выбери тему или ищи по слову. Возвращайся сюда, когда что-то забудешь.');
+  $('#taskLbl').textContent='Словарь';$('#steps').innerHTML=`<li class="now"><i>${Object.keys(G).length}</i>терминов</li><li><i>${GT.length}</i>тем</li>`;
 }
 
 let exam=null;
