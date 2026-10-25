@@ -1,9 +1,9 @@
 /* Галс · оболочка: вкладки, брифинги, диалоги, словарь, экзамен, ввод */
-const TABS=[...CH.map(c=>({id:c.id,n:c.n,en:c.en})),{id:'fleet',n:'Флот',en:'Fleet'},{id:'gloss',n:'Словарь',en:'Glossary'}];
+const TABS=[...CH.map(c=>({id:c.id,n:c.n,en:c.en})),{id:'course',n:'Курс',en:'Course'},{id:'fleet',n:'Флот',en:'Fleet'},{id:'gloss',n:'Словарь',en:'Glossary'}];
 let cur='prolog',slideI=0,phase='brief';
 
 function renderTabs(){
-  $('#tabs').innerHTML=TABS.map(m=>`${m.id==='fleet'?'<span class="sep"></span>':''}<button data-m="${m.id}" aria-pressed="${m.id===cur}">${done[m.id]?'<span class="ok">✓</span>':''}${m.n}<small>${m.en}</small></button>`).join('');
+  $('#tabs').innerHTML=TABS.map(m=>`${m.id==='course'?'<span class="sep"></span>':''}<button data-m="${m.id}" aria-pressed="${m.id===cur}">${done[m.id]?'<span class="ok">✓</span>':''}${m.n}<small>${m.en}</small></button>`).join('');
   $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>openChapter(b.dataset.m));
   const n=CH.filter(m=>done[m.id]).length;$('#prog').innerHTML=`Пройдено <b>${n}</b> из ${CH.length} глав`;
 }
@@ -23,12 +23,13 @@ function padMode(m){ // null | 'walk' | 'sail' | 'motor'
   $('#padSteer').hidden=!(m==='sail'||m==='motor');$('#padSail').hidden=!(m==='sail'||m==='motor');
   $('#padUp').textContent=m==='motor'?'Газ ▲':'Выбрать';$('#padDown').textContent=m==='motor'?'Назад ▼':'Травить';
 }
-function stopAll(){sim=null;stop3D();stopSail3D();stopMoor3D();stopFleet3D();hideDialog();for(const k in keys)keys[k]=false}
+function stopAll(){sim=null;stop3D();stopSail3D();stopMoor3D();if(typeof stopHelm3D==='function')stopHelm3D();stopFleet3D();if(typeof stopLabs==='function')stopLabs();hideDialog();for(const k in keys)keys[k]=false}
 
 function openChapter(id){
   stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
   if(id==='gloss'){renderGloss();return}
   if(id==='fleet'){startFleet();return}
+  if(id==='course'){startCourse();return}
   phase='brief';slideI=0;renderSlide();
 }
 function renderSlide(){
@@ -51,14 +52,16 @@ function renderSlide(){
 function no3D(){padMode(null);show('board');$('#board').innerHTML='<div class="exam"><div class="card"><h3>3D-палуба не загрузилась</h3><p>Браузер не смог запустить 3D-движок. Обнови страницу или открой её в другом браузере. Если не помогло, включи в настройках браузера аппаратное ускорение (WebGL).</p></div></div>'}
 function startPractice(p){
   phase='practice';
-  const backLink=`<br><button class="back" id="toBrief">Вернуться к брифингу</button>`;
+  const inCourse=cur==='course'&&typeof crs!=='undefined'&&crs.lesson,backLink=`<br><button class="back" id="toBrief">${inCourse?'Вернуться к уроку':'Вернуться к брифингу'}</button>`;
   if(p==='exam'){startExam()}
   else if(p==='deck3d'){if(window.THREE)start3D();else no3D()}
   // День 4: сначала мастер-класс, после него — практика; без WebGL — прежняя 2D-швартовка
   else if(p==='moor3d'){moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
+  // урок «Рулёжка» из вкладки «Курс»: мастер-класс, потом практика
+  else if(p==='helm3d'){helmMode=helmMode||(done['helm-lesson']?'practice':'lesson');if(!(window.THREE&&startHelm3D(helmMode)))no3D()}
   else startSim(p);
-  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (у штурвала, за кормой, сверху). Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
-  $('#toBrief').onclick=()=>openChapter(cur);
+  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',helm3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (за кормой, сверху, у штурвала). Мышь или палец — осмотреться.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (у штурвала, за кормой, сверху). Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
+  $('#toBrief').onclick=()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)};
   focusStage();
 }
 /* на телефоне и в альбомной ориентации сцена занимает весь экран: прокручиваем к ней, вкладки остаются выше */
@@ -85,9 +88,13 @@ function runQuiz(list,onDone){
   step();
 }
 function endCard(title,text,ok){
-  showDialog(`<h3>${title}</h3><p>${text}</p><div class="row"><button class="btn${ok?' ghost':''}" id="again">Ещё раз</button>${ok&&cur!=='exam'?'<button class="btn" id="next">Следующая глава</button>':''}</div>`);
-  $('#again').onclick=()=>{hideDialog();const p=chap(cur).practice;stopAll();startPractice(p)};
-  if(ok&&cur!=='exam')$('#next').onclick=()=>{hideDialog();openChapter(nextId())};
+  // практика, открытая из урока вкладки «Курс»: урок засчитан, кнопка ведёт обратно к урокам
+  const L=cur==='course'&&typeof crs!=='undefined'?crs.lesson:null;
+  if(L&&ok)markDone('c:'+L.id);
+  showDialog(`<h3>${title}</h3><p>${text}</p><div class="row"><button class="btn${ok?' ghost':''}" id="again">Ещё раз</button>${L?'<button class="btn" id="next">К урокам</button>':ok&&cur!=='exam'?'<button class="btn" id="next">Следующая глава</button>':''}</div>`);
+  $('#again').onclick=()=>{hideDialog();const p=L?L.practice:chap(cur).practice;stopAll();startPractice(p)};
+  if(L)$('#next').onclick=()=>{hideDialog();stopAll();renderCourseHome()};
+  else if(ok&&cur!=='exam')$('#next').onclick=()=>{hideDialog();openChapter(nextId())};
 }
 
 /* =========================== ГЛОССАРИЙ (вкладка) =========================== */

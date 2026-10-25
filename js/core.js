@@ -11,7 +11,7 @@ const C={};
 
 const gkey=k=>G[k]?k:Object.keys(G).find(x=>x.toLowerCase()===k.toLowerCase());
 /* английский рядом с русским: «гик (boom)». Регистр сохраняем у аббревиатур вроде COLREGs */
-const enForm=t=>/[A-Z]{2}/.test(t)?t:t.toLowerCase();
+const enForm=t=>/[A-Z]{2}|\b[A-Z]\b/.test(t)?t:t.toLowerCase();
 const en=t=>t?`<span class="en">${t}</span>`:'';
 /* в каждом тексте английский вариант термина показываем при первом упоминании, чтобы не рябило */
 function rich(s){const seen={};return s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(m,k,v)=>{const key=gkey(k);if(!key)return v||k;
