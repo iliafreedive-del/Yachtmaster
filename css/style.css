@@ -423,3 +423,15 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #h5thrN{min-height:26px}
 .acts.one{grid-template-columns:1fr}
 @container (max-width:460px){#h5btG .hrow{flex-direction:column}}
+/* Галс · курс VHF: экран станции, кнопка бедствия, разбор по буквам, диалоги */
+.vhf{display:flex;flex-direction:column;gap:8px;background:#1b2a33;border:1px solid var(--line);border-radius:12px;padding:10px}
+.vhf .lcd{font-family:var(--f-mono);background:#b9c7a3;color:#1d2a17;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;font-size:12px;min-height:58px}
+.vhf .lcd b{font-size:18px}.vhf .lcd.big b{font-size:16px}.vhf .lcd .bad{color:#9c1f16}.vhf .lcd .good{color:#14532d}.vhf .lcd .warn{color:#6b4405}
+.vhf .row{display:flex;flex-wrap:wrap;gap:6px}.vhf .btn{padding:6px 10px;font-size:13px}.vhf .btn.on{border-color:var(--buoy);background:rgba(242,163,58,.18)}
+.btn.dist{background:var(--port);color:#fff}.btn.dist:disabled{opacity:.45}
+.vhf .hold{height:6px;border-radius:3px;background:var(--panel)}.vhf .hold i{display:block;height:100%;width:0;border-radius:3px;background:var(--port)}
+.spell{display:flex;flex-wrap:wrap;gap:6px}.spell span{display:flex;flex-direction:column;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:13px}
+.spell span b{font-family:var(--f-mono);color:var(--buoy)}.spell i{width:10px}
+.msg{margin:0;padding-left:20px;display:grid;gap:6px;font-size:13.5px}
+.chat{display:grid;gap:6px;max-height:320px;overflow:auto}.chat p{margin:0;padding:7px 10px;border-radius:10px;font-size:13.5px;background:var(--panel2)}
+.chat p.me{border-left:3px solid var(--buoy)}.chat p.them{border-left:3px solid var(--stbd)}

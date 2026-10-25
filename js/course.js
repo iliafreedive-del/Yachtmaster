@@ -623,3 +623,138 @@ LABS.tackseq=el=>{
   let last=0;const stop=anim(t=>{if(!play){last=t;return}const v=Math.min(100,+$('#tsP').value+(t-last)*9);last=t;$('#tsP').value=v;draw();if(v>=100){play=false;$('#tsPlay').textContent='▶ Показать'}});
   return stop;
 };
+
+/* =========================== РАДИОСВЯЗЬ VHF =========================== */
+/* ---------- морские районы ГМССБ ---------- */
+const GMA={A1:['A1','в зоне берегового VHF с DSC, обычно 20–30 миль','VHF с DSC (70 канал), EPIRB или его замена, SART, NAVTEX — для судов СОЛАС; на яхте минимум — VHF с DSC.'],
+  A2:['A2','в зоне берегового MF (ПВ) с DSC, ориентировочно до 100–150 миль','К оборудованию A1 добавляется MF-станция с DSC на 2187,5 кГц.'],
+  A3:['A3','в зоне геостационарных спутников связи, ~70° с. ш. — 70° ю. ш.','Добавляется спутниковый терминал или MF/HF с DSC.'],
+  A4:['A4','полярные районы вне спутников','Нужна HF (КВ) связь с DSC.']};
+LABS.gmdss=el=>{
+  el.innerHTML=`${tog('gmA',Object.keys(GMA).map(k=>[k,k]),'A1')}<svg viewBox="0 0 300 200" id="gmS"></svg><p class="lo" id="gmO"></p>`;
+  const draw=k=>{const R={A1:40,A2:110,A3:190,A4:300}[k];
+    $('#gmS').innerHTML=`<rect width="300" height="200" fill="#123247"/>${k==='A4'?'<rect width="300" height="200" fill="#9fd3e6" opacity=".15"/>':''}
+      ${['A3','A2','A1'].map(a=>{const r={A1:40,A2:110,A3:190}[a];return`<circle cx="20" cy="110" r="${r}" fill="${a===k?'rgba(242,163,58,.25)':'none'}" stroke="${a===k?'#f2a33a':'#4d7488'}" stroke-dasharray="4 4"/><text x="${22+r*.72}" y="${110-r*.72}" class="f-s" style="fill:#9fd3e6">${a}</text>`}).join('')}
+      <path d="M0 0 H30 Q45 50 25 90 Q10 130 35 200 H0 Z" fill="#7ea55a"/><path d="M20 110 v-18 m-6 6 l6 -6 l6 6" stroke="#f4f1e6" stroke-width="2" fill="none"/>
+      <text x="40" y="190" class="f-s">береговая станция · coast station</text>`;
+    $('#gmO').innerHTML=`<b>Район ${GMA[k][0]}</b> — ${GMA[k][1]}.<br><span class="keys">${GMA[k][2]}</span>`};
+  segOn(el,'gmA',draw);draw('A1');
+};
+
+/* ---------- дальность VHF ---------- */
+LABS.range=el=>{
+  el.innerHTML=`<svg viewBox="0 0 300 170" id="rgS"></svg>${rng('rgA','Антенна яхты над водой',1,25,1,12,' м')}${rng('rgB','Антенна собеседника',1,400,1,12,' м')}<p class="lo" id="rgO"></p>`;
+  const draw=()=>{const a=+$('#rgA').value,b=+$('#rgB').value;$('#rgAV').textContent=a+' м';$('#rgBV').textContent=b+' м';
+    const d=2.2*(Math.sqrt(a)+Math.sqrt(b)),k=Math.sqrt(a)/(Math.sqrt(a)+Math.sqrt(b)),x1=20,x2=280,xt=x1+(x2-x1)*k;
+    const y=x=>120+((x-xt)/130)**2*30,ha=y(x1)-110,hb=y(x2)-110; // антенны ровно до луча, касающегося горизонта
+    $('#rgS').innerHTML=`<path d="M0 ${y(0)} ${Array.from({length:31},(_,i)=>`L${i*10} ${y(i*10).toFixed(1)}`).join(' ')} V170 H0Z" fill="#1f5f74"/>
+      <line x1="${x1}" y1="${y(x1)}" x2="${x1}" y2="${y(x1)-ha}" stroke="#f4f1e6" stroke-width="2"/><line x1="${x2}" y1="${y(x2)}" x2="${x2}" y2="${y(x2)-hb}" stroke="#f4f1e6" stroke-width="2"/>
+      <line x1="${x1}" y1="${y(x1)-ha}" x2="${x2}" y2="${y(x2)-hb}" stroke="#f2a33a" stroke-width="2" stroke-dasharray="6 5"/><circle cx="${xt}" cy="${y(xt)}" r="3" fill="#f2a33a"/>
+      <text x="150" y="18" text-anchor="middle" class="f-s">кривизна Земли преувеличена</text><text x="${x1}" y="${y(x1)-ha-6}" class="f-s">яхта</text><text x="${x2}" y="${y(x2)-hb-6}" text-anchor="end" class="f-s">собеседник</text>`;
+    $('#rgO').innerHTML=`Дальность прямой видимости ≈ <b>${d.toFixed(0)} миль</b> (оценка 2,2 × (√h₁ + √h₂), высоты в метрах). ${d<12?'Связь яхта — яхта на таком расстоянии обычно уверенная, дальше — как повезёт.':d>35?'Так далеко слышно береговую станцию с антенной на горе.':''}`};
+  el.querySelectorAll('input').forEach(i=>i.oninput=draw);draw();
+};
+
+/* ---------- каналы ---------- */
+const VCH=[['16','Бедствие, срочность, безопасность и вызов','Distress, urgency, safety & calling','Слушать постоянно. Только вызов и аварийные сообщения.'],
+  ['70','Только цифровой вызов DSC','DSC only','Голосом нельзя. Станция слушает его сама.'],
+  ['06','Судно — судно, поиск и спасание','Intership, SAR','Переговоры между судами, в том числе со спасательными самолётами.'],
+  ['13','Безопасность мореплавания','Bridge-to-bridge','Расхождение судов, мосты и шлюзы во многих странах.'],
+  ['08','Судно — судно','Intership','Рабочий канал между судами.'],
+  ['72','Судно — судно','Intership','Частый выбор яхт и флотилий для переговоров.'],
+  ['77','Судно — судно','Intership','Ещё один рабочий канал между судами.'],
+  ['09','Судно — судно и портовые службы','Intership / port ops','Во многих странах — марины. Проверь по лоции.']];
+LABS.ch=el=>{
+  el.innerHTML=`<div class="vhf"><div class="lcd" id="chL"></div><div class="row">${VCH.map((c,i)=>`<button class="btn ghost" data-i="${i}">${c[0]}</button>`).join('')}</div></div><p class="lo" id="chO"></p>`;
+  const draw=i=>{const c=VCH[i];$('#chL').innerHTML=`<b>CH ${c[0]}</b><span>${c[2]}</span>`;$('#chO').innerHTML=`<b>${c[1]}</b>. ${c[3]}`;
+    el.querySelectorAll('[data-i]').forEach(b=>b.classList.toggle('on',+b.dataset.i===i))};
+  el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>draw(+b.dataset.i));draw(0);
+};
+
+/* ---------- фонетический алфавит ---------- */
+const PHON='Alfa Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo Lima Mike November Oscar Papa Quebec Romeo Sierra Tango Uniform Victor Whiskey X-ray Yankee Zulu'.split(' ');
+const PNUM=['Zero','Wun','Too','Tree','Fow-er','Fife','Six','Seven','Ait','Nin-er'];
+const RU2L={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+LABS.phon=el=>{
+  el.innerHTML=`<label class="lr"><span>Имя яхты или позывной</span><input type="text" id="phI" value="Galatea SV1234" maxlength="24" style="grid-column:1/-1;font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)"></label><div class="spell" id="phO"></div><p class="lo keys" id="phN"></p>`;
+  const draw=()=>{const raw=$('#phI').value,lat=[...raw.toLowerCase()].map(c=>RU2L[c]??c).join('');
+    $('#phO').innerHTML=[...lat].map(c=>/[a-z]/.test(c)?`<span><b>${c.toUpperCase()}</b>${PHON[c.charCodeAt(0)-97]}</span>`:/[0-9]/.test(c)?`<span><b>${c}</b>${PNUM[+c]}</span>`:c===' '?'<i></i>':'').join('');
+    $('#phN').textContent=/[а-яё]/i.test(raw)?'Кириллицу в эфире передают латиницей — так, как имя записано в судовых документах.':'Читай слово целиком, ровно и без пауз между слогами.'};
+  $('#phI').oninput=draw;draw();
+};
+
+/* ---------- собрать сообщение по порядку ---------- */
+function orderLab(el,items,okText){
+  const order=items.map((_,i)=>i).sort(()=>Math.random()-.5);let next=0;
+  el.innerHTML=`<ol class="msg" id="olO"></ol><div class="chips" id="olC">${order.map(i=>`<button data-i="${i}">${items[i][0]}</button>`).join('')}</div><p class="lo" id="olM">Нажимай части сообщения в правильном порядке.</p><div class="row"><button class="btn ghost" id="olR">Заново</button></div>`;
+  $('#olR').onclick=()=>orderLab(el,items,okText);
+  el.querySelectorAll('#olC button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;
+    if(i!==next){$('#olM').innerHTML=`<span class="warn">Не сейчас. Сначала идёт другое: подумай, что спасатель должен услышать раньше.</span>`;return}
+    b.remove();$('#olO').insertAdjacentHTML('beforeend',`<li><b>${items[i][0]}</b>${items[i][1]?`<br><span class="keys">${items[i][1]}</span>`:''}</li>`);next++;
+    $('#olM').innerHTML=next===items.length?`<span class="good">${okText}</span>`:'Верно. Дальше.'});
+}
+LABS.call=el=>orderLab(el,[['Marina Delfini, Marina Delfini','кого вызываем'],['THIS IS','говорит'],['sailing yacht Galatea, Galatea','кто вызывает'],['request a berth for tonight, twelve metres','суть, коротко'],['OVER','приём']],'Вызов собран. На 16 канале дальше только договариваются о рабочем канале.');
+LABS.mayday=el=>orderLab(el,[['MAYDAY, MAYDAY, MAYDAY','сигнал бедствия трижды'],['THIS IS Galatea, Galatea, Galatea, call sign SV1234, MMSI 239 123 456','кто: имя трижды, позывной, MMSI'],['MAYDAY Galatea, call sign SV1234, MMSI 239 123 456','ещё раз MAYDAY и имя'],['My position three seven degrees two fife decimal fower minutes North, zero two fower degrees zero one decimal two minutes East','P — место'],['Fire on board, out of control','D — что случилось'],['Require immediate assistance','A — какая помощь'],['Four persons on board','N — сколько людей'],['Abandoning to liferaft','I — дополнительно'],['OVER','O — приём']],'MAYDAY собран по MIPDANIO. Учебные имя, позывной и MMSI выдуманы.');
+
+/* ---------- тренажёр DSC: красная кнопка ---------- */
+LABS.dsc=el=>{
+  el.innerHTML=`<div class="vhf"><div class="lcd big" id="dsL"></div>
+    <div class="row">${tog('dsN',[['UNDESIGNATED','без указания'],['FIRE','пожар'],['FLOODING','затопление'],['MOB','человек за бортом'],['SINKING','тонем']],'UNDESIGNATED')}</div>
+    <div class="row"><button class="btn ghost" id="dsCov">Поднять крышку</button><button class="btn dist" id="dsB" disabled>DISTRESS · держать 5 с</button><button class="btn ghost" id="dsX">Отменить тревогу</button></div>
+    <div class="hold"><i id="dsP"></i></div></div><p class="lo" id="dsO"></p>`;
+  const S={st:'idle',nat:'UNDESIGNATED',hold:0,t:0,cover:false};
+  segOn(el,'dsN',v=>{if(S.st==='idle')S.nat=v});
+  $('#dsCov').onclick=()=>{S.cover=!S.cover;$('#dsB').disabled=!S.cover;$('#dsCov').textContent=S.cover?'Закрыть крышку':'Поднять крышку'};
+  const b=$('#dsB');let down=false;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();if(S.cover&&S.st==='idle')down=true});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{down=false;if(S.st==='idle')S.hold=0}));
+  $('#dsX').onclick=()=>{if(S.st==='sent'||S.st==='ack'){S.st='cancel';S.t=0}};
+  let last=0;
+  const stop=anim(t=>{const dt=Math.min(.1,t-last);last=t;
+    if(down&&S.st==='idle'){S.hold+=dt;if(S.hold>=5){S.st='sent';S.t=0;down=false}}
+    if(S.st==='sent'||S.st==='ack')S.t+=dt;if(S.st==='sent'&&S.t>8)S.st='ack';if(S.st==='cancel')S.t+=dt;
+    $('#dsP').style.width=(S.st==='idle'?S.hold/5*100:100)+'%';
+    const rep=Math.max(0,240-Math.floor(S.t*20)),mm=`${Math.floor(rep/60)}:${String(rep%60).padStart(2,'0')}`;
+    $('#dsL').innerHTML=S.st==='idle'?`<b>CH 16</b><span>MMSI 239123456 · 37°25.4'N 024°01.2'E · ${S.cover?'COVER OPEN':'READY'}</span><span>NATURE: ${S.nat}</span>`:
+      S.st==='sent'?`<b class="bad">DISTRESS SENT</b><span>${S.nat} · WAITING FOR ACK</span><span>REPEAT IN ${mm} · CH 16</span>`:
+      S.st==='ack'?`<b class="good">DISTRESS ACK</b><span>FROM 002391000 (COAST)</span><span>CH 16 · SEND VOICE MAYDAY</span>`:
+      `<b class="warn">ALERT CANCELLED</b><span>CH 16 · SAY: ALL STATIONS ×3…</span><span>CANCEL MY DISTRESS ALERT</span>`;
+    $('#dsO').innerHTML=S.st==='idle'?(S.cover?'Держи кнопку DISTRESS 5 секунд. Отпустишь раньше — сигнал не уйдёт.':'Выбери характер бедствия (или оставь «без указания») и подними красную крышку.'):
+      S.st==='sent'?'Сигнал ушёл: MMSI, координаты, время, характер. Станция сама перешла на 16 канал и будет повторять сигнал, пока не придёт подтверждение. Сейчас — голосом MAYDAY.':
+      S.st==='ack'?'Береговая станция подтвердила (учебный MMSI). Передай голосом MAYDAY по MIPDANIO и слушай указания спасательного центра.':
+      'Тревога отменена. Обязательно продублируй отмену голосом на 16 канале: ALL STATIONS ×3, THIS IS имя ×3, MMSI, место, CANCEL MY DISTRESS ALERT OF дата, время UTC. OVER.'});
+  return stop;
+};
+
+/* ---------- примеры радиообмена ---------- */
+const RADIO={
+  marina:['Марина: запрос места',[['me','Marina Delfini, Marina Delfini, this is sailing yacht Galatea, Galatea. Over.','Марина Дельфини, говорит парусная яхта «Галатея». Приём.'],
+    ['them','Galatea, this is Marina Delfini. Channel seven one. Over.','«Галатея», говорит марина. Канал 71. Приём.'],['me','Seven one. Out.','71. Конец связи. (переходим на 71)'],
+    ['me','Marina Delfini, this is Galatea. Request a berth for one night. Length twelve metres, beam four metres, draught two metres. ETA one hour. Over.','Нужно место на ночь. Длина 12 м, ширина 4 м, осадка 2 м. Будем через час. Приём.'],
+    ['them','Galatea, this is Marina Delfini. Berth available on pontoon Charlie. Call us at the entrance, a marinero will meet you. Over.','Место есть на понтоне C. Вызовите нас у входа, вас встретит маринеро. Приём.'],
+    ['me','Pontoon Charlie, call at the entrance. Thank you. Galatea out.','Понтон C, вызвать у входа. Спасибо. Конец связи.']]],
+  ship:['Расхождение с судном',[['me','Motor vessel in position two miles south of Cape Sounion, heading north, this is sailing yacht Galatea, Galatea. Over.','Моторное судно в двух милях к югу от мыса Сунион, идущее на север, говорит «Галатея». Приём.'],
+    ['them','Galatea, this is Aegean Star. Go ahead. Over.','«Галатея», говорит «Иджиан Стар». Слушаю. Приём.'],
+    ['me','Aegean Star, this is Galatea. I am on your starboard bow, about one mile. What are your intentions? Over.','Я у вас справа по носу, около мили. Каковы ваши намерения? Приём.'],
+    ['them','Galatea, this is Aegean Star. I will alter course to starboard and pass astern of you. Over.','Отверну вправо и пройду у вас за кормой. Приём.'],
+    ['me','Aegean Star, this is Galatea. You will alter to starboard and pass astern of me. I maintain course and speed. Out.','Вы отворачиваете вправо и проходите за кормой. Я сохраняю курс и скорость. Конец связи.']]],
+  cg:['Береговая охрана',[['them','Sailing yacht with blue hull, one mile east of Poros, this is Coast Guard patrol. Over.','Яхта с синим корпусом в миле к востоку от Пороса, говорит патруль береговой охраны. Приём.'],
+    ['me','Coast Guard patrol, this is sailing yacht Galatea. Over.','Береговая охрана, говорит «Галатея». Приём.'],
+    ['them','Galatea, state your flag, last port, next port and persons on board. Over.','Назовите флаг, последний порт, следующий порт и число людей на борту. Приём.'],
+    ['me','Flag Greece, charter yacht. Last port Athens, next port Hydra. Six persons on board. Over.','Флаг Греции, чартер. Последний порт Афины, следующий Гидра. Шесть человек. Приём.'],
+    ['them','Galatea, received. Have a good trip. Out.','Принято. Хорошего плавания. Конец связи.']]],
+  bridge:['Разводной мост',[['me','Delfini Bridge, Delfini Bridge, this is sailing yacht Galatea. Over.','Мост Дельфини, говорит «Галатея». Приём.'],
+    ['them','Galatea, this is Delfini Bridge. Go ahead. Over.','Слушаю. Приём.'],['me','Request bridge opening, eastbound. I am at the western waiting area. Over.','Прошу развести мост, идём на восток. Ждём у западной стороны. Приём.'],
+    ['them','Galatea, stand by on this channel. Bridge opening in approximately three zero minutes. Over.','Ожидайте на этом канале. Мост разведут примерно через 30 минут. Приём.'],['me','Standing by. Galatea out.','Ожидаю. Конец связи.']]],
+  wx:['Прогноз погоды',[['them','SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, this is Delfini Radio. Listen to the weather bulletin on channel eight five. Out.','Внимание, безопасность. Всем станциям, говорит «Дельфини Радио». Метеобюллетень на канале 85. Конец связи.'],
+    ['me','(переход на 85 канал, записываем: время, район, ветер по Бофорту, видимость, предупреждения)','Переходим на 85 и записываем бюллетень.'],
+    ['them','Gale warning. Area South Aegean. Northerly winds seven to eight Beaufort, locally nine. Out.','Штормовое предупреждение. Южная Эгейка. Северный 7–8 баллов, местами 9.']]],
+  flot:['Флотилия',[['me','Flotilla all boats, this is Galatea, lead boat. Channel seven two. Over.','Всем лодкам флотилии, говорит ведущая «Галатея». Канал 72. Приём.'],
+    ['them','Galatea, this is Ariadne, seven two. Over.','«Ариадна», 72. Приём.'],['me','All boats, this is Galatea. Wind increasing from north. We go to Poros, not Hydra. Reef now. Over.','Ветер усиливается с севера. Идём на Порос, не на Гидру. Берите рифы сейчас. Приём.'],
+    ['them','Galatea, this is Ariadne. Poros, reefing now. Out.','Порос, берём рифы. Конец связи.']]]};
+LABS.radio=el=>{
+  el.innerHTML=`<label class="lr"><span>Ситуация</span></label><div class="chips" id="raK">${Object.entries(RADIO).map(([k,v])=>`<button data-k="${k}" aria-pressed="${k==='marina'}">${v[0]}</button>`).join('')}</div><div class="chat" id="raO"></div><div class="row"><button class="btn" id="raN">Следующая реплика</button><button class="btn ghost" id="raR">Сначала</button></div>`;
+  let k='marina',n=1;
+  const draw=()=>{const L=RADIO[k][1];$('#raO').innerHTML=L.slice(0,n).map(([w,e,r])=>`<p class="${w}"><b>${w==='me'?'Мы':'Они'}</b> ${e}<br><span class="keys">${r}</span></p>`).join('');$('#raN').disabled=n>=L.length;$('#raO').scrollTop=1e4};
+  el.querySelectorAll('#raK button').forEach(b=>b.onclick=()=>{el.querySelectorAll('#raK button').forEach(x=>x.setAttribute('aria-pressed',x===b));k=b.dataset.k;n=1;draw()});
+  $('#raN').onclick=()=>{n++;draw()};$('#raR').onclick=()=>{n=1;draw()};draw();
+};
