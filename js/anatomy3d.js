@@ -61,14 +61,15 @@ function startAnatomy(){
     const px=new THREE.Mesh(new THREE.BufferGeometry(),proxyM);px.userData.proxy=true;p.g.add(m,px);const R={p,m,px,r,fn};ropes.push(R);return R};
   const W=0xf7f5ef,band=0x1f4f7a,bot=0x22324a,teakC=0xc29a68,steel='steel',navy=0x2a5a8c;
 
-  /* ---------- корпус: тот же лофт, что у makeCruiser ---------- */
+  /* ---------- корпус: тот же лофт, что у makeCruiser (плавная ширина HH, как в boats3d.js) ---------- */
+  const HH=smoothTab([[-6,0],[-4.5,1.45],[-3,1.95],[-1.5,2.17],[0,2.2],[6,1.85]]);
   const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):z>-3.2?-.22:lerp(-.22,.12,((-z-3.2)/2.8)**1.6),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
   // скула в кормовой половине, как у makeCruiser
   const prof=z=>{const s=sh(z),b=yb(z),ch=clamp((z+1)/5,0,1),p=[[1,s+.07],[1,s],[.996,.8],[.99,.7],[.985-.01*ch,.5+.08*ch],[.96-.06*ch,.36],[.94-.1*ch,.28]];
-    for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}return p.map(([f,y])=>[f,Math.max(y,b)])};
-  {const k=kit3();loftHull(k,{z0:-6,z1:6,dz:.4,half:hullHalfW,prof,col:y=>y>.81?W:y>.69?band:y>.37?W:y>.27?band:bot});
-    [1,-1].forEach(s=>{k.box(.02,.1,2.6,'glass',s*(hullHalfW(-1.1)*.997+.012),.9,-1.1).box(.02,.08,.5,'glass',s*(hullHalfW(-3.3)*.996+.012),.9,-3.3);
-      for(let z=-5;z<5.8;z+=1)k.rod([s*(hullHalfW(z)*.999+.02),1.0,z],[s*(hullHalfW(z+1)*.999+.02),1.0,Math.min(z+1,5.9)],.03,0x9aa3a6,4)});
+    for(let i=1;i<=8;i++){const a=i/8*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}return p.map(([f,y])=>[f,Math.max(y,b)])};
+  {const k=kit3();loftHull(k,{z0:-6,z1:6,dz:.25,half:HH,prof,col:y=>y>.81?W:y>.69?band:y>.37?W:y>.27?band:bot});
+    [1,-1].forEach(s=>{k.box(.02,.1,2.6,'glass',s*(HH(-1.1)*.997+.012),.9,-1.1).box(.02,.08,.5,'glass',s*(HH(-3.3)*.996+.012),.9,-3.3);
+      for(let z=-5;z<5.8;z+=1)k.rod([s*(HH(z)*.999+.02),1.0,z],[s*(HH(z+1)*.999+.02),1.0,Math.min(z+1,5.9)],.03,0x9aa3a6,4)});
     k.build(part('hull').g)}
   /* зоны корпуса: подсвечиваются полупрозрачной заливкой, нажимаются подписью */
   const zone=(id,geo,col,x,y,z)=>{const p=part(id);const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.45,depthWrite:false}));m.position.set(x,y,z);m.visible=false;m.userData.zone=true;p.g.add(m);p.zone=m};
@@ -76,13 +77,13 @@ function startAnatomy(){
   zone('port',new THREE.BoxGeometry(.06,.7,10),0xe2564d,-2.27,.75,-.3);zone('starboard',new THREE.BoxGeometry(.06,.7,10),0x3cbf7e,2.27,.75,-.3);
 
   /* ---------- палуба, рубка, кокпит ---------- */
-  {const k=kit3(),dg=deckFrom(hullHalfW,-6,6,.4);dg.scale(.97,1,.985);k.add(dg,'deck',0,1.01,0);k.build(part('deck').g)}
-  {const k=kit3();k.add(prismZY([[-2.6,1],[1.55,1],[1.55,1.6],[-1.6,1.66],[-2.6,1.3]],2.3),0xfbfaf6,0,0,0);
+  {const k=kit3(),dg=deckFrom(HH,-6,6,.25);dg.scale(.97,1,.985);k.add(dg,'deck',0,1.01,0);k.build(part('deck').g)}
+  {const k=kit3();k.add(prismR([[-2.6,1],[1.55,1],[1.55,1.6],[-1.6,1.66],[-2.6,1.3]],2.3,0,.12),'h:'+0xfbfaf6,0,0,0);
     [1,-1].forEach(s=>{k.box(.02,.13,2.6,'glass',s*1.155,1.4,-.6).box(.02,.09,.5,'glass',s*1.155,1.4,1.05);k.rod([s*.85,1.71,-1.5],[s*.85,1.71,-.2],.022,steel)});
     k.box(1.7,.03,.82,'glass',0,1.495,-2.12,-.39);
     [-.55,.55].forEach(x=>k.box(.28,.2,.04,0x15191b,x,1.42,1.575).box(.22,.15,.01,'screen',x,1.42,1.6));
     k.build(part('coachroof').g)}
-  {const k=kit3();k.add(prismZY([[.65,1.62],[1.62,1.62],[1.62,2.0],[1.15,2.12],[.65,1.9]],2.0),navy,0,0,0).box(1.6,.02,.3,'glass',0,1.98,1.25,-.4);k.build(part('sprayhood').g)}
+  {const k=kit3();k.add(prismR([[.65,1.62],[1.62,1.62],[1.62,2.0],[1.15,2.12],[.65,1.9]],2.0,0,.1),'h:'+navy,0,0,0).box(1.6,.02,.3,'glass',0,1.98,1.25,-.4);k.build(part('sprayhood').g)}
   {const k=kit3();k.box(2.2,.02,2.8,'teak',0,1.025,3.2).box(3.2,.02,1.0,'teak',0,1.025,5.3);
     k.box(.5,.45,2.6,W,-1.3,1.22,3.2).box(.5,.45,2.6,W,1.3,1.22,3.2).box(.46,.04,2.5,'teak',-1.3,1.465,3.2).box(.46,.04,2.5,'teak',1.3,1.465,3.2);
     [1,-1].forEach(s=>k.box(.08,.42,2.8,W,s*1.62,1.21,3.1).box(.3,.06,2.8,W,s*1.7,1.44,3.1));
@@ -105,7 +106,7 @@ function startAnatomy(){
         .add(new THREE.CylinderGeometry(r*.45,r*.6,.06,10),0x2b2f31,0,.26,0).box(r*.9,.035,.05,0x2b2f31,r*.25,.3,0).build(w);dyn.win[n]=w})}
   {const k=kit3();[[-.42,0x2a6fa8],[-.3,0xe2564d],[-.18,0x3cbf7e],[.18,0xf2c23a],[.3,0xeeeeee],[.42,0x2a6fa8]].forEach(([x,c])=>k.box(.09,.07,.18,0x2b2f31,x,1.69,1.38).box(.05,.03,.1,c,x,1.74,1.38));k.build(part('clutch').g)}
   {const k=kit3();[[.75,-4.6],[-.75,-4.6],[-1.45,5.6],[1.45,5.6],[1.95,-.3],[-1.95,-.3]].forEach(([x,z])=>k.box(.1,.06,.1,0x9aa3a6,x,1.04,z).box(.08,.05,.34,0x9aa3a6,x,1.09,z));k.build(part('cleat').g)}
-  const stanch=[[.62,-4.9],...[-4.2,-2.4,-.6,1.2,3.2].map(z=>[hullHalfW(z)-.1,z]),[1.75,4.9]];
+  const stanch=[[.62,-4.9],...[-4.2,-2.4,-.6,1.2,3.2].map(z=>[HH(z)-.1,z]),[1.75,4.9]];
   {const k=kit3();lifelines(k,stanch,1.04,1.74);k.build(part('lifelines').g)}
   {const k=kit3();k.rail([[-.62,1.74,-4.9],[-.32,1.74,-5.5],[.32,1.74,-5.5],[.62,1.74,-4.9]],.028,steel).rod([-.32,1.04,-5.5],[-.32,1.74,-5.5],.028,steel).rod([.32,1.04,-5.5],[.32,1.74,-5.5],.028,steel)
     .rod([-.62,1.04,-4.9],[-.62,1.74,-4.9],.028,steel).rod([.62,1.04,-4.9],[.62,1.74,-4.9],.028,steel);k.build(part('pulpit').g)}
@@ -178,7 +179,7 @@ function startAnatomy(){
     dyn.jcars=[1,-1].map(s=>{const g=new THREE.Group();kit3().box(.1,.08,.18,0x2b2f31,0,0,0).add(new THREE.SphereGeometry(.05,8,6),0x555a5c,0,.07,0).build(g);g.position.set(s*1.78,1.09,-.4);part('jibcar').g.add(g);return g})}
   {const p=part('furler'),dr=new THREE.Group();dr.position.set(...RG.tack);dr.position.y-=.3;p.g.add(dr);
     kit3().add(new THREE.CylinderGeometry(.13,.13,.16,12),0x9aa3a6,0,0,0).box(.27,.03,.05,0x2b2f31,0,.09,0).build(dr);dyn.drum=dr}
-  rope('furler',0x2a6fa8,.022,()=>{const L=[anV(RG.tack[0]-.1,RG.tack[1]-.32,RG.tack[2]+.05),anV(-.35,1.1,-5.3)];[-4.2,-2.4,-.6,1.2].forEach(z=>L.push(anV(-(hullHalfW(z)-.17),1.1,z)));L.push(anV(-1.5,1.45,2.9));return[L]});
+  rope('furler',0x2a6fa8,.022,()=>{const L=[anV(RG.tack[0]-.1,RG.tack[1]-.32,RG.tack[2]+.05),anV(-.35,1.1,-5.3)];[-4.2,-2.4,-.6,1.2].forEach(z=>L.push(anV(-(HH(z)-.17),1.1,z)));L.push(anV(-1.5,1.45,2.9));return[L]});
   rope('mainhalyard',0x2a6fa8,.024,()=>{const h=S.mainHead||anV(0,TOP-.5,MZ+.1);return[[h,anV(0,TOP-.05,MZ+.1)],[anV(-.06,1.5,MZ+.1),anV(-.25,1.32,-2.55),anV(-.42,1.69,-1.6),anV(-.42,1.72,1.3),anV(-.84,1.83,1.3)]]});
   rope('jibhalyard',0xe2564d,.022,()=>{const h=S.jibHead||anV(...RG.head);return[[h,anV(0,15.5,MZ-.1)],[anV(.06,1.5,MZ+.1),anV(.18,1.32,-2.55),anV(.3,1.69,-1.6),anV(.3,1.72,1.3)]]});
   rope('toppinglift',0x3cbf7e,.02,()=>{const e=bw(anV(0,.08,boomL)),t=anV(0,TOP-.05,MZ+.08);// при потравленном топенанте трос провисает
@@ -192,8 +193,8 @@ function startAnatomy(){
     return[[cl,cP,anV(-1.72,1.2,1.6),anV(-1.5,1.62,2.4)],[cl,anV(-.2,1.45,-3.2),anV(.6,1.15,-2.6),cS,anV(1.72,1.2,1.6),anV(1.5,1.62,2.4)]]});
 
   /* ---------- размеры: линии со стрелками, значения считаются из геометрии ---------- */
-  const halfAt=(z,y)=>{const pts=prof(z),w=hullHalfW(z);for(let i=1;i<pts.length;i++){const[a,ya]=pts[i-1],[b,yb2]=pts[i];if((ya-y)*(yb2-y)<=0&&ya!==yb2)return w*(a+(b-a)*(y-ya)/(yb2-ya))}return 0};
-  const DIMV={loa:12,beam:2*Math.max(...[-2,-1,0,1,2].map(hullHalfW)),draft:AN_WL+1.70,airdraft:TOP+.6-AN_WL,freeboard:sh(1)+.07-AN_WL};
+  const halfAt=(z,y)=>{const pts=prof(z),w=HH(z);for(let i=1;i<pts.length;i++){const[a,ya]=pts[i-1],[b,yb2]=pts[i];if((ya-y)*(yb2-y)<=0&&ya!==yb2)return w*(a+(b-a)*(y-ya)/(yb2-ya))}return 0};
+  const DIMV={loa:12,beam:2*Math.max(...[-2,-1,0,1,2].map(HH)),draft:AN_WL+1.70,airdraft:TOP+.6-AN_WL,freeboard:sh(1)+.07-AN_WL};
   const dimM=0xf2a33a;
   const dim=(id,a,b,ticks)=>{rope(id,dimM,.035,()=>{const L=[[a,b]];(ticks||[]).forEach(t=>L.push(t));return L},{emissive:0x5a3500});
     const p=part(id),dir=b.clone().sub(a).normalize(),q=new THREE.Quaternion();
@@ -202,7 +203,7 @@ function startAnatomy(){
   {const hw=DIMV.beam/2;dim('beam',anV(-hw,2.25,0),anV(hw,2.25,0),[[anV(-hw,2.4,0),anV(-hw,1.0,0)],[anV(hw,2.4,0),anV(hw,1.0,0)]])}
   dim('draft',anV(0,AN_WL,-1.75),anV(0,-1.7,-1.75),[[anV(0,-1.7,-1.9),anV(0,-1.7,.6)],[anV(0,AN_WL,-2.1),anV(0,AN_WL,-1.4)]]);
   dim('airdraft',anV(3.6,AN_WL,MZ),anV(3.6,TOP+.6,MZ),[[anV(3.75,TOP+.6,MZ),anV(0,TOP+.6,MZ)],[anV(3.75,AN_WL,MZ),anV(2.4,AN_WL,MZ)]]);
-  {const x=hullHalfW(1)+.35;dim('freeboard',anV(x,AN_WL,1),anV(x,sh(1)+.07,1),[[anV(x+.15,sh(1)+.07,1),anV(x-.4,sh(1)+.07,1)]])}
+  {const x=HH(1)+.35;dim('freeboard',anV(x,AN_WL,1),anV(x,sh(1)+.07,1),[[anV(x+.15,sh(1)+.07,1),anV(x-.4,sh(1)+.07,1)]])}
   rope('waterline',dimM,.03,()=>{const L=[[],[]];for(let z=-6;z<=6.001;z+=.4){const h=halfAt(z,AN_WL+.01)+.015;if(h>0){L[0].push(anV(h,AN_WL+.01,z));L[1].push(anV(-h,AN_WL+.01,z))}}
     L[0].push(anV(0,AN_WL+.01,6.0));L[1].push(anV(0,AN_WL+.01,6.0));return L},{emissive:0x5a3500});
   const fmtM=v=>v.toFixed(1).replace('.',',')+' м';
@@ -306,7 +307,7 @@ function startAnatomy(){
   const anchorOf=id=>{const s=camSide(),v=st.v;switch(id){
     case'hull':return anV(s*2.15,.62,-2.2);case'bow':return anV(0,1.55,-6.1);case'stern':return anV(0,1.5,6.25);case'port':return anV(-2.25,.9,.6);case'starboard':return anV(2.25,.9,.6);
     case'transom':return anV(.9,.46,6.5);case'loa':return anV(3.1,AN_WL+.05,0);case'beam':return anV(0,2.25,0);case'draft':return anV(0,-.8,-1.75);case'airdraft':return anV(3.6,9.5,MZ);
-    case'freeboard':return anV(hullHalfW(1)+.35,.66,1);case'waterline':return anV(s*halfAt(3.6,AN_WL+.01),AN_WL,3.6);
+    case'freeboard':return anV(HH(1)+.35,.66,1);case'waterline':return anV(s*halfAt(3.6,AN_WL+.01),AN_WL,3.6);
     case'keel':return anV(0,-1.1,-.1);case'rudder':return anV(0,-.5,5.25);case'propeller':return anV(0,-.18,4.55);
     case'mast':return anV(0,13.2,MZ);case'boom':return bw(anV(0,.1,2.9));case'spreaders':return tip(0,s);
     case'forestay':return anV(...RG.stay).lerp(anV(...RG.staytop),.68);case'backstay':return anV(0,TOP,MZ).lerp(anV(0,1.1,5.95),.45);case'shrouds':return tip(0,s).lerp(chain(s),.45);
@@ -320,7 +321,7 @@ function startAnatomy(){
     case'uvstrip':return S.jib(.96,.25);case'telltales':return S.jib(.15,.5);
     case'deck':return anV(s*1.45,1.05,-3.7);case'coachroof':return anV(0,1.66,-.9);case'cockpit':return anV(0,1.3,3.9);case'companionway':return anV(0,1.62,1.5);case'hatch':return anV(0,1.12,-4.1);
     case'wheel':return anV(s*.85,2.38,4.82);case'winch':return anV(s*1.6,1.75,2.4);case'clutch':return anV(-.3,1.75,1.38);case'cleat':return anV(s*.75,1.1,-4.6);case'pulpit':return anV(0,1.76,-5.5);
-    case'pushpit':return anV(s*1.76,1.75,5.4);case'lifelines':return anV(s*(hullHalfW(-.6)-.1),1.74,-.6);case'jackstay':return anV(s*1.82,1.05,-1.2);case'sprayhood':return anV(0,2.1,1.2);
+    case'pushpit':return anV(s*1.76,1.75,5.4);case'lifelines':return anV(s*(HH(-.6)-.1),1.74,-.6);case'jackstay':return anV(s*1.82,1.05,-1.2);case'sprayhood':return anV(0,2.1,1.2);
     case'anchor':return anV(0,1.0,-6.3);case'wind':return dyn.windArrow.position.clone();case'sidelights':return anV(s*.66,1.85,-4.9)}
     return null};
   const ray=new THREE.Raycaster(),occ={},v3=anV(0,0,0);let occI=0;
