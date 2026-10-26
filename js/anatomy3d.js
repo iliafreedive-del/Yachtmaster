@@ -62,7 +62,7 @@ function startAnatomy(){
   const W=0xf7f5ef,band=0x1f4f7a,bot=0x22324a,teakC=0xc29a68,steel='steel',navy=0x2a5a8c;
 
   /* ---------- корпус: тот же лофт, что у makeCruiser ---------- */
-  const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):lerp(-.22,.88,(-z/6)**2.4),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
+  const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):z>-3.2?-.22:lerp(-.22,.12,((-z-3.2)/2.8)**1.6),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
   // скула в кормовой половине, как у makeCruiser
   const prof=z=>{const s=sh(z),b=yb(z),ch=clamp((z+1)/5,0,1),p=[[1,s+.07],[1,s],[.996,.8],[.99,.7],[.985-.01*ch,.5+.08*ch],[.96-.06*ch,.36],[.94-.1*ch,.28]];
     for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}return p.map(([f,y])=>[f,Math.max(y,b)])};
@@ -203,7 +203,7 @@ function startAnatomy(){
   dim('draft',anV(0,AN_WL,-1.75),anV(0,-1.7,-1.75),[[anV(0,-1.7,-1.9),anV(0,-1.7,.6)],[anV(0,AN_WL,-2.1),anV(0,AN_WL,-1.4)]]);
   dim('airdraft',anV(3.6,AN_WL,MZ),anV(3.6,TOP+.6,MZ),[[anV(3.75,TOP+.6,MZ),anV(0,TOP+.6,MZ)],[anV(3.75,AN_WL,MZ),anV(2.4,AN_WL,MZ)]]);
   {const x=hullHalfW(1)+.35;dim('freeboard',anV(x,AN_WL,1),anV(x,sh(1)+.07,1),[[anV(x+.15,sh(1)+.07,1),anV(x-.4,sh(1)+.07,1)]])}
-  rope('waterline',dimM,.03,()=>{const L=[[],[]];for(let z=-5.2;z<=6.001;z+=.4){const h=halfAt(z,AN_WL+.01)+.015;if(h>0){L[0].push(anV(h,AN_WL+.01,z));L[1].push(anV(-h,AN_WL+.01,z))}}
+  rope('waterline',dimM,.03,()=>{const L=[[],[]];for(let z=-6;z<=6.001;z+=.4){const h=halfAt(z,AN_WL+.01)+.015;if(h>0){L[0].push(anV(h,AN_WL+.01,z));L[1].push(anV(-h,AN_WL+.01,z))}}
     L[0].push(anV(0,AN_WL+.01,6.0));L[1].push(anV(0,AN_WL+.01,6.0));return L},{emissive:0x5a3500});
   const fmtM=v=>v.toFixed(1).replace('.',',')+' м';
   const DIMTXT={loa:'12 м',beam:'≈ '+fmtM(DIMV.beam),draft:'≈ '+fmtM(DIMV.draft),airdraft:'≈ '+fmtM(DIMV.airdraft),freeboard:'≈ '+fmtM(DIMV.freeboard)};
