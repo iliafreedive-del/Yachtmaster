@@ -90,6 +90,16 @@ function kit3(){
 /* призма: профиль в плоскости (z,y), толщина w по X с центром в cx */
 function prismZY(pts,w,cx){const s=new THREE.Shape();pts.forEach(([z,y],i)=>i?s.lineTo(z,y):s.moveTo(z,y));
   const g=new THREE.ExtrudeGeometry(s,{depth:w,bevelEnabled:false});g.rotateY(-Math.PI/2);g.translate((cx||0)+w/2,0,0);return g}
+/* плавная кривая по табличным точкам (монотонный кубический сплайн): обводы в плане без изломов между точками таблицы */
+function smoothTab(t){const n=t.length,d=[],m=[];for(let i=0;i<n-1;i++)d.push((t[i+1][1]-t[i][1])/(t[i+1][0]-t[i][0]));
+  m.push(d[0]);for(let i=1;i<n-1;i++)m.push(d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2);m.push(d[n-2]);
+  for(let i=0;i<n-1;i++){if(!d[i]){m[i]=m[i+1]=0;continue}const a=m[i]/d[i],b=m[i+1]/d[i],h=a*a+b*b;if(h>9){const q=3/Math.sqrt(h);m[i]=q*a*d[i];m[i+1]=q*b*d[i]}}
+  return z=>{if(z<=t[0][0])return t[0][1];if(z>=t[n-1][0])return t[n-1][1];let i=0;while(z>t[i+1][0])i++;
+    const h=t[i+1][0]-t[i][0],u=(z-t[i][0])/h,u2=u*u,u3=u2*u;return(2*u3-3*u2+1)*t[i][1]+(u3-2*u2+u)*h*m[i]+(-2*u3+3*u2)*t[i+1][1]+(u3-u2)*h*m[i+1]}}
+/* призма как prismZY, но со скруглёнными кромками радиуса r (рубки, спрейхуды): габарит тот же */
+function prismR(pts,w,cx,r){const s=new THREE.Shape();pts.forEach(([z,y],i)=>i?s.lineTo(z,y):s.moveTo(z,y));
+  const g=new THREE.ExtrudeGeometry(s,{depth:w-2*r,bevelEnabled:true,bevelThickness:r,bevelSize:r,bevelOffset:-r,bevelSegments:4,curveSegments:4});
+  g.rotateY(-Math.PI/2);g.translate((cx||0)+w/2-r,0,0);return g}
 /* корпус «лофтом»: шпангоуты от z0 до z1 с шагом dz; prof(z) — точки шпангоута [доля полуширины, y] от палубы к килю.
    Цвет грани выбирает col(y) по высоте её центра — так получаются ровные полосы и необрастайка. Транец закрывается. */
 function loftHull(k,{z0,z1,dz,half,prof,col:col0,cx=0,smooth=true}){
@@ -177,20 +187,21 @@ function makeCruiser(o){
   const g=new THREE.Group(),k=kit3(),band=o.band||0x1f4f7a,bot=o.bottom||0x22324a,W=0xf7f5ef,teak=0xc29a68;
   // линия киля: почти отвесный форштевень доходит до ватерлинии (~0.26) и плавно уходит в днище, как у Sun Odyssey 410
   const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):z>-3.2?-.22:lerp(-.22,.12,((-z-3.2)/2.8)**1.6),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
-  loftHull(k,{z0:-6,z1:6,dz:.4,half:hullHalfW,
+  const HH=smoothTab([[-6,0],[-4.5,1.45],[-3,1.95],[-1.5,2.17],[0,2.2],[6,1.85]]);
+  loftHull(k,{z0:-6,z1:6,dz:.25,half:HH,
     // скула (hard chine) в кормовой половине, как у современных чартерных яхт: борт вертикальный до скулы, ниже — излом
     prof:z=>{const s=sh(z),b=yb(z),ch=clamp((z+1)/5,0,1),p=[[1,s+.07],[1,s],[.996,.8],[.99,.7],[.985-.01*ch,.5+.08*ch],[.96-.06*ch,.36],[.94-.1*ch,.28]];
-      for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}
+      for(let i=1;i<=8;i++){const a=i/8*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,.28-(.28-b)*Math.sin(a)])}
       return p.map(([f,y])=>[f,Math.max(y,b)])},
     col:y=>y>.81?W:y>.69?band:y>.37?W:y>.27?band:bot});
-  const dg=deckFrom(hullHalfW,-6,6,.4);dg.scale(.97,1,.985);k.add(dg,o.teakDeck?'teak':'deck',0,1.01,0);
+  const dg=deckFrom(HH,-6,6,.25);dg.scale(.97,1,.985);k.add(dg,o.teakDeck?'teak':'deck',0,1.01,0);
   // киль с бульбой и перо руля
   k.add(prismZY([[-1,.1],[.7,.1],[.35,-1.95],[-.45,-1.95]],.16),bot,0,0,0);
   const bulb=new THREE.SphereGeometry(1,10,6);bulb.scale(.24,.2,.95);k.add(bulb,bot,0,-2.02,-.1);
   // два пера руля (twin rudders), как у Sun Odyssey 410 с широкой кормой
   [1,-1].forEach(s=>k.add(prismZY([[5.05,.4],[5.5,.4],[5.42,-1.0],[5.15,-1.0]],.07),bot,s*.8,0,0,0,0,s*.08));
   // рубка с окнами, люками и поручнями
-  k.add(prismZY([[-2.6,1],[1.55,1],[1.55,1.6],[-1.6,1.66],[-2.6,1.3]],2.3),0xfbfaf6,0,0,0);
+  k.add(prismR([[-2.6,1],[1.55,1],[1.55,1.6],[-1.6,1.66],[-2.6,1.3]],2.3,0,.12),'h:'+0xfbfaf6,0,0,0);
   [1,-1].forEach(s=>{k.box(.02,.13,2.6,'glass',s*1.155,1.4,-.6).box(.02,.09,.5,'glass',s*1.155,1.4,1.05);
     k.rod([s*.85,1.71,-1.5],[s*.85,1.71,-.2],.022,'steel');
     // длинное окно и иллюминаторы в корпусе, привальный брус
@@ -205,7 +216,7 @@ function makeCruiser(o){
   [-.55,.55].forEach(x=>k.box(.28,.2,.04,0x15191b,x,1.42,1.575).box(.22,.15,.01,'screen',x,1.42,1.6));
   [[-.42,0x2a6fa8],[-.3,0xe2564d],[-.18,0x3cbf7e],[.18,0xf2c23a],[.3,0xeeeeee],[.42,0x2a6fa8]].forEach(([x,c])=>{k.box(.09,.07,.18,0x2b2f31,x,1.69,1.38);k.rod([x,1.67,1.48],[x*.3,1.67,-2.55],.011,c,4).rod([x,1.67,1.48],[x*1.4,1.62,1.95],.013,c,4)});
   // спрейхуд над входом в каюту
-  k.add(prismZY([[.65,1.62],[1.62,1.62],[1.62,2.0],[1.15,2.12],[.65,1.9]],2.0),o.cover||0x2a5a8c,0,0,0);
+  k.add(prismR([[.65,1.62],[1.62,1.62],[1.62,2.0],[1.15,2.12],[.65,1.9]],2.0,0,.1),'h:'+(o.cover||0x2a5a8c),0,0,0);
   k.box(1.6,.02,.3,'glass',0,1.98,1.25,-.4);
   // кокпит: пайол, банки, комингсы, лебёдки, стопоры
   k.box(2.2,.02,2.8,'teak',0,1.025,3.2).box(3.2,.02,1.0,'teak',0,1.025,5.3);
@@ -260,9 +271,9 @@ function makeCat(o){
   // отвесные носы Lagoon: форштевень до ватерлинии, дальше плавно в днище
   const yb=z=>z>0?lerp(-.12,.2,(z/6)**1.4):z>-3.5?-.12:lerp(-.12,.18,((-z-3.5)/2.5)**1.6);
   [1,-1].forEach(s=>{
-    loftHull(k,{z0:-6,z1:6,dz:.4,half:hw,cx:s*X,
+    loftHull(k,{z0:-6,z1:6,dz:.25,half:hw,cx:s*X,
       prof:z=>{const b=yb(z),p=[[1,deck],[1,.9],[.99,.7],[.97,.5],[.94,.38],[.92,.3]];
-        for(let i=1;i<=4;i++){const a=i/4*Math.PI/2;p.push([.92*Math.cos(a)**.8,.3-(.3-b)*Math.sin(a)])}
+        for(let i=1;i<=7;i++){const a=i/7*Math.PI/2;p.push([.92*Math.cos(a)**.8,.3-(.3-b)*Math.sin(a)])}
         return p.map(([f,y])=>[f,Math.max(y,b)])},
       col:y=>y>.37?W:y>.27?band:bot});
     const dg=deckFrom(hw,-6,6,.4);k.add(dg,0xebe8df,s*X,deck+.01,0);
@@ -278,7 +289,7 @@ function makeCat(o){
   k.box(3.7,.38,8.3,W,0,1.26,1.5).box(3.5,.03,3.1,0x3d474c,0,1.38,-4.2).rod([-X,1.42,-5.7],[X,1.42,-5.7],.08,W,8).rod([0,1.45,-5.7],[0,1.45,-2.7],.05,W,6);
   // салон с панорамными окнами, хардтоп над кокпитом
   // салон с вертикальными передними окнами — фирменная черта Lagoon; крыша нависает козырьком
-  k.add(prismZY([[-2.5,deck],[2.4,deck],[2.4,2.55],[-2.5,2.62]],5.4),0xfbfaf6,0,0,0);
+  k.add(prismR([[-2.5,deck],[2.4,deck],[2.4,2.55],[-2.5,2.62]],5.4,0,.12),'h:'+0xfbfaf6,0,0,0);
   k.box(5.6,.09,.45,0xfbfaf6,0,2.62,-2.62).box(4.8,.62,.02,'glass',0,2.2,-2.51);[-1.6,0,1.6].forEach(x=>k.box(.06,.62,.03,0x2b2f31,x,2.2,-2.52));
   [1,-1].forEach(s=>k.box(.02,.38,3.6,'glass',s*2.71,2.06,0).box(.02,.25,.8,'glass',s*2.71,1.98,-2.1));
   k.box(3.4,.85,.02,'glass',0,1.98,2.41);
@@ -307,6 +318,9 @@ function makeCat(o){
 function prismT(pts,wb,wt,cx,y0,y1){const g=prismZY(pts,1,0),p=g.attributes.position;
   for(let i=0;i<p.count;i++)p.setX(i,cx+p.getX(i)*lerp(wb,wt,(p.getY(i)-y0)/(y1-y0)));return g}
 /* плита по контуру в плане: pts — точки [x,z], от y0 вверх на h */
+/* плита в плане со скруглёнными кромками радиуса r: козырёк и пол флайбриджа */
+function slabR(pts,y0,h,r){const s=new THREE.Shape();pts.forEach(([x,z],i)=>i?s.lineTo(x,z):s.moveTo(x,z));
+  const g=new THREE.ExtrudeGeometry(s,{depth:h-2*r,bevelEnabled:true,bevelThickness:r,bevelSize:r,bevelOffset:-r,bevelSegments:4});g.rotateX(Math.PI/2);g.translate(0,y0+h-r,0);return g}
 function slabXZ(pts,y0,h){const s=new THREE.Shape();pts.forEach(([x,z],i)=>i?s.lineTo(x,z):s.moveTo(x,z));
   const g=new THREE.ExtrudeGeometry(s,{depth:h,bevelEnabled:false});g.rotateX(Math.PI/2);g.translate(0,y0+h,0);return g}
 /* прямоугольник со скруглёнными углами в плоскости (z,y) — окна и иллюминаторы */
@@ -321,7 +335,8 @@ function rrZY(z0,z1,y0,y1,r){const P=[],n=5,arc=(cz,cy,a0)=>{for(let i=0;i<=n;i+
 function makeMotor(o){
   const g=new THREE.Group(),k=kit3(),W=0xf7f7f3,H=0xfbfbf8,bot=o.bottom||0x343b41,boot=0x26323c,blk=0x1d2226,seam=0xc3c9cc,cush=o.cushion||0x7a3b2e,can=0x7c8388;
   const D=1.25,F=3.44,RF=3.27;
-  const hw=z=>{const t=[[-6.05,0],[-5.5,.82],[-4.6,1.45],[-3.3,1.9],[-1.8,2.08],[1,2.1],[5.9,2.02]];for(let i=1;i<t.length;i++)if(z<=t[i][0]){const[a,b]=t[i-1],[c,d]=t[i];return b+(d-b)*(z-a)/(c-a)}return 2.02};
+  // обводы в плане — плавная кривая: на фото нос и борта скруглены, без изломов
+  const hw=smoothTab([[-6.05,0],[-5.5,.82],[-4.6,1.45],[-3.3,1.9],[-1.8,2.08],[1,2.1],[5.9,2.02]]);
   // седловатость: борт поднимается к носу; скула (chine) у носа уходит вверх к форштевню
   const sh=z=>z>=0?1.95-.17*z/5.9:1.95+.8*(-z/6.05)**1.8,ch=z=>z<-1.5?.62+.75*((-z-1.5)/4.55)**1.6:.62;
   const cf=z=>z<-1?lerp(.93,.5,(-z-1)/5.05):.93,yb=z=>z<-3?lerp(-.25,.3,((-z-3)/3.05)**1.5):z<2?-.25:lerp(-.25,.28,(z-2)/3.9);
@@ -329,7 +344,7 @@ function makeMotor(o){
     for(let i=1;i<=4;i++){const t=i/4;p.push([(f-.05)*(1-t),(c-.03)-((c-.03)-b)*t**.85])}return p.map(([f,y])=>[f,Math.max(y,b)])};
   // x борта на высоте y у шпангоута z — по нему ставятся окна, фальшборт, релинг
   const sx=(z,y)=>{const p=prof(z),w=hw(z);for(let i=1;i<p.length;i++)if(y>=p[i][1]){const[a,b]=p[i-1],[c,d]=p[i];return w*(c+(a-c)*(y-d)/((b-d)||1))}return 0};
-  loftHull(k,{z0:-6.05,z1:5.9,dz:.35,half:hw,prof,col:y=>y>.62?W:y>.47?boot:bot});
+  loftHull(k,{z0:-6.05,z1:5.9,dz:.25,half:hw,prof,col:y=>y>.62?W:y>.47?boot:bot});
   // накладка по борту (detail) — деталь кладётся на поверхность корпуса: x каждой вершины = борт + отступ
   const skin=(pts,s,c,off,X)=>{const gg=prismZY(pts,.02,0),p=gg.attributes.position;for(let i=0;i<p.count;i++)p.setX(i,p.getX(i)+s*((X||sx)(p.getZ(i),p.getY(i))+(off||.012)));k.add(gg,c,0,0,0)};
   // скруглённое окно-«капсула» по изогнутому борту: сетка с шагом 10 см, каждая вершина лежит на корпусе
@@ -353,7 +368,7 @@ function makeMotor(o){
       k.rod([s*(sx(z,sh(z))-.02),sh(z)+.03,z],[s*(sx(z2,sh(z2))-.02),sh(z2)+.03,z2],.055,H,6).rod([s*(sx(z,1.05)+.02),1.05,z],[s*(sx(z2,1.05)+.02),1.05,z2],.03,seam,4)}});
   // надстройка: слегка заваленные внутрь борта, наклонное ветровое стекло, крыша = пол флайбриджа
   const HW=y=>lerp(3.17,3.0,(y-D)/(RF-D))/2,hx=(z,y)=>HW(y);
-  k.add(prismT([[-2.5,D],[3.0,D],[3.0,RF],[-1.72,RF],[-2.5,2.25]],3.17,3.0,0,D,RF),H,0,0,0);
+  {const hg=prismR([[-2.5,D],[3.0,D],[3.0,RF],[-1.72,RF],[-2.5,2.25]],3.17,0,.14),p=hg.attributes.position;for(let i=0;i<p.count;i++)p.setX(i,p.getX(i)*lerp(1,3.0/3.17,(p.getY(i)-D)/(RF-D)));k.add(hg,'h:'+H,0,0,0)}
   {const L=Math.hypot(.78,1.02),th=Math.atan2(.78,1.02),n=[.607,-.794],yc=2.76,zc=-2.11;
     k.box(3.02,L*.98,.02,blk,0,yc+n[0]*.008,zc+n[1]*.008,th);
     [[-1.0,.88],[0,.98],[1.0,.88]].forEach(([x,w])=>k.box(w,L*.8,.02,'glass',x,yc+n[0]*.022,zc+n[1]*.022,th));
@@ -366,7 +381,7 @@ function makeMotor(o){
       [[0,.05],[.7,.05]].forEach(([z])=>skin([[z,sh(z)-.62],[z+.025,sh(z)-.62],[z+.025,sh(z)],[z,sh(z)]],s,seam,.006))}
     else skin([[-.33,2.07],[.53,2.07],[.53,2.98],[-.33,2.98]],s,'glass',.016,hx);
     // окна кают в корпусе: длинное скруглённое у носа и два круглых иллюминатора, решётка воздухозаборника машинного отделения
-    slot(-4.05,-2.75,1.16,1.4,s,blk,.012);slot(-3.99,-2.81,1.19,1.37,s,'glass',.022);
+    slot(-4.1,-2.7,1.13,1.43,s,0xd3d9dc,.012);slot(-4.0,-2.8,1.18,1.38,s,'glass',.024);
     [-1.55,-.7].forEach(z=>{const c=[];for(let i=0;i<12;i++){const a=i/12*Math.PI*2;c.push([z+Math.cos(a)*.11,1.42+Math.sin(a)*.11])}skin(c,s,'steel',.008);skin(c.map(([a,b])=>[z+(a-z)*.75,1.42+(b-1.42)*.75]),s,'glass',.018)});
     [3.5,3.62,3.74,3.86].forEach(z=>skin([[z,1.2],[z+.07,1.2],[z+.07,1.55],[z,1.55]],s,0x5c6366,.01))});
   // кормовая переборка салона: раздвижная стеклянная дверь
@@ -375,13 +390,14 @@ function makeMotor(o){
   k.box(.8,.55,.45,0x2f3335,.8,1.55,-1.55).box(.6,.02,.3,'screen',.8,1.86,-1.6,-.6);k.add(new THREE.TorusGeometry(.17,.025,6,16),blk,.8,2.0,-1.3,-.5,0,0);
   // пол флайбриджа: скруглённый спереди, выступает козырьком над ветровым стеклом и тянется над кокпитом
   const zfr=(x,z0,r,a)=>z0+r*(1-Math.sqrt(1-clamp((Math.abs(x)-a)/r,0,1)**2)),front=(x0,z0,r,z1)=>{const P=[];for(let i=0;i<=20;i++){const x=-x0+i/20*2*x0;P.push([x,zfr(x,z0,r,x0-r)])}P.push([x0,z1],[-x0,z1]);return P};
-  k.add(slabXZ(front(1.66,-2.22,.95,5.65),RF-.14,F-RF+.14),H,0,0,0);
+  k.add(slabR(front(1.66,-2.22,.95,5.65),RF-.14,F-RF+.14,.06),'h:'+H,0,0,0);
   [1,-1].forEach(s=>k.rod([s*1.55,D,5.5],[s*1.55,RF,5.5],.035,'steel',6));
   // флайбридж: передний обтекатель с низким стеклом, пост справа, диваны, мачта, бар, бимини, леера
-  k.add(slabXZ(front(1.56,-2.12,.85,-1.1),F,.42),H,0,0,0);
+  // козырёк: толстая скруглённая «морда» флайбриджа нависает над ветровым стеклом, как на фото
+  k.add(slabR(front(1.64,-2.6,1.05,-1.0),3.02,F+.42-3.02,.15),'h:'+H,0,0,0);
   // сплошные белые борта передней части флайбриджа, дальше к корме — леера
   [1,-1].forEach(s=>k.box(.1,.45,1.85,H,s*1.56,F+.22,-.35).box(.14,.04,1.85,H,s*1.56,F+.46,-.35));
-  {const P=[];for(let i=0;i<=16;i++){const x=-1.45+i/16*2.9;P.push([x,zfr(x,-2.06,.82,.68)])}
+  {const P=[];for(let i=0;i<=16;i++){const x=-1.45+i/16*2.9;P.push([x,zfr(x,-2.42,.9,.6)])}
     for(let i=1;i<P.length;i++){const[a,b]=P[i-1],[c,d]=P[i];k.tri([a,F+.42,b,c,F+.42,d,a*.97,F+.62,b+.12, c,F+.42,d,c*.97,F+.62,d+.12,a*.97,F+.62,b+.12],'glass')}}
   k.box(.85,.85,.4,H,.98,F+.42,-1.15).box(.75,.03,.3,blk,.98,F+.86,-1.12,-.5).box(.3,.18,.01,'screen',.83,F+.89,-1.06,-.5).box(.3,.18,.01,'screen',1.15,F+.89,-1.06,-.5);
   k.box(.06,.12,.06,blk,1.32,F+.95,-.98).box(.06,.12,.06,blk,1.4,F+.95,-.98);
@@ -451,15 +467,15 @@ function makeMotor(o){
 const RIG_SLOOP={mast:[0,1.09,-.9],mastH:10.47,mastR:.72,spr:[.5],sprW:[.8],pivot:[0,2.2,-.9],mainH:8.5,foot:3.3,sheet:[2.45,.9],
   tack:[0,.98,-4.05],head:[0,10,-1.05],clewY:1.4,jibL:2.7,top:[0,11.56,-.9],stay:[0,.95,-4.15],staytop:[0,10.2,-.95]};
 function makeSloop(o){
-  const g=new THREE.Group(),k=kit3(),band=o.band||0x1f4f7a,bot=o.bottom||0x2a4f9a,W=0xf7f5ef,teak=0xc29a68;
+  const g=new THREE.Group(),k=kit3(),band=o.band||0x1f4f7a,bot=o.bottom||0x8a4b3e,W=0xf7f5ef,teak=0xc29a68;
   const T=[[-4.3,0],[-3.4,.78],[-2.2,1.24],[-.6,1.47],[.6,1.5],[2.5,1.4],[4.2,1.12]];
-  const hs=z=>{for(let i=1;i<T.length;i++)if(z<=T[i][0]){const[a,b]=T[i-1],[c,d]=T[i];return b+(d-b)*(z-a)/(c-a)}return 1.1};
+  const hs=smoothTab(T);
   const sh=z=>z<0?.82+.2*(-z/4.3)**2:.82+.06*(z/4.2)**2;
   // наклонный форштевень First 285: от палубы прямой линией к ватерлинии, дальше плавный подъём днища
   const yb=z=>z<-3.5?lerp(.2,.95,(-z-3.5)/.8):z<0?lerp(-.32,.2,(-z/3.5)**2):lerp(-.32,.3,(z/4.2)**1.6);
-  loftHull(k,{z0:-4.3,z1:4.2,dz:.3,half:hs,
+  loftHull(k,{z0:-4.3,z1:4.2,dz:.2,half:hs,
     prof:z=>{const s=sh(z),b=yb(z),p=[[1,s+.06],[1,s],[.99,.6],[.988,.58],[.986,.54],[.975,.45],[.95,.35],[.92,.27]];
-      for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([.92*Math.cos(a)**.6,.27-(.27-b)*Math.sin(a)])}
+      for(let i=1;i<=8;i++){const a=i/8*Math.PI/2;p.push([.92*Math.cos(a)**.6,.27-(.27-b)*Math.sin(a)])}
       return p.map(([f,y])=>[f,Math.max(y,b)])},
     col:y=>y>.58?W:y>.54?band:y>.3?W:y>.21?band:bot});
   // палуба повторяет седловатость, в ней вырез под кокпит
@@ -475,7 +491,7 @@ function makeSloop(o){
     k.box(.2,.05,.07,0x5c6164,s*1.15,.88,3.6).box(.2,.05,.07,0x5c6164,s*.7,.92,-3.7)});
   k.box(1.9,.4,.04,W,0,.65,3.95).box(1.9,.06,.28,W,0,.85,1.45).box(1.5,.03,.05,0x3b3f41,0,.89,1.45).box(.14,.06,.1,0x2b2f31,.2,.92,1.45);
   // рубка по чертежу sailboatdata: длинная и низкая, мачта у её переднего края, вдоль борта — вытянутое тонированное окно
-  k.add(prismZY([[-1.1,.8],[1.25,.8],[1.25,1.22],[-.5,1.24],[-1.1,1.02]],1.75),0xfbfaf6,0,0,0);
+  k.add(prismR([[-1.1,.8],[1.25,.8],[1.25,1.22],[-.5,1.24],[-1.1,1.02]],1.75,0,.1),'h:'+0xfbfaf6,0,0,0);
   k.add(prismZY([[-.7,1.03],[1.12,1.03],[1.12,1.17],[-.5,1.19]],1.77),'glass',0,0,0);
   [1,-1].forEach(s=>{k.rail([[s*.62,1.25,-.4],[s*.62,1.3,-.2],[s*.62,1.3,.7],[s*.62,1.25,.9]],.02,teak);
     // погоны стакселя на бортовой палубе
@@ -488,10 +504,9 @@ function makeSloop(o){
   [1,-1].forEach(s=>{k.add(new THREE.CylinderGeometry(.06,.08,.1,10),'steel',s*.55,1.3,1.0);k.box(.2,.06,.12,0x2b2f31,s*.3,1.28,1.0)});
   [[-.2,0xe2564d],[-.1,0x3cbf7e],[.1,0xf2c23a],[.2,0x2a6fa8]].forEach(([x,c])=>k.rod([x,1.28,.95],[x*.4,1.2,-.85],.01,c,4));
   // небольшой спрейхуд
-  if(o.cover!==false)k.add(prismZY([[.55,1.2],[1.15,1.2],[1.15,1.55],[.8,1.63],[.55,1.48]],1.5),o.cover||0x2a5a8c,0,0,0);
-  // киль-плавник с небольшой бульбой
-  k.add(prismZY([[-.6,-.25],[.5,-.25],[.25,-1.45],[-.45,-1.45]],.12),bot,0,0,0);
-  const bulb=new THREE.SphereGeometry(1,10,6);bulb.scale(.13,.12,.6);k.add(bulb,bot,0,-1.5,-.15);
+  if(o.cover!==false)k.add(prismR([[.55,1.2],[1.15,1.2],[1.15,1.55],[.8,1.63],[.55,1.48]],1.5,0,.08),'h:'+(o.cover||0x2a5a8c),0,0,0);
+  // киль-плавник без бульбы, со скруглёнными кромками (на фото лодки на трейлере)
+  k.add(prismR([[-.6,-.25],[.5,-.25],[.28,-1.45],[-.42,-1.45]],.14,0,.05),'h:'+bot,0,0,0);
   // руль-перо под корпусом (spade) на баллере, румпель из кокпита; винт и вал стационарного дизеля
   const tl=new THREE.Group();tl.position.set(0,0,3.45);g.add(tl);
   kit3().add(prismZY([[-.12,.18],[.32,.18],[.26,-1.05],[-.06,-1.05]],.06),bot,0,0,0).add(new THREE.CylinderGeometry(.06,.06,.15,8),0x2f3335,0,.53,0)
@@ -512,6 +527,10 @@ function makeSloop(o){
   addRig(g,k,o,RIG_SLOOP,[1.3,.88,-.8],[[0,.92,4.2]]);
   if(o.full){k.box(.4,.05,.7,0xf07a28,-.72,.7,3.1)}
   k.build(g);g.userData.wl=.2;g.userData.hulls=[{cx:0,half:hs,z0:-3.5,len:3.6,wl:.22}];
+  // надпись FIRST 285 на борту у носа, как на заводской окраске
+  {const c=document.createElement('canvas');c.width=512;c.height=64;const x=c.getContext('2d');x.fillStyle='#55606a';x.font='italic 600 46px sans-serif';x.textBaseline='middle';x.fillText('FIRST 285',8,34);
+    const m=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}),z=-2.5,dw=(hs(z-.1)-hs(z+.1))/.2; // dw — минус наклон борта в плане
+    [1,-1].forEach(sd=>{const p=new THREE.Mesh(new THREE.PlaneGeometry(1.3,.16),m);p.position.set(sd*(hs(z)*.995+.012),.7,z);p.rotation.y=Math.atan2(sd,dw);g.add(p)})}
   g.userData.parts=[[0,7,-.9,'Мачта','mast'],[0,2.4,.6,'Гик','boom'],[0,6,-2.6,'Штаг (дробная оснастка)','fractional forestay'],[1,5.5,-.8,'Ванты','shrouds'],[0,6,2,'Ахтерштаг','backstay'],
     [0,1.45,.1,'Рубка с длинными окнами','coachroof & windows'],[0,1.75,.9,'Спрейхуд','sprayhood'],[0,.9,2.6,'Кокпит','cockpit'],[0,1.2,2.6,'Румпель','tiller'],[0,-.6,3.6,'Перо руля','spade rudder'],
 [0,-.3,2.3,'Винт стационарного дизеля','propeller'],[1.05,1.3,1.9,'Лебёдка','winch'],[0,1.05,1.45,'Погон гика-шкота','mainsheet traveller'],[1.3,1.4,-1.8,'Леера','lifelines'],[0,1.7,-4,'Носовой релинг','pulpit'],[.6,.6,4.4,'Кормовой трап','stern ladder'],[0,-1.2,-.1,'Киль','fin keel']];
