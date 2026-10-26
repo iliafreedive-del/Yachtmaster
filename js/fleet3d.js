@@ -32,7 +32,7 @@ function startFleet(){
   let view0='studio';try{view0=localStorage.getItem('gals-fleet-view')||'studio'}catch(e){}
   const st={on:true,renderer,id:boatType(),sails:false,labels:false,studio:view0!=='water',specs:!narrow,yaw:2.3,pitch:.22,dist:30,auto:true,t:0,boat:null,cradle:null,lift:0,raf:0};F3=st;
   const labels=$('#flab');
-  function setView(v){st.studio=v;try{localStorage.setItem('gals-fleet-view',v?'studio':'water')}catch(e){}
+  function setView(v,quiet){st.studio=v;if(!quiet)try{localStorage.setItem('gals-fleet-view',v?'studio':'water')}catch(e){}
     studio.visible=v;sea.mesh.visible=skyD.dome.visible=skyD.clouds.visible=!v;
     scene.background.set(v?STUDIO:sky);scene.fog.color.set(v?STUDIO:sky);scene.fog.near=v?70:70;scene.fog.far=v?190:240;
     renderer.toneMappingExposure=v?1.05:1.15;host.classList.toggle('studio',v);$('#fv').textContent=v?'🌊 На воде':'◻ В студии';
@@ -76,18 +76,18 @@ function startFleet(){
     $('#taskLbl').textContent='Паспорт лодки · boat profile';
     $('#steps').innerHTML=sec('Как узнать · how to spot it',f.look)+sec('Внутри · below deck',f.inside)+sec('В тренажёре · handling',f.h);
     st.dist=st.id==='sloop'?24:st.id==='cat'?34:st.id==='motor'?27:32;
-    setView(st.studio);
+    setView(st.studio,true);
   }
   /* миниатюры витрины: каждая лодка снимается в студии на тот же холст, пока браузер не успел ничего показать */
   function thumbs(){
     const pr=renderer.getPixelRatio(),r=host.getBoundingClientRect(),tw=300,th=180,tc=new THREE.PerspectiveCamera(30,tw/th,.3,400),box=new THREE.Box3(),c=new THREE.Vector3(),sz=new THREE.Vector3(),out={};
-    setView(true);renderer.setPixelRatio(1);renderer.setSize(tw,th,false);
+    const was=st.studio;setView(true,true);renderer.setPixelRatio(1);renderer.setSize(tw,th,false);
     FLEET.forEach(f=>{const b=makeBoat(f.id,{band:0x1f4f7a,full:true}),cr=cradle(b);b.position.y=cr.lift;scene.add(b,cr.g);
       box.setFromObject(b);box.getCenter(c);box.getSize(sz);const d=sz.z*1.2+4,a=2.35,y=cr.lift+2.2;
       tc.position.set(c.x+Math.sin(a)*d,y+d*.22,c.z+Math.cos(a)*d);tc.lookAt(c.x,y,c.z);renderer.render(scene,tc);
       try{out[f.id]=renderer.domElement.toDataURL('image/jpeg',.82)}catch(e){out[f.id]=''}
       scene.remove(b,cr.g);[b,cr.g].forEach(g=>g.traverse(o=>{if(o.geometry)o.geometry.dispose()}))});
-    renderer.setPixelRatio(pr);renderer.setSize(r.width,r.height);
+    renderer.setPixelRatio(pr);renderer.setSize(r.width,r.height);st.studio=was;
     $('#fb').innerHTML=FLEET.map(f=>`<button data-b="${f.id}" aria-pressed="${f.id===st.id}">${out[f.id]?`<img src="${out[f.id]}" alt="">`:''}<b>${f.s}</b><span>${f.mk.split(/[ ·(]/)[0]} · ${String(BOATS[f.id].lenM).replace('.',',')} м</span></button>`).join('');
     $('#fb').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(st.id===b.dataset.b)return;st.id=b.dataset.b;st.auto=true;build()});
   }
