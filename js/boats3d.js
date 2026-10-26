@@ -175,7 +175,8 @@ function wheelGroup(g,r,x,y,z,tilt){
 /* ---------- круизная яхта 40 футов (шлюп). Габариты и раскладка палубы — те же, что ждёт День 1 ---------- */
 function makeCruiser(o){
   const g=new THREE.Group(),k=kit3(),band=o.band||0x1f4f7a,bot=o.bottom||0x22324a,W=0xf7f5ef,teak=0xc29a68;
-  const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):lerp(-.22,.88,(-z/6)**2.4),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
+  // линия киля: почти отвесный форштевень доходит до ватерлинии (~0.26) и плавно уходит в днище, как у Sun Odyssey 410
+  const yb=z=>z>0?lerp(-.22,.34,(z/6)**1.5):z>-3.2?-.22:lerp(-.22,.12,((-z-3.2)/2.8)**1.6),sh=z=>1+.1*clamp((-z-2)/4,0,1)**2;
   loftHull(k,{z0:-6,z1:6,dz:.4,half:hullHalfW,
     // скула (hard chine) в кормовой половине, как у современных чартерных яхт: борт вертикальный до скулы, ниже — излом
     prof:z=>{const s=sh(z),b=yb(z),ch=clamp((z+1)/5,0,1),p=[[1,s+.07],[1,s],[.996,.8],[.99,.7],[.985-.01*ch,.5+.08*ch],[.96-.06*ch,.36],[.94-.1*ch,.28]];
@@ -256,7 +257,8 @@ const RIG_CAT={sheet:[4.5,2.7],sweep:.2,mast:[0,2.6,-1.1],mastH:15,pivot:[0,3.15
 function makeCat(o){
   const g=new THREE.Group(),k=kit3(),band=o.band||0x1f4f7a,bot=o.bottom||0x22324a,W=0xf7f5ef,teak=0xc29a68,X=2.45,deck=1.45;
   const hw=z=>{const t=[[-6,0],[-5,.42],[-3.5,.66],[-1,.76],[6,.7]];for(let i=1;i<t.length;i++)if(z<=t[i][0]){const[a,b]=t[i-1],[c,d]=t[i];return b+(d-b)*(z-a)/(c-a)}return .7};
-  const yb=z=>z>0?lerp(-.12,.2,(z/6)**1.4):lerp(-.12,.95,(-z/6)**2.6);
+  // отвесные носы Lagoon: форштевень до ватерлинии, дальше плавно в днище
+  const yb=z=>z>0?lerp(-.12,.2,(z/6)**1.4):z>-3.5?-.12:lerp(-.12,.18,((-z-3.5)/2.5)**1.6);
   [1,-1].forEach(s=>{
     loftHull(k,{z0:-6,z1:6,dz:.4,half:hw,cx:s*X,
       prof:z=>{const b=yb(z),p=[[1,deck],[1,.9],[.99,.7],[.97,.5],[.94,.38],[.92,.3]];
@@ -453,7 +455,8 @@ function makeSloop(o){
   const T=[[-4.3,0],[-3.4,.78],[-2.2,1.24],[-.6,1.47],[.6,1.5],[2.5,1.4],[4.2,1.12]];
   const hs=z=>{for(let i=1;i<T.length;i++)if(z<=T[i][0]){const[a,b]=T[i-1],[c,d]=T[i];return b+(d-b)*(z-a)/(c-a)}return 1.1};
   const sh=z=>z<0?.82+.2*(-z/4.3)**2:.82+.06*(z/4.2)**2;
-  const yb=z=>z<0?lerp(-.32,.55,(-z/4.3)**2.2):lerp(-.32,.3,(z/4.2)**1.6);
+  // наклонный форштевень First 285: от палубы прямой линией к ватерлинии, дальше плавный подъём днища
+  const yb=z=>z<-3.5?lerp(.2,.95,(-z-3.5)/.8):z<0?lerp(-.32,.2,(-z/3.5)**2):lerp(-.32,.3,(z/4.2)**1.6);
   loftHull(k,{z0:-4.3,z1:4.2,dz:.3,half:hs,
     prof:z=>{const s=sh(z),b=yb(z),p=[[1,s+.06],[1,s],[.99,.6],[.988,.58],[.986,.54],[.975,.45],[.95,.35],[.92,.27]];
       for(let i=1;i<=5;i++){const a=i/5*Math.PI/2;p.push([.92*Math.cos(a)**.6,.27-(.27-b)*Math.sin(a)])}
