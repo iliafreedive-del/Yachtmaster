@@ -1,4 +1,4 @@
-/* Галс · оболочка: вкладки, брифинги, диалоги, словарь, экзамен, ввод */
+/* Галс · оболочка: вкладки, брифинги, диалоги, словарь, ввод. Экзамен-тренажёр — js/drill.js */
 const TABS=[...CH.map(c=>({id:c.id,n:c.n,en:c.en})),{id:'course',n:'Курс',en:'Course'},{id:'fleet',n:'Флот',en:'Fleet'},{id:'gloss',n:'Словарь',en:'Glossary'}];
 let cur='prolog',slideI=0,phase='brief';
 
@@ -128,23 +128,6 @@ function renderGloss(){
   $('#taskLbl').textContent='Словарь';$('#steps').innerHTML=`<li class="now"><i>${Object.keys(G).length}</i>терминов</li><li><i>${GT.length}</i>тем</li>`;
 }
 
-let exam=null;
-function startExam(){exam={i:0,score:0};show('board');say('Вопросы уровня IYT Bareboat Skipper. Нужно 10 верных из 13.');hint('');$('#taskLbl').textContent='Экзамен';renderExam()}
-function renderExam(){
-  const q=EXAM[exam.i];
-  $('#steps').innerHTML=`<li class="now"><i>${exam.i+1}</i>Вопрос из ${EXAM.length}</li><li><i>✓</i>Верно: ${exam.score}</li>`;
-  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">IYT Bareboat · вопрос ${exam.i+1} из ${EXAM.length}</p><h3>${rich(q.q)}</h3><div class="opts">${q.o.map((o,j)=>`<button class="opt" data-j="${j}">${o}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
-  $('#board').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
-    const j=+b.dataset.j;
-    $('#board').querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.j===q.a)x.classList.add('right')});
-    if(j===q.a)exam.score++;else b.classList.add('wrong');
-    const ex=$('#eex');ex.hidden=false;ex.innerHTML=rich(q.e);
-    const n=$('#enx');n.hidden=false;n.focus();n.onclick=()=>{exam.i++;
-      if(exam.i>=EXAM.length){const pass=exam.score>=10;if(pass)markDone('exam');
-        endCard(pass?'Теория сдана':'Пока не сдано',`Верных ответов: ${exam.score} из ${EXAM.length}. ${pass?'Учебная неделя пройдена. На настоящем курсе дальше практический экзамен с инструктором IYT.':'Перечитай объяснения и попробуй снова.'}`,pass)}
-      else renderExam()};
-  });
-}
 
 /* =========================== ВВОД =========================== */
 const keys={};

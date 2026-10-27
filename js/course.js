@@ -200,9 +200,9 @@ LABS.bearing=el=>{
 
 /* ---------- кто уступает ---------- */
 const CR=[ // me/ot: {x,y,h(курс),k: 'sail'|'power'|'fish'}; wind — откуда дует; a: 'me'|'ot'|'both'
- {me:{x:150,y:230,h:315,k:'sail'},ot:{x:250,y:120,h:225,k:'sail'},wind:0,a:'me',e:'Ты на левом галсе (ветер в левый борт), он на правом. Правило 12: левый галс уступает.'},
- {me:{x:150,y:230,h:45,k:'sail'},ot:{x:60,y:110,h:135,k:'sail'},wind:0,a:'ot',e:'Ты на правом галсе, он на левом. Он уступает, ты держишь курс и скорость (правило 17), но следишь.'},
- {me:{x:130,y:200,h:60,k:'sail'},ot:{x:150,y:250,h:60,k:'sail'},wind:0,a:'me',e:'Оба на правом галсе, ты ближе к ветру — наветренный. Наветренный уступает подветренному.'},
+ {me:{x:80,y:200,h:45,k:'sail'},ot:{x:220,y:200,h:315,k:'sail'},wind:0,a:'me',e:'Ты на левом галсе (ветер в левый борт), он на правом. Правило 12: левый галс уступает.'},
+ {me:{x:220,y:200,h:315,k:'sail'},ot:{x:80,y:200,h:45,k:'sail'},wind:0,a:'ot',e:'Ты на правом галсе, он на левом. Он уступает, ты держишь курс и скорость (правило 17), но следишь.'},
+ {me:{x:130,y:200,h:60,k:'sail'},ot:{x:150,y:250,h:60,k:'sail'},wind:0,a:'me',e:'Оба на левом галсе (ветер в левый борт), ты ближе к ветру — наветренный. Наветренный уступает подветренному.'},
  {me:{x:150,y:250,h:60,k:'sail'},ot:{x:120,y:190,h:60,k:'sail'},wind:0,a:'ot',e:'Один галс, наветренный — он. Он уступает тебе, подветренному.'},
  {me:{x:150,y:240,h:0,k:'power'},ot:{x:250,y:120,h:270,k:'sail'},wind:90,a:'me',e:'Ты под мотором, он под парусами. Правило 18: моторное уступает парусному (если не обгон и не узкость).'},
  {me:{x:150,y:240,h:0,k:'sail'},ot:{x:250,y:130,h:270,k:'power'},wind:90,a:'ot',e:'Ты под парусами, он моторный. Он уступает. Но в узком фарватере не мешай большому судну (правило 9).'},
@@ -225,7 +225,7 @@ LABS.colregs=el=>{
   let i=0,score=0;
   el.innerHTML=`<svg viewBox="0 0 300 300" id="crS"></svg><p class="lo" id="crQ"></p><div class="opts" id="crO"></div><p class="lo" id="crE"></p>`;
   const show=()=>{const c=CR[i];
-    $('#crS').innerHTML=`<rect width="300" height="300" rx="10" class="f-sea"/><g transform="translate(36,36) rotate(${c.wind+180})">${arw(0,-22,0,22,'#9fd3e6',2.5)}</g><text x="10" y="74" class="f-s" style="fill:#9fd3e6">ВЕТЕР</text>${vesselSVG(c.ot,c.wind,false)}${vesselSVG(c.me,c.wind,true)}`;
+    $('#crS').innerHTML=`<rect width="300" height="300" rx="10" class="f-sea"/><g transform="translate(36,36) rotate(${c.wind})">${arw(0,-22,0,22,'#9fd3e6',2.5)}</g><text x="10" y="74" class="f-s" style="fill:#9fd3e6">ВЕТЕР</text>${vesselSVG(c.ot,c.wind,false)}${vesselSVG(c.me,c.wind,true)}`;
     $('#crQ').innerHTML=`<b>Ситуация ${i+1} из ${CR.length}.</b> Синяя — ты. Кто уступает дорогу?`;$('#crE').innerHTML='';
     $('#crO').innerHTML=[['me','Уступаю я'],['ot','Уступает он'],['both','Оба вправо']].map(([v,t])=>`<button class="opt" data-v="${v}">${t}</button>`).join('');
     $('#crO').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const ok=b.dataset.v===c.a;if(ok)score++;
@@ -247,28 +247,57 @@ const VES=[
  {id:'anc50',n:'Судно 50 м и больше на якоре',L:[['w',2.6,.8,'all'],['w',1.6,-.8,'all']],side:0,stern:0,day:['ball']},
  {id:'nuc',n:'Лишённое возможности управляться (NUC) с ходом',L:[['r',3.4,0,'all'],['r',2.6,0,'all']],side:1,stern:1,day:['ball','ball']},
  {id:'ram',n:'Ограниченное в возможности маневрировать (RAM) с ходом',L:[['w',3.8,.5,'mast'],['r',3.2,0,'all'],['w',2.6,0,'all'],['r',2,0,'all']],side:1,stern:1,day:['ball','diamond','ball']},
- {id:'cbd',n:'Стеснённое своей осадкой (CBD)',L:[['w',2.4,.6,'mast'],['w',3.4,-.3,'mast'],['r',4.4,0,'all'],['r',3.8,0,'all'],['r',3.2,0,'all']],side:1,stern:1,day:['cyl']},
- {id:'trawl',n:'Траулер с ходом (тралит)',L:[['g',3.4,0,'all'],['w',2.6,0,'all']],side:1,stern:1,day:['cone-up','cone-down']},
- {id:'fish',n:'Судно, занятое ловом (не трал), с ходом',L:[['r',3.4,0,'all'],['w',2.6,0,'all']],side:1,stern:1,day:['cone-up','cone-down']},
+ {id:'cbd',n:'Стеснённое своей осадкой (CBD)',L:[['w',2.4,.6,'mast'],['w',3.2,-.3,'mast'],['r',4.8,0,'all'],['r',4.3,0,'all'],['r',3.8,0,'all']],side:1,stern:1,day:['cyl']},
+ {id:'trawl',n:'Траулер с ходом (тралит)',L:[['g',3.4,0,'all'],['w',2.6,0,'all']],side:1,stern:1,day:['cone-down','cone-up']},
+ {id:'fish',n:'Судно, занятое ловом (не трал), с ходом',L:[['r',3.4,0,'all'],['w',2.6,0,'all']],side:1,stern:1,day:['cone-down','cone-up']},
  {id:'pilot',n:'Лоцманское судно на ходу',L:[['w',3.4,0,'all'],['r',2.6,0,'all']],side:1,stern:1,day:[]},
  {id:'tow',n:'Буксировщик, состав до 200 м',L:[['w',3.6,.4,'mast'],['w',2.9,.4,'mast'],['y',1.6,-1,'tow']],side:1,stern:1,day:[]},
  {id:'ground',n:'Судно на мели',L:[['w',2.4,.6,'all'],['r',3.4,0,'all'],['r',2.8,0,'all']],side:0,stern:0,day:['ball','ball','ball']}
 ];
 const ASP=[['bow','Идёт прямо на тебя'],['port','Ты видишь его левый борт'],['stbd','Ты видишь его правый борт'],['stern','Ты видишь его корму']];
+/* судно сбоку или с оконечности, ночью — только огни (и едва видный силуэт), днём — силуэт по типу судна и фигуры.
+   Огни стоят на своих местах: топовые и круговые — на мачтах, бортовые — у рубки, кормовой — на корме */
+const VTYPE={pw:'motor',anc:'motor',pilot:'pilot',pw50:'ship',anc50:'ship',cbd:'ship',ram:'ship',nuc:'ship',ground:'ship',sail:'yacht',tri:'yacht',motorsail:'yacht',trawl:'fish',fish:'fish',tow:'tug'};
 function vesselView(v,asp,night){
   // вид сбоку: при левом борте нос слева, при правом — справа. Нос/корма прямо — всё по центру
-  const dir=asp==='port'?-1:asp==='stbd'?1:0,X=x=>150+x*dir*80,Y=h=>200-h*30,c={w:'#fffbe6',r:'#ff4a3d',g:'#3dff8a',y:'#ffd23d'};
+  const dir=asp==='port'?-1:asp==='stbd'?1:0,X=x=>150+x*dir*80,Y=h=>200-h*30,c={w:'#fffbe6',r:'#ff4a3d',g:'#3dff8a',y:'#ffd23d'},ty=VTYPE[v.id]||'motor';
   const vis=sec=>sec==='all'||(sec==='mast'&&asp!=='stern')||(sec==='tow'&&asp==='stern')||sec==='tri';
-  const dot=(col,x,y)=>night?`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${c[col]}" filter="url(#glow)"/>`:'';
+  const lights=[];
+  v.L.forEach(([col,h,off,sec])=>{if(!vis(sec))return;if(col==='tri'){if(asp==='bow')lights.push(['r',148,Y(h)],['g',152,Y(h)]);else lights.push([asp==='port'?'r':asp==='stbd'?'g':'w',150,Y(h)]);return}lights.push([col,dir?X(off):150,Y(h)])});
+  if(v.side&&asp!=='stern'){if(asp==='bow')lights.push(['r',134,Y(1.2)],['g',166,Y(1.2)]);else lights.push([asp==='port'?'r':'g',X(.2),Y(1.2)])}
+  if(v.stern&&asp==='stern')lights.push(['w',150,Y(.9)]);
+  const hc=night?'#0b161d':ty==='ship'?'#7a2f2a':ty==='fish'?'#2f5d7c':ty==='tug'?'#2d2f33':'#eef0ec',sc=night?'#0d1a22':ty==='ship'?'#e9e4d8':'#f6f6f2',mc=night?'#101f28':'#4a5056',P=a=>a.map(([x,h])=>`${(dir?X(x):150+x*30).toFixed(1)} ${Y(h).toFixed(1)}`).join(' L');
   let s='';
-  v.L.forEach(([col,h,off,sec])=>{if(!vis(sec))return;if(col==='tri'){const cc=asp==='bow'?null:asp==='port'?'r':asp==='stbd'?'g':'w';
-      s+=asp==='bow'?dot('r',148,Y(h))+dot('g',152,Y(h)):dot(cc,150,Y(h));return}s+=dot(col,X(off),Y(h))});
-  if(v.side&&asp!=='stern'){if(asp==='bow')s+=dot('r',138,Y(1.2))+dot('g',162,Y(1.2));else s+=dot(asp==='port'?'r':'g',X(.2),Y(1.2))}
-  if(v.stern&&asp==='stern')s+=dot('w',150,Y(1.1));
-  const hullW=dir?170:60,hull=`<path d="M${150-hullW/2} 196 H${150+hullW/2} L${150+hullW/2-(dir?14:6)} 214 H${150-hullW/2+(dir?14:6)} Z" fill="${night?'#0c1820':'#3b4247'}"/>${dir?`<path d="M${X(1)} 196 l${dir*14} -8 v8 Z" fill="${night?'#0c1820':'#3b4247'}"/>`:''}<line x1="150" y1="196" x2="150" y2="${Y(4.6)}" stroke="${night?'#0f1d26':'#3b4247'}" stroke-width="3"/>`;
-  let shapes='';if(!night)v.day.forEach((sh,k)=>{const y=Y(4.2)+k*22,cx=165;shapes+=sh==='ball'?`<circle cx="${cx}" cy="${y}" r="8" fill="#111"/>`:sh==='diamond'?`<path d="M${cx} ${y-10} l9 10 l-9 10 l-9 -10 Z" fill="#111"/>`:sh==='cyl'?`<rect x="${cx-7}" y="${y-10}" width="14" height="20" fill="#111"/>`:sh==='cone-down'?`<path d="M${cx-9} ${y-8} h18 l-9 16 Z" fill="#111"/>`:`<path d="M${cx-9} ${y+8} h18 l-9 -16 Z" fill="#111"/>`});
-  return`<svg viewBox="0 0 300 240"><defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <rect width="300" height="240" rx="10" fill="${night?'#050c12':'#bcd3dc'}"/><rect y="206" width="300" height="34" fill="${night?'#08141c':'#4b7d93'}"/>${hull}${shapes}${s}</svg>`;
+  // мачты под огнями
+  const posts=[...new Set(v.L.filter(([,,,sec])=>sec!=='tow').map(([,h,off])=>dir?X(off).toFixed(1):'150'))];
+  posts.forEach(x=>{const top=Math.min(...v.L.filter(([,,off,sec])=>sec!=='tow'&&(dir?X(off).toFixed(1):'150')===x).map(([,h])=>Y(h)));s+=`<line x1="${x}" y1="${Y(.4)}" x2="${x}" y2="${top-4}" stroke="${mc}" stroke-width="2.4"/>`});
+  if(dir){
+    const len={ship:1.15,yacht:.85,tug:.7,fish:.8,pilot:.75,motor:.8}[ty],bowH={ship:.75,yacht:.35,tug:.6,fish:.7,pilot:.55,motor:.55}[ty];
+    s+=`<path d="M${P([[-len,.35],[len*.55,.45],[len+.12,bowH],[len*.85,-.25],[-len+.05,-.25]])} Z" fill="${hc}"/>`;
+    if(!night)s+=`<path d="M${P([[-len,.18],[len+.06,.25]])}" stroke="${ty==='yacht'?'#2a6f8a':'#d9d4c4'}" stroke-width="2.5" fill="none"/>`;
+    if(ty==='ship')s+=`<path d="M${P([[-1.05,.4],[-1.05,1.7],[-.55,1.7],[-.55,.4]])} Z" fill="${sc}"/><rect x="${Math.min(X(-.95),X(-.75))}" y="${Y(2.3)}" width="10" height="${Y(1.7)-Y(2.3)}" fill="${night?'#0d1a22':'#2b3237'}"/>`;
+    if(ty==='motor'||ty==='pilot')s+=`<path d="M${P([[-.55,.45],[-.45,1],[.15,1],[.4,.5]])} Z" fill="${sc}"/>${night?'':`<path d="M${P([[-.38,.85],[.1,.85]])}" stroke="#2b3a44" stroke-width="5"/>`}`;
+    if(ty==='pilot'&&!night)s+=`<text x="${X(-.05)}" y="${Y(.15)}" text-anchor="middle" style="font:700 9px var(--f-mono);fill:#1b2a33">PILOT</text>`;
+    if(ty==='fish')s+=`<path d="M${P([[.15,.5],[.15,1.4],[.6,1.4],[.6,.5]])} Z" fill="${sc}"/><path d="M${P([[-.75,.4],[-.62,1.9],[-.5,.4]])}" stroke="${mc}" stroke-width="2.5" fill="none"/>`;
+    if(ty==='tug')s+=`<path d="M${P([[-.3,.5],[-.3,1.5],[.25,1.5],[.25,.5]])} Z" fill="${night?sc:'#c9c3b4'}"/><path d="M${P([[-.7,.35],[-1.9,-.1]])}" stroke="${mc}" stroke-width="1.5" fill="none"/>`;
+    if(ty==='yacht'){const m=X(0);s+=`<line x1="${m}" y1="${Y(.4)}" x2="${m}" y2="${Y(4.7)}" stroke="${mc}" stroke-width="2.4"/><path d="M${P([[-.35,.45],[-.15,.85],[.25,.85],[.4,.45]])} Z" fill="${sc}"/>
+      <path d="M${P([[-.03,4.5],[-.62,.75],[-.03,.75]])} Z" fill="${night?'#0c1820':'#f4f1e6'}" opacity="${night?1:.95}"/><path d="M${P([[.03,4.3],[.8,.55],[.05,.75]])} Z" fill="${night?'#0c1820':'#f4f1e6'}" opacity="${night?1:.9}"/>`}
+  }else{
+    const w={ship:46,yacht:26,tug:32,fish:30,pilot:28,motor:28}[ty];
+    s+=`<path d="M${150-w} ${Y(.45)} L${150+w} ${Y(.45)} L${150+w*.7} ${Y(-.25)} L${150-w*.7} ${Y(-.25)} Z" fill="${hc}"/>`;
+    if(ty==='yacht')s+=`<line x1="150" y1="${Y(.4)}" x2="150" y2="${Y(4.7)}" stroke="${mc}" stroke-width="2.4"/><path d="M146 ${Y(4.5)} L150 ${Y(.8)} L154 ${Y(.8)} Z" fill="${night?'#0c1820':'#f4f1e6'}"/>`;
+    else s+=`<rect x="${150-w*.55}" y="${Y(ty==='ship'?1.7:1.2)}" width="${w*1.1}" height="${Y(.45)-Y(ty==='ship'?1.7:1.2)}" fill="${night?sc:ty==='ship'?'#e9e4d8':'#f2f1ec'}"/>${night?'':`<rect x="${150-w*.45}" y="${Y(ty==='ship'?1.5:1.05)}" width="${w*.9}" height="5" fill="#2b3a44"/>`}`;
+  }
+  // дневные фигуры на фале у мачты
+  let shapes='';if(!night&&v.day.length){const mx=dir?X(0):150,cx=mx+(dir||1)*16,y0=Y(4.3);shapes+=`<line x1="${mx}" y1="${Y(.4)}" x2="${mx}" y2="${y0-18}" stroke="${mc}" stroke-width="2.4"/><line x1="${mx}" y1="${y0-14}" x2="${cx}" y2="${y0-14}" stroke="${mc}" stroke-width="2"/><line x1="${cx}" y1="${y0-14}" x2="${cx}" y2="${y0+v.day.length*22}" stroke="#555" stroke-width="1"/>`;
+    v.day.forEach((sh,k)=>{const y=y0+k*22;shapes+=sh==='ball'?`<circle cx="${cx}" cy="${y}" r="8" fill="#111"/>`:sh==='diamond'?`<path d="M${cx} ${y-10} l9 10 l-9 10 l-9 -10 Z" fill="#111"/>`:sh==='cyl'?`<rect x="${cx-7}" y="${y-10}" width="14" height="20" fill="#111"/>`:sh==='cone-down'?`<path d="M${cx-9} ${y-8} h18 l-9 16 Z" fill="#111"/>`:`<path d="M${cx-9} ${y+8} h18 l-9 -16 Z" fill="#111"/>`})}
+  const dots=night?lights.map(([col,x,y])=>`<line x1="${x.toFixed(1)}" y1="209" x2="${x.toFixed(1)}" y2="236" stroke="${c[col]}" stroke-width="3" stroke-dasharray="4 3" opacity=".22"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${c[col]}" filter="url(#glow)"/>`).join(''):'';
+  const stars=night?[[22,18],[64,40],[118,12],[205,30],[262,16],[284,52],[40,70],[244,78]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r=".8" fill="#cfe3f0" opacity=".45"/>`).join(''):'';
+  return`<svg viewBox="0 0 300 240"><defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="vsky${night?'n':'d'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${night?'#01050a':'#7fb2cb'}"/><stop offset="1" stop-color="${night?'#0c1d2a':'#dcebf1'}"/></linearGradient>
+    <linearGradient id="vsea${night?'n':'d'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${night?'#071219':'#3d7891'}"/><stop offset="1" stop-color="${night?'#03090d':'#1f4f66'}"/></linearGradient></defs>
+    <rect width="300" height="240" rx="10" fill="url(#vsky${night?'n':'d'})"/>${stars}${night?'':'<path d="M0 206 L0 196 Q40 186 80 194 T170 190 T300 196 V206 Z" fill="#8fa7a8" opacity=".55"/>'}
+    ${s}${shapes}<rect y="206" width="300" height="34" fill="url(#vsea${night?'n':'d'})" opacity=".93"/><path d="M0 214 q12 -3 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0" stroke="${night?'#123040':'#7fb6cc'}" stroke-width="1" fill="none" opacity=".5"/>${dots}</svg>`;
 }
 LABS.lights=el=>{
   let night=true,cur=null,score=0,n=0;
@@ -442,9 +471,14 @@ function buoySVG(m,night,on,phase){
   const bh=90,n=m.bands.length;
   if(m.vert)m.bands.forEach((c,i)=>s+=`<rect x="${-20+i*40/n}" y="70" width="${40/n}" height="${bh}" fill="${c}"/>`);else m.bands.forEach((c,i)=>s+=`<rect x="-20" y="${70+i*bh/n}" width="40" height="${bh/n}" fill="${c}"/>`);
   const lc=m.alt?m.alt[phase%2]:m.lc;
-  return`<svg viewBox="-80 0 160 220"><defs><filter id="bglow" x="-3" y="-3" width="7" height="7"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <rect x="-80" width="160" height="220" fill="${night?'#050c12':'#bcd3dc'}" rx="10"/><g opacity="${night?.12:1}"><rect x="-3" y="30" width="6" height="40" fill="#555"/>${top(m.top,m.tc)}${s}<path d="M-28 160 h56 l-8 14 h-40 Z" fill="#3b4247"/></g>
-    <rect x="-80" y="168" width="160" height="52" fill="${night?'#08141c':'#4b7d93'}"/>${night&&on?`<circle cy="22" r="7" fill="${lc}" filter="url(#bglow)"/>`:''}</svg>`;
+  // объём: тень по краям корпуса буя, небо и море с градиентом, отражение огня ночью
+  return`<svg viewBox="-80 0 160 220"><defs><filter id="bglow" x="-3" y="-3" width="7" height="7"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="bshade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".45"/><stop offset=".35" stop-color="#fff" stop-opacity=".18"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="bsky${night?'n':'d'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${night?'#01050a':'#86b6cd'}"/><stop offset="1" stop-color="${night?'#0b1a26':'#dbeaf0'}"/></linearGradient></defs>
+    <rect x="-80" width="160" height="220" fill="url(#bsky${night?'n':'d'})" rx="10"/>${night?'':'<path d="M-80 170 L-80 160 Q-40 150 0 158 T80 156 V170 Z" fill="#8fa7a8" opacity=".5"/>'}
+    <g opacity="${night?.12:1}"><rect x="-3" y="30" width="6" height="40" fill="#555"/>${top(m.top,m.tc)}${s}<rect x="-20" y="70" width="40" height="${bh}" fill="url(#bshade)"/><path d="M-28 160 h56 l-8 14 h-40 Z" fill="#3b4247"/></g>
+    <rect x="-80" y="168" width="160" height="52" fill="${night?'#08141c':'#3f7a92'}" opacity=".95"/><path d="M-80 176 q10 -3 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" stroke="${night?'#123040':'#9fd0e0'}" stroke-width="1" fill="none" opacity=".6"/>
+    ${night&&on?`<line x1="0" y1="174" x2="0" y2="214" stroke="${lc}" stroke-width="4" stroke-dasharray="4 3" opacity=".25"/><circle cy="22" r="7" fill="${lc}" filter="url(#bglow)"/>`:''}</svg>`;
 }
 LABS.iala=el=>{
   let night=false,m=MARKS[0],stop=null,quiz=false;

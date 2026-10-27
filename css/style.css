@@ -550,3 +550,78 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .fthumbs b,.fthumbs span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:560px){.fcard{bottom:132px}}
 .three:not(.studio) .fhead{background:rgba(10,29,42,.72);padding:8px 12px;border-radius:10px}
+
+/* ---------- экзамен-тренажёр (js/drill.js) ---------- */
+.drill{padding:18px;display:flex;flex-direction:column;gap:14px;max-width:820px;margin:0 auto}
+.drill .card{max-width:none}
+.dhead h3,.dend h3{margin:0;font-family:var(--f-display);font-size:19px}
+.dstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.dstats>div{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.dstats b{font-family:var(--f-display);font-size:22px;line-height:1}.dstats b small{font-size:13px;color:var(--muted)}
+.dstats span{font-size:12px;color:var(--muted)}
+.dbar{display:block;height:6px;border-radius:3px;background:rgba(147,174,187,.2);overflow:hidden}
+.dbar>i{display:block;height:100%;background:var(--stbd);border-radius:3px;transition:width .3s}
+.dmodes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.dmode{font:inherit;text-align:left;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-height:84px}
+.dmode b{font-family:var(--f-display);font-size:15px}.dmode span{font-size:12.5px;color:var(--muted)}
+.dmode:hover:not(:disabled){border-color:var(--muted)}.dmode:disabled{opacity:.5;cursor:default}
+.dmode.main{background:linear-gradient(135deg,rgba(242,163,58,.22),rgba(242,163,58,.06));border-color:var(--buoy)}
+.drill .lbl{margin:4px 0 -4px}
+.dtopics{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.dtopic{font:inherit;text-align:left;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;display:grid;grid-template-columns:34px 1fr;gap:6px 10px;align-items:center}
+.dtopic:hover{border-color:var(--muted)}
+.dtopic .dico{width:34px;height:34px;padding:5px;border-radius:10px;background:var(--panel2);color:var(--buoy)}
+.dtn{display:flex;flex-direction:column;min-width:0}.dtn b{font-size:14px;line-height:1.25}.dtn small{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.dtopic .dbar{grid-column:1/-1}.dtc{grid-column:1/-1;font-size:11.5px;color:var(--muted);margin-top:-2px}
+.dnote{font-size:12.5px;color:var(--muted);margin:0}
+/* сессия: прогресс сверху, задание, ответ снизу — как в приложениях для изучения языков */
+.dsess{min-height:100%;display:flex;flex-direction:column;max-width:700px;margin:0 auto}
+.dtop{display:flex;align-items:center;gap:12px;padding:14px 16px 6px;position:sticky;top:0;background:var(--sea);z-index:2}
+.dx{font:inherit;font-size:18px;line-height:1;background:transparent;border:0;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;min-width:36px;min-height:36px}
+.dx:hover{color:var(--ink);background:var(--panel2)}
+.dprog{flex:1;height:12px;border-radius:6px;background:rgba(147,174,187,.18);overflow:hidden}
+.dprog>i{display:block;height:100%;background:var(--stbd);border-radius:6px;transition:width .35s}
+.dexam .dprog>i{background:var(--buoy)}
+.dcombo,.dtime{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);min-width:64px;text-align:right}
+.dcombo.hot{color:var(--buoy);font-weight:600}.dtime.low{color:var(--port);font-weight:600}
+.dbody{flex:1;padding:6px 16px 14px;display:flex;flex-direction:column;gap:12px}
+.dbody .qn{margin:0}
+.dq{margin:0;font-size:18px;line-height:1.35;font-weight:600}
+.dpic{display:flex;justify-content:center}
+.dpic svg{width:100%;max-width:420px;height:auto;border-radius:10px;display:block}
+.dpic .dbuoy{width:100%;max-width:260px}.dpic .dbuoy svg{max-width:260px}
+.dopts .opt{display:flex;gap:10px;align-items:center;min-height:48px;font-size:15px}
+.dopts .opt kbd{flex:none;opacity:.7}
+@media (hover:none){.dopts .opt kbd{display:none}}
+.dopts .opt.pick{border-color:var(--buoy);background:rgba(242,163,58,.14)}
+.dopts .opt .en{font-size:12px}
+.dfoot{position:sticky;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--sea);border-top:1px solid transparent;display:flex;flex-direction:column;gap:10px;z-index:2}
+.dfoot:empty{display:none}
+.dfoot .row{justify-content:flex-end}.dfoot .btn{min-height:44px}
+.dfoot.ok{background:#123d2f;border-top-color:var(--stbd)}.dfoot.bad{background:#3d1c1d;border-top-color:var(--port)}
+.dfb{display:flex;flex-direction:column;gap:4px;font-size:14px}.dfb>b{font-family:var(--f-display);font-size:16px}
+.dfoot.ok .dfb>b{color:var(--stbd)}.dfoot.bad .dfb>b{color:#ff8a80}
+.dfb p{margin:0;color:var(--ink)}
+.dpairs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dpairs>div{display:flex;flex-direction:column;gap:8px}
+.dtile{font:inherit;font-size:14px;text-align:left;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:12px;padding:10px 12px;cursor:pointer;min-height:46px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.dtile small{font-size:11px;color:var(--muted)}
+.dtile.sel{border-color:var(--buoy);background:rgba(242,163,58,.16)}
+.dtile.done{opacity:.35;cursor:default}
+.dtile.bad{border-color:var(--port);background:rgba(226,86,77,.2);animation:dshake .3s}
+@keyframes dshake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.dline{list-style:none;margin:0;padding:10px;border:1px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;gap:6px;counter-reset:st;min-height:60px}
+.dline li{counter-increment:st;display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:center}
+.dline li::before{content:counter(st);font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right}
+.dline li.ph{display:block;color:var(--muted);font-size:13px;padding:8px}.dline li.ph::before{content:none}
+.dline .dtile.on{background:var(--panel)}
+.dline li.right .dtile{border-color:var(--stbd)}.dline li.wrong .dtile{border-color:var(--port)}
+.dpool{display:flex;flex-direction:column;gap:6px}
+.dright{margin:4px 0 0;padding-left:20px;font-weight:400}
+.dnum{display:flex;align-items:center;gap:10px}
+.dnum input{font:inherit;font-size:22px;width:160px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+.dnum span{color:var(--muted)}
+.dend.pass{border-color:var(--stbd)}.dend.fail{border-color:var(--port)}
+.dend p{margin:0}
+@media (max-width:700px){.drill{padding:12px}.dq{font-size:16.5px}.dtopics{grid-template-columns:1fr 1fr}.dtopic{grid-template-columns:28px 1fr;padding:10px}.dtopic .dico{width:28px;height:28px;padding:4px}.dpairs{gap:8px}.dtile{font-size:13px;padding:8px 10px}}
+.jtop{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 16px}.jtop>div{display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center;font-size:13px}.jtop .dbar{grid-column:1/-1}.jtop small{color:var(--muted);font-size:11.5px}
