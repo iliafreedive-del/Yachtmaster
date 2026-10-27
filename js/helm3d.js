@@ -54,7 +54,7 @@ function startHelm3D(mode){
       <div class="hg" id="h5btG"><div class="cap">подруливающее<br>bow thruster</div>
         <div class="hrow"><button class="hb" data-b="-1" aria-label="Нос влево">◀</button><button class="hb" data-b="1" aria-label="Нос вправо">▶</button></div><div class="cap">нос · bow</div></div>
     </div>`;
-  host.appendChild(ui);
+  host.appendChild(ui);hudVars(ui);
 
   /* ---------- сцена: открытая бухта ---------- */
   const scene=new THREE.Scene(),ocean=typeof makeOcean==='function';

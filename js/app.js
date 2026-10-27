@@ -5,6 +5,10 @@ let cur='prolog',slideI=0,phase='brief';
 function renderTabs(){
   $('#tabs').innerHTML=TABS.map(m=>`${m.id==='course'?'<span class="sep"></span>':''}<button data-m="${m.id}" aria-pressed="${m.id===cur}">${done[m.id]?'<span class="ok">✓</span>':''}${m.n}<small>${m.en}</small></button>`).join('');
   $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>openChapter(b.dataset.m));
+  // на телефоне вкладки — лента: прокручиваем её так, чтобы открытая вкладка была видна посередине
+  const t=$('#tabs'),a=t.querySelector('[aria-pressed="true"]');
+  if(a&&t.scrollWidth>t.clientWidth)t.scrollLeft+=a.getBoundingClientRect().left-t.getBoundingClientRect().left-(t.clientWidth-a.offsetWidth)/2;
+  if(!crumbFn)$('#crumbN').textContent=(TABS.find(m=>m.id===cur)||{}).n||'';
   const n=CH.filter(m=>done[m.id]).length;$('#prog').innerHTML=`Пройдено <b>${n}</b> из ${CH.length} глав`;
 }
 function markDone(k){done[k]=true;store.set(done);renderTabs()}
@@ -18,15 +22,22 @@ function show(view){ // 'board' | 'canvas' | 'three'
   $('#board').hidden=view!=='board';$('#three').hidden=view!=='three';$('#cv').style.visibility=view==='canvas'?'visible':'hidden';
 }
 function padMode(m){ // null | 'walk' | 'sail' | 'motor'
-  $('#pad').hidden=!m;
+  $('#pad').hidden=!m;$('#stage').dataset.pad=m||'';
   $('#padMove').hidden=m!=='walk';$('#padAct').hidden=m!=='walk';
   $('#padSteer').hidden=!(m==='sail'||m==='motor');$('#padSail').hidden=!(m==='sail'||m==='motor');
   $('#padUp').textContent=m==='motor'?'Газ ▲':'Выбрать';$('#padDown').textContent=m==='motor'?'Назад ▼':'Травить';
 }
-function stopAll(){sim=null;stop3D();stopSail3D();stopMoor3D();if(typeof stopHelm3D==='function')stopHelm3D();stopFleet3D();if(typeof stopLabs==='function')stopLabs();hideDialog();for(const k in keys)keys[k]=false}
+/* строка над сценой: «← назад» туда, откуда пришли (брифинг, урок, список уроков) и где мы сейчас.
+   crumb(подпись, действие, где) — показать, crumb() — убрать. На телефоне она прилипает к верху вместе с вкладками */
+let crumbFn=null;
+function crumb(label,fn,where){
+  crumbFn=fn||null;$('#crumbB').hidden=!fn;$('#crumbT').textContent=label||'';
+  $('#crumbN').textContent=where||(TABS.find(t=>t.id===cur)||{}).n||'';document.body.classList.toggle('crumbed',!!fn)}
+function stopAll(){crumb();sim=null;stop3D();stopSail3D();stopMoor3D();if(typeof stopHelm3D==='function')stopHelm3D();stopFleet3D();if(typeof stopLabs==='function')stopLabs();hideDialog();for(const k in keys)keys[k]=false}
 
 function openChapter(id){
   stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
+  focusStage();
   if(id==='gloss'){renderGloss();return}
   if(id==='fleet'){startFleet();return}
   if(id==='course'){startCourse();return}
@@ -52,25 +63,40 @@ function renderSlide(){
 function no3D(){padMode(null);show('board');$('#board').innerHTML='<div class="exam"><div class="card"><h3>3D-палуба не загрузилась</h3><p>Браузер не смог запустить 3D-движок. Обнови страницу или открой её в другом браузере. Если не помогло, включи в настройках браузера аппаратное ускорение (WebGL).</p></div></div>'}
 function startPractice(p){
   phase='practice';
-  const inCourse=cur==='course'&&typeof crs!=='undefined'&&crs.lesson,backLink=`<br><button class="back" id="toBrief">${inCourse?'Вернуться к уроку':'Вернуться к брифингу'}</button>`;
+  const inCourse=cur==='course'&&typeof crs!=='undefined'&&crs.lesson,
+    back=()=>crumb(inCourse?'К уроку':'К брифингу',()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)},inCourse?crs.lesson.n:chap(cur).n+' · практика');
   // День 4 и «Рулёжка»: сначала мастер-класс, после него — практика
   if(p==='moor3d')moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');
   if(p==='helm3d')helmMode=helmMode||(done['helm-lesson']?'practice':'lesson');
   // перед практикой — карточка «Условия» (js/practice.js); перезапуск той же практики идёт без неё
   const skip=condSkip;condSkip=false;
-  if(!skip&&condNeed(p)){condCard(p,()=>{condSkip=true;startPractice(p)});$('#keysHelp').innerHTML=backLink;$('#toBrief').onclick=()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)};return}
+  if(!skip&&condNeed(p)){condCard(p,()=>{condSkip=true;startPractice(p)});$('#keysHelp').innerHTML='';back();focusStage();return}
   if(p==='exam'){startExam()}
   else if(p==='deck3d'){if(window.THREE)start3D();else no3D()}
   // без WebGL — прежняя 2D-швартовка
   else if(p==='moor3d'){if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
   else if(p==='helm3d'){if(!(window.THREE&&startHelm3D(helmMode)))no3D()}
   else startSim(p);
-  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>C</kbd> или <kbd>1</kbd> <kbd>2</kbd> — вид камеры, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху (ветер вверху), <kbd>4</kbd> сверху по курсу, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> <kbd>4</kbd> сверху, <kbd>C</kbd> — следующая.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',helm3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
-  $('#toBrief').onclick=()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)};
+  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>C</kbd> или <kbd>1</kbd> <kbd>2</kbd> — вид камеры, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху (ветер вверху), <kbd>4</kbd> сверху по курсу, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> <kbd>4</kbd> сверху, <kbd>C</kbd> — следующая.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',helm3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'');
+  if(p!=='exam')back();
   focusStage();
 }
-/* на телефоне и в альбомной ориентации сцена занимает весь экран: прокручиваем к ней, вкладки остаются выше */
-function focusStage(){if(innerWidth<700||innerHeight<600)$('#stage').scrollIntoView({block:'start'})}
+/* на телефоне сцена занимает экран под вкладками (они прилипают к верху): прокручиваем так, чтобы шапка ушла, а вкладки и строка «назад» остались.
+   В альбомной ориентации и в низком окне вкладки уезжают вверх, над сценой остаётся строка «назад · Разделы ↑» */
+const lowScreen=()=>matchMedia('(max-height:560px) and (orientation:landscape)').matches;
+function focusStage(){
+  if(innerWidth>700&&innerHeight>=600)return;
+  const b=$('#bar'),y=$('#stage').getBoundingClientRect().top+scrollY,top=parseFloat(getComputedStyle(b).top)||0;
+  scrollTo(0,Math.max(0,lowScreen()?$('#crumb').getBoundingClientRect().top+scrollY-4:y-b.offsetHeight-top-8))}
+$('#crumbB').onclick=()=>{if(crumbFn)crumbFn()};
+$('#crumbUp').onclick=()=>scrollTo({top:0,behavior:'smooth'});
+// высота липкой полосы вкладок: от неё считается высота сцены на телефоне (css: --barH)
+if(window.ResizeObserver)new ResizeObserver(()=>document.documentElement.style.setProperty('--barH',$('#bar').offsetHeight+'px')).observe($('#bar'));
+
+/* марина и рулёжка: высота ряда кнопок сверху и пульта снизу — в css-переменные --tl и --hh, чтобы ветер и мастер-класс шли сразу под кнопками и не наезжали на пульт */
+function hudVars(ui){if(!window.ResizeObserver)return;const t=ui.querySelector('.tools'),h=ui.querySelector('.helm');
+  const ro=new ResizeObserver(()=>{if(t)ui.style.setProperty('--tl',t.offsetHeight+'px');if(h)ui.style.setProperty('--hh',h.offsetHeight+'px')});
+  if(t)ro.observe(t);if(h)ro.observe(h)}
 
 /* ---------- dialogs ---------- */
 function showDialog(html){$('#dlgCard').innerHTML=rich(html);$('#dlg').hidden=false}

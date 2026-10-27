@@ -63,7 +63,7 @@ function startMoor3D(mode){
       <div class="hg" id="m4btG"><div class="cap">подруливающее<br>bow thruster</div>
         <div class="hrow"><button class="hb" data-b="-1" aria-label="Нос влево">◀</button><button class="hb" data-b="1" aria-label="Нос вправо">▶</button></div><div class="cap">нос · bow</div></div>
     </div>`;
-  host.appendChild(ui);
+  host.appendChild(ui);hudVars(ui);
 
   /* ---------- сцена ---------- */
   const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:90,far:280}).getHex(),hq=gfxQ()==='high';

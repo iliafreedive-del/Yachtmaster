@@ -331,6 +331,6 @@ document.addEventListener('keydown',e=>{
 (function(){
   const open0=openChapter;
   openChapter=function(id){if(id!=='exam')return open0(id);
-    stopAll();cur=id;phase='practice';renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='Клавиши: <kbd>1</kbd>–<kbd>4</kbd> — ответ, <kbd>Enter</kbd> — дальше.';startExam()};
+    stopAll();cur=id;phase='practice';renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='Клавиши: <kbd>1</kbd>–<kbd>4</kbd> — ответ, <kbd>Enter</kbd> — дальше.';startExam();focusStage()};
   const stop0=stopAll;stopAll=function(){drStop();stop0()};
 })();

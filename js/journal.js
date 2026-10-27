@@ -59,4 +59,4 @@ function renderJournal(){
 (function(){const i=TABS.findIndex(t=>t.id==='gloss');TABS.splice(i<0?TABS.length:i,0,{id:'log',n:'Журнал',en:'Logbook'});
   const open0=openChapter;
   openChapter=function(id){if(id!=='log')return open0(id);
-    stopAll();cur=id;phase='log';renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='';renderJournal()}})();
+    stopAll();cur=id;phase='log';renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='';renderJournal();focusStage()}})();
