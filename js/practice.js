@@ -8,7 +8,7 @@ function condGet(){try{return Object.assign({},COND_DEF,JSON.parse(localStorage.
 function condSet(c){try{localStorage.setItem('gals-cond',JSON.stringify(c))}catch(e){}}
 const condKn=(kind,c)=>COND_KN[kind][{low:0,mid:1,high:2}[c.wind]??1];
 /* упражнения, перед которыми спрашиваем условия; мастер-классы идут в своих тихих условиях */
-const condNeed=p=>p==='points'||p==='tack'||(p==='moor3d'&&moorMode==='practice')||(p==='helm3d'&&helmMode==='practice');
+const condNeed=p=>p==='points'||(p==='tack'&&tackMode==='practice')||(p==='moor3d'&&moorMode==='practice')||(p==='helm3d'&&helmMode==='practice');
 let condSkip=false; // перезапуск той же практики (смена лодки, графики, «Сначала») — без карточки
 
 function condCard(kind,onStart){
