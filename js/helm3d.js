@@ -65,9 +65,12 @@ function startHelm3D(mode){
   const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
   {const c=sun.shadow.camera;c.left=-30;c.right=30;c.top=30;c.bottom=-30;c.near=1;c.far=200}sun.shadow.bias=-.0008;scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
-  const wind={from:lesson?20:45,kn:lesson?4:10};
+  // практика — в условиях из карточки «Условия»; в повторных заходах «человек за бортом» оказывается в разных местах
+  const cond=condGet(),min=!lesson&&cond.hints==='min',vary=!lesson&&(cond.dir==='rnd'||done.helm);
+  const wind=lesson?{from:20,kn:4}:gustWind({from:cond.dir==='rnd'?Math.floor(Math.random()*72)*5:45,kn:condKn('helm3d',cond)},cond.gust);
+  const mobP=vary?[H5MOB,{x:28,z:-125},{x:-48,z:-30},{x:12,z:-170}][Math.floor(Math.random()*4)]:H5MOB;
   let sea=null,water=null,wg=null;
-  if(ocean)sea=makeOcean(scene,{R:320,sun:[-30,55,40],wind,calm:lesson?.3:.6,opacity:.9,sky});
+  if(ocean)sea=makeOcean(scene,{R:320,sun:[-30,55,40],wind:wind.base||wind,calm:lesson?.3:.6,opacity:.9,sky});
   else{wg=new THREE.PlaneGeometry(700,700,70,70);wg.rotateX(-Math.PI/2);
     water=new THREE.Mesh(wg,M(0x1f8197,{roughness:.3,envMapIntensity:.6}));water.receiveShadow=true;scene.add(water)}
   if(typeof skyDome==='function'){scene.environment=skyEnv(renderer);skyDome(scene,{r:500})}
@@ -88,7 +91,7 @@ function startHelm3D(mode){
   let mark=null,mob=null,bgate=null;
   if(!lesson){mark=buoy(H5MARK.x,H5MARK.z,'y');gateBuoys(H5BG,'w');bgate=H5BG;
     mob=new THREE.Group();mesh(new THREE.TorusGeometry(.42,.13,8,20).rotateX(Math.PI/2),M(0xf07a28),0,.1,0,mob);
-    mob.position.set(H5MOB.x,0,H5MOB.z);mob.visible=false;scene.add(mob)}
+    mob.position.set(mobP.x,0,mobP.z);mob.visible=false;scene.add(mob)}
   // метки шага: зелёный круг-цель и оранжевый круг за кормой
   const ringM=new THREE.MeshBasicMaterial({color:0xf2a33a,transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide});
   const ring=mesh(new THREE.RingGeometry(3,3.6,40).rotateX(-Math.PI/2),ringM,0,.12,0);ring.visible=false;
@@ -126,7 +129,7 @@ function startHelm3D(mode){
   const VIEWS={helm:'у штурвала',third:'за кормой',top:'сверху'};
   $('#h5cam').onclick=()=>{st.view=st.view==='helm'?'third':st.view==='third'?'top':'helm';st.yaw=0;$('#h5cam').textContent='Камера: '+VIEWS[st.view]};
   $('#h5mode').onclick=()=>{helmMode=lesson?'practice':'lesson';stopHelm3D();startPractice('helm3d')};
-  $('#h5rst').onclick=()=>{stopHelm3D();startPractice('helm3d')};
+  $('#h5rst').onclick=()=>{stopHelm3D();condSkip=true;startPractice('helm3d')};
   if(!lesson)$('#h5hint').onclick=()=>practiceHint(true);
   const KM={ArrowLeft:'h-1',KeyA:'h-1',ArrowRight:'h1',KeyD:'h1',KeyQ:'b-1',KeyE:'b1'};
   const kd=e=>{if(H5!==st||!$('#dlg').hidden||(e.target&&e.target.tagName==='INPUT'))return;
@@ -167,7 +170,7 @@ function startHelm3D(mode){
   function lessonDone(){
     st.running=false;host.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));$('#h5coach').hidden=true;ring.visible=false;
     done['helm-lesson']=true;store.set(done);renderSteps();
-    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты прошёл ворота, описал [[циркуляция|циркуляцию]], остановил яхту задним ходом, увидел [[заброс винта]], прошёл задним ходом и развернулся на месте. Теперь сам: в практике ветер 10 узлов, слалом через трое ворот, обход знака, подход к спасательному кругу и ворота задним ходом.</p><div class="row"><button class="btn ghost" id="h5again">Повторить</button><button class="btn" id="h5prac">К практике</button></div>`);
+    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты прошёл ворота, описал [[циркуляция|циркуляцию]], остановил яхту задним ходом, увидел [[заброс винта]], прошёл задним ходом и развернулся на месте. Теперь сам: в практике ветер сильнее — его выберешь перед стартом, — слалом через трое ворот, обход знака, подход к спасательному кругу и ворота задним ходом.</p><div class="row"><button class="btn ghost" id="h5again">Повторить</button><button class="btn" id="h5prac">К практике</button></div>`);
     $('#h5again').onclick=()=>{hideDialog();helmMode='lesson';stopHelm3D();startPractice('helm3d')};
     $('#h5prac').onclick=()=>{hideDialog();helmMode='practice';stopHelm3D();startPractice('helm3d')};
   }
@@ -185,14 +188,14 @@ function startHelm3D(mode){
       if(d<30){if(st.rndA!==null)st.rnd+=norm(a-st.rndA);st.rndA=a;if(Math.abs(st.rnd)>330){P.round=true;mob.visible=true;
         msg('Знак обойдён. «Человек за бортом!» — оранжевый спасательный круг в воде, подойди к нему.','bad')}}else{st.rndA=null;st.rnd=0}}
     // человек за бортом: круг у борта, ход почти ноль; винт рядом с человеком — ошибка
-    if(P.round&&!P.mob){const d=Math.hypot(st.x-H5MOB.x,st.z-H5MOB.z),[sx,sz]=m4w(st,0,B.L),ds=Math.hypot(sx-H5MOB.x,sz-H5MOB.z);
+    if(P.round&&!P.mob){const d=Math.hypot(st.x-mobP.x,st.z-mobP.z),[sx,sz]=m4w(st,0,B.L),ds=Math.hypot(sx-mobP.x,sz-mobP.z);
       if(d<B.W*.9&&Math.abs(st.u)>.3){fail('Яхта наехала на человека в воде. К нему подходят медленно, против ветра, и останавливаются так, чтобы он был у борта.');return}
       if(ds<4&&st.thrI!==2&&st.eng&&!st.propWarn){st.propWarn=true;st.errs++;msg('Винт рядом с человеком! Рычаг в нейтраль.','bad')}
       if(ds>6)st.propWarn=false;
       if(d<B.W+3&&Math.abs(st.u)*MS2KN<.3){P.mob=true;mob.visible=false;msg('Человек на борту. Теперь ворота задним ходом — белые буи.','good')}}
     if(P.mob&&!P.back&&st.u<-.1&&h5cross(bgate,px,pz,st.x,st.z)){P.back=true;msg('Ворота задним ходом пройдены. Остановись и заглуши двигатель.','good')}
     if(P.back&&!st.eng&&st.thrI===2)P.off=true;
-    st.hintT+=dt;practiceHint(false);
+    st.hintT+=dt;if(!min)practiceHint(false);
     if(st.coachT>0){st.coachT-=dt;if(st.coachT<=0)$('#h5coach').hidden=true}
     if(PR.every(p=>P[p.id]))win();
   }
@@ -217,6 +220,7 @@ function startHelm3D(mode){
 
   /* ---------- физика (как в js/moor3d.js) ---------- */
   function physics(dt){
+    if(wind.step){wind.step(dt);if(sea)sea.gust(wind.from,wind.kn,.6)}
     if(st.k['h-1'])st.rud=clamp(st.rud-dt*1.1,-1,1);if(st.k.h1)st.rud=clamp(st.rud+dt*1.1,-1,1);
     st.bt=st.eng?(st.k.b1?1:0)-(st.k['b-1']?1:0):0;
     const px=st.x,pz=st.z,ph=st.h;
@@ -263,7 +267,7 @@ function startHelm3D(mode){
     const P=st.pr;if(!P.engine)return null;
     if(st.gi<3){const g=H5PG[st.gi];return[g.x,g.z,'ворота '+(st.gi+1),'gate '+(st.gi+1)]}
     if(!P.round)return[mark.x,mark.z,'обойти знак','round the mark'];
-    if(!P.mob)return[H5MOB.x,H5MOB.z,'человек за бортом','man overboard'];
+    if(!P.mob)return[mobP.x,mobP.z,'человек за бортом','man overboard'];
     if(!P.back)return[bgate.x,bgate.z,'задним ходом','astern'];return null}
   function frame(now){
     if(H5!==st)return;
@@ -272,7 +276,7 @@ function startHelm3D(mode){
     const t=now/1000;
     // вода и яхта на волне
     if(sea){sea.update(t,st.x,st.z);const sr=sea.float(me,st.x,st.z,st.h,B.L,B.W,t,dt,(me.userData.wl||0)*.5);me.position.x=st.x;me.position.z=st.z;me.rotation.set(sr.p,-st.h*D,sr.r);
-      buoys.forEach(b=>{b.g.position.y=sea.height(b.x,b.z,t)-.15});if(mob)mob.position.y=sea.height(H5MOB.x,H5MOB.z,t);
+      buoys.forEach(b=>{b.g.position.y=sea.height(b.x,b.z,t)-.15});if(mob)mob.position.y=sea.height(mobP.x,mobP.z,t);
       if(wake)wake.update(st.wake,Math.abs(st.u)>.25?m4w(st,0,B.L):null,t);if(bowF)bowF.update(st.u,t)}
     else{me.position.set(st.x,Math.sin(t*1.2)*.04,st.z);me.rotation.set(Math.sin(t*.7)*.01,-st.h*D,Math.sin(t*.9)*.012);
       water.position.set(Math.round(st.x/10)*10,0,Math.round(st.z/10)*10);
@@ -306,7 +310,7 @@ function startHelm3D(mode){
     $('#h5thr').classList.toggle('astern',st.thrI<2);$('#h5thr').classList.toggle('ahead',st.thrI>2);$('#h5eng').classList.toggle('on',st.eng);
     host.querySelectorAll('[data-b]').forEach(b=>b.classList.toggle('on',st.bt===+b.dataset.b&&st.bt!==0));
     const Y=st.camYaw,wdx=Math.sin((wind.from+180)*D),wdz=-Math.cos((wind.from+180)*D),up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
-    $('#h5wa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#h5wt').textContent=`${wind.kn} уз · ${compassName(wind.from)}`;
+    $('#h5wa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#h5wt').textContent=`${Math.round(wind.kn)} уз · ${compassName(wind.from)}`;
     if(now-lastP>120){lastP=now;panel()}
     st.raf=requestAnimationFrame(frame);
   }
@@ -317,14 +321,15 @@ function startHelm3D(mode){
     $('#inst').innerHTML=`<div><span>Скорость · speed</span><b>${Math.abs(kn).toFixed(1)} уз${kn<-.05?' <small style="font-size:12px;color:var(--muted)">назад</small>':''}</b></div><div><span>Курс · heading</span><b>${String(Math.round(st.h)).padStart(3,'0')}°</b></div>
       <div style="grid-column:1/-1"><span>Рычаг газа · throttle</span><b>${M4N[st.thrI][0]} <small style="font-size:12px;color:var(--muted)">${M4N[st.thrI][1]}</small></b></div>
       <div><span>Двигатель · engine</span><b>${st.eng?'работает':'заглушен'}</b></div>${extra}
-      <div><span>Ветер · wind</span><b>${wind.kn} уз ${compassName(wind.from)}</b></div><div><span>Руль · rudder</span><b>${Math.abs(st.rud)<.05?'прямо':(Math.round(Math.abs(st.rud)*35))+'° '+(st.rud>0?'пр':'лев')}</b></div>`;
+      <div><span>Ветер · wind</span><b>${Math.round(wind.kn)} уз ${compassName(wind.from)}</b></div><div><span>Руль · rudder</span><b>${Math.abs(st.rud)<.05?'прямо':(Math.round(Math.abs(st.rud)*35))+'° '+(st.rud>0?'пр':'лев')}</b></div>`;
     if(!st.running)return;
     const v=Math.abs(kn);
+    if(min){hint('');if(!lesson)renderSteps();return}
     hint(!st.eng?'Двигатель заглушен.':st.thrI<2&&v<1.2&&E.walk>=.5?'На заднем ходу корму тянет влево — [[заброс винта]].':st.thrI===2&&v>.5?'Нейтраль: яхта катится по инерции.':'Руль работает от потока воды: нет хода — нет руля.',st.thrI<2?'':'good');
     if(!lesson)renderSteps();
   }
-  say(lesson?'Мастер-класс по рулёжке: я подсвечиваю, что делать, и жду, пока сделаешь. Смотри на след яхты — он многое объясняет.':`Теперь сам. Ветер ${wind.kn} узлов ${windFrom(wind.from)}. Если застрянешь, нажми «Подсказка».`);
-  if(lesson)enterStep();else{renderSteps();practiceHint(true)}
+  say(lesson?'Мастер-класс по рулёжке: я подсвечиваю, что делать, и жду, пока сделаешь. Смотри на след яхты — он многое объясняет.':`Теперь сам. Ветер ${wind.kn} узлов ${windFrom(wind.from)}${cond.gust?', порывистый':''}. Если застрянешь, нажми «Подсказка».`);
+  if(lesson)enterStep();else{renderSteps();if(!min)practiceHint(true)}
   st.raf=requestAnimationFrame(frame);
   return true;
 }

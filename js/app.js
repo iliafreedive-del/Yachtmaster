@@ -53,12 +53,17 @@ function no3D(){padMode(null);show('board');$('#board').innerHTML='<div class="e
 function startPractice(p){
   phase='practice';
   const inCourse=cur==='course'&&typeof crs!=='undefined'&&crs.lesson,backLink=`<br><button class="back" id="toBrief">${inCourse?'Вернуться к уроку':'Вернуться к брифингу'}</button>`;
+  // День 4 и «Рулёжка»: сначала мастер-класс, после него — практика
+  if(p==='moor3d')moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');
+  if(p==='helm3d')helmMode=helmMode||(done['helm-lesson']?'practice':'lesson');
+  // перед практикой — карточка «Условия» (js/practice.js); перезапуск той же практики идёт без неё
+  const skip=condSkip;condSkip=false;
+  if(!skip&&condNeed(p)){condCard(p,()=>{condSkip=true;startPractice(p)});$('#keysHelp').innerHTML=backLink;$('#toBrief').onclick=()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)};return}
   if(p==='exam'){startExam()}
   else if(p==='deck3d'){if(window.THREE)start3D();else no3D()}
-  // День 4: сначала мастер-класс, после него — практика; без WebGL — прежняя 2D-швартовка
-  else if(p==='moor3d'){moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
-  // урок «Рулёжка» из вкладки «Курс»: мастер-класс, потом практика
-  else if(p==='helm3d'){helmMode=helmMode||(done['helm-lesson']?'practice':'lesson');if(!(window.THREE&&startHelm3D(helmMode)))no3D()}
+  // без WebGL — прежняя 2D-швартовка
+  else if(p==='moor3d'){if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
+  else if(p==='helm3d'){if(!(window.THREE&&startHelm3D(helmMode)))no3D()}
   else startSim(p);
   $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Мышь или палец — повернуть камеру, <kbd>C</kbd> — камера за кормой.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',helm3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (за кормой, сверху, у штурвала). Мышь или палец — осмотреться.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее, <kbd>C</kbd> камера (у штурвала, за кормой, сверху). Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'')+backLink;
   $('#toBrief').onclick=()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)};

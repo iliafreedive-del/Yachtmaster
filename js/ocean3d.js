@@ -82,8 +82,9 @@ function makeOcean(scene,o){
     setWaves(list){W=list.slice(0,4);while(W.length<4)W.push({dx:1,dz:0,k:1,a:0,w:0,q:0});let amp=0;
       W.forEach((w,i)=>{u.uWa.value[i].set(w.dx,w.dz,w.k,w.a);u.uWb.value[i].set(w.w,Math.min(1,w.q/(w.k*Math.max(w.a,1e-4)*4)));amp+=w.a});u.uAmp.value=amp;return oc},
     /* ветер на воде: направление ряби и сила порывов */
-    setWind(from,kn,calm){const to=(from+180)*D;u.uWd.value.set(Math.sin(to),-Math.cos(to));u.uGust.value=clamp(kn/14,0,1.2)*(calm??1);
-      return oc.setWaves(windWaves(from,kn,calm))},
+    setWind(from,kn,calm){oc.gust(from,kn,calm);return oc.setWaves(windWaves(from,kn,calm))},
+    /* порыв или заход ветра: меняются рябь и тёмные пятна, а волны остаются от среднего ветра, чтобы не прыгали */
+    gust(from,kn,calm){const to=(from+180)*D;u.uWd.value.set(Math.sin(to),-Math.cos(to));u.uGust.value=clamp(kn/14,0,1.2)*(calm??1);return oc},
     /* сетка едет за камерой шагами, чтобы волны не «плыли» */
     update(t,cx,cz){u.uTime.value=t;const s=4;mesh.position.x=Math.round((cx||0)/s)*s;mesh.position.z=Math.round((cz||0)/s)*s;u.uC.value.set(mesh.position.x,mesh.position.z)},
     height(x,z,t){let y=oc.y;for(const w of W)y+=w.a*Math.sin(w.k*(w.dx*x+w.dz*z)-w.w*t);return y},
@@ -211,4 +212,4 @@ function renderGfx(){const row=$('#gfxRow');if(!row)return;const q=gfxQ();
   row.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.q===gfxQ())return;setGfxQ(b.dataset.q);renderGfx();
     if($('#three').hidden)return;if(cur==='fleet'){stopAll();startFleet();return}if(cur==='anatomy'){openChapter('anatomy');return}
     // практика из урока «Курса» берёт упражнение из урока, остальные — из главы
-    if(phase!=='practice')return;const p=cur==='course'?typeof crs!=='undefined'&&crs.lesson&&crs.lesson.practice:chap(cur)&&chap(cur).practice;if(!p)return;stopAll();startPractice(p)})}
+    if(phase!=='practice')return;const p=cur==='course'?typeof crs!=='undefined'&&crs.lesson&&crs.lesson.practice:chap(cur)&&chap(cur).practice;if(!p)return;stopAll();condSkip=true;startPractice(p)})}

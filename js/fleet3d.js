@@ -125,5 +125,5 @@ function startFleet(){
 function boatPicker(kind,cur){
   const box=$('#boatBox');if(!box)return;box.hidden=false;
   $('#boatChips').innerHTML=FLEET.filter(f=>/moor/.test(kind)||BOATS[f.id].sail).map(f=>`<button data-b="${f.id}" aria-pressed="${f.id===cur}" title="${f.n} · ${f.en}">${f.s}</button>`).join('');
-  $('#boatChips').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.b===cur)return;setBoatType(b.dataset.b);stopAll();startPractice(kind)});
+  $('#boatChips').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.b===cur)return;setBoatType(b.dataset.b);stopAll();condSkip=true;startPractice(kind)});
 }
