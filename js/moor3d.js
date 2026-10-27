@@ -143,9 +143,14 @@ function startMoor3D(mode){
   scene.traverse(o=>{if(o.isMesh&&o!==sea.mesh&&o.material.transparent!==true){o.castShadow=true;o.receiveShadow=true}});
 
   /* ---------- состояние ---------- */
-  const st={renderer,mode,scene,B,berth,cam,obs,running:true,t:0,x:M4START.x,z:M4START.z,h:M4START.h,u:0,v:0,r:0,rud:0,thrI:2,bt:0,eng:false,
-    fend:false,prep:false,lines:{w:false,l:false},lazy:false,held:false,neutT:0,wind:{from:90,kn:lesson?4:8},
-    si:0,okT:0,view:'helm',yaw:0,camYaw:-M4START.h*D,camPit:.6,k:{},touches:0,errs:0,hintT:0,hintId:'',speedWarn:0,wake:[],wt:0,msgT:0,engOnce:false,backOnce:false};
+  // практика — в условиях из карточки «Условия»: ветер вдоль причала с востока или с запада, порывы; в повторных заходах яхта
+  // приходит то слева, то справа — и заброс винта то помогает развороту, то мешает. Мастер-класс — всегда тихий ветер 4 узла с востока
+  const cond=condGet(),min=!lesson&&cond.hints==='min',wfrom=!lesson&&cond.dir==='rnd'?(Math.random()<.5?90:270)+Math.round(Math.random()*8-4)*5:90;
+  const S0=!lesson&&(cond.dir==='rnd'||done.day4)&&Math.random()<.5?{x:-M4START.x,z:M4START.z,h:270}:M4START;
+  if(deco)deco.dx=S0.x>0?-1:1; // тузик катается с другой стороны, чтобы не мешать
+  const st={renderer,mode,scene,B,berth,cam,obs,running:true,t:0,x:S0.x,z:S0.z,h:S0.h,u:0,v:0,r:0,rud:0,thrI:2,bt:0,eng:false,
+    fend:false,prep:false,lines:{w:false,l:false},lazy:false,held:false,neutT:0,wind:lesson?{from:90,kn:4}:gustWind({from:wfrom,kn:condKn('moor3d',cond)},cond.gust),
+    si:0,okT:0,view:'helm',yaw:0,camYaw:-S0.h*D,camPit:.6,k:{},touches:0,errs:0,hintT:0,hintId:'',speedWarn:0,wake:[],wt:0,msgT:0,engOnce:false,backOnce:false};
   M4=st;
   const msg=(t,c)=>{const m=$('#m4msg');m.innerHTML=rich(t);m.className='toast '+(c||'');m.hidden=false;st.msgT=5};
 
@@ -179,7 +184,7 @@ function startMoor3D(mode){
   const VIEWS={helm:'у штурвала',third:'за кормой',top:'сверху'};
   $('#m4cam').onclick=()=>{st.view=st.view==='helm'?'third':st.view==='third'?'top':'helm';st.yaw=0;$('#m4cam').textContent='Камера: '+VIEWS[st.view]};
   $('#m4mode').onclick=()=>{moorMode=lesson?'practice':'lesson';stopMoor3D();startPractice('moor3d')};
-  $('#m4rst').onclick=()=>{stopMoor3D();startPractice('moor3d')};
+  $('#m4rst').onclick=()=>{stopMoor3D();condSkip=true;startPractice('moor3d')};
   if(!lesson)$('#m4hint').onclick=()=>practiceHint(true);
   const KM={ArrowLeft:'h-1',KeyA:'h-1',ArrowRight:'h1',KeyD:'h1',KeyQ:'b-1',KeyE:'b1'};
   const kd=e=>{if(M4!==st||!$('#dlg').hidden||(e.target&&e.target.tagName==='INPUT'))return;
@@ -213,7 +218,7 @@ function startMoor3D(mode){
   function lessonDone(){
     st.running=false;host.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));$('#m4coach').hidden=true;
     done['day4-lesson']=true;store.set(done);renderSteps();
-    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты прошёл всю швартовку кормой: кранцы, швартовы, разворот, задний ход с поправкой на [[заброс винта]], остановка, наветренный швартов, подветренный, [[муринг]]. Теперь то же самое сам: в практике ветер 8 узлов и подсказок почти нет.</p><div class="row"><button class="btn ghost" id="m4again">Повторить</button><button class="btn" id="m4prac">К практике</button></div>`);
+    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты прошёл всю швартовку кормой: кранцы, швартовы, разворот, задний ход с поправкой на [[заброс винта]], остановка, наветренный швартов, подветренный, [[муринг]]. Теперь то же самое сам: в практике ветер сильнее — силу и направление выберешь перед стартом, — а подсказок почти нет.</p><div class="row"><button class="btn ghost" id="m4again">Повторить</button><button class="btn" id="m4prac">К практике</button></div>`);
     $('#m4again').onclick=()=>{hideDialog();moorMode='lesson';stopMoor3D();startPractice('moor3d')};
     $('#m4prac').onclick=()=>{hideDialog();moorMode='practice';stopMoor3D();startPractice('moor3d')};
   }
@@ -224,7 +229,7 @@ function startMoor3D(mode){
     if(now||st.hintT>15){st.hintT=-15;$('#m4coach').hidden=false;$('#m4coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=8}}
   function practiceTick(dt){
     if(M4DONE.back(st))st.backOnce=true;
-    st.hintT+=dt;practiceHint(false);
+    st.hintT+=dt;if(!min)practiceHint(false);
     if(st.coachT>0){st.coachT-=dt;if(st.coachT<=0)$('#m4coach').hidden=true}
     if(M4DONE.off(st)){st.running=false;markDone('day4');
       endCard('День 4 пройден',`Яхта стоит кормой к причалу: швартовы на берегу, муринг на носу, двигатель заглушен. Время ${Math.round(st.t)} с, касаний соседей: ${st.touches}, ошибок в порядке швартовов: ${st.errs}. Остался экзамен по теории.`,true)}
@@ -240,6 +245,7 @@ function startMoor3D(mode){
 
   /* ---------- физика ---------- */
   function physics(dt){
+    if(st.wind.step)st.wind.step(dt);
     if(st.k['h-1'])st.rud=clamp(st.rud-dt*1.1,-1,1);if(st.k.h1)st.rud=clamp(st.rud+dt*1.1,-1,1);
     st.bt=st.eng?(st.k.b1?1:0)-(st.k['b-1']?1:0):0;
     st.neutT=st.thrI===2?st.neutT+dt:0;
@@ -289,11 +295,11 @@ function startMoor3D(mode){
     const dt=Math.min(.05,(now-lastT)/1000);lastT=now;st.t+=st.running?dt*M4X:0;
     if(deco){const T=now/1000;skyD.clouds.rotation.y=T*.004;
       deco.walkers.forEach(w=>{const s=Math.sin(T*.12+w.x0);w.p.position.x=w.x0+s*14*w.sp;w.p.rotation.y=Math.cos(T*.12+w.x0)*w.sp>0?-Math.PI/2:Math.PI/2;w.p.userData.walk(T*6,.45)});
-      const a=T*.12;deco.dinghy.position.set(40+Math.sin(a)*9,0,28+Math.cos(a)*6);deco.dinghy.rotation.y=a+Math.PI/2}
+      const a=T*.12;deco.dinghy.position.set((deco.dx||1)*(40+Math.sin(a)*9),0,28+Math.cos(a)*6);deco.dinghy.rotation.y=(deco.dx||1)*(a+Math.PI/2)}
     for(let i=0;i<M4X&&st.running&&$('#dlg').hidden;i++){physics(dt);if(st.running)(lesson?lessonTick:practiceTick)(dt)}
     const t=now/1000;
     // яхта
-    if(!st.seaSet){st.seaSet=1;sea.setWind(st.wind.from,st.wind.kn,.15)}
+    if(!st.seaSet){st.seaSet=1;const wb=st.wind.base||st.wind;sea.setWind(wb.from,wb.kn,.15)}else sea.gust(st.wind.from,st.wind.kn,.15);
     sea.update(t,st.x,st.z);const sr=sea.float(me,st.x,st.z,st.h,B.L,B.W,t,dt,(me.userData.wl||0)*.5);me.position.x=st.x;me.position.z=st.z;me.rotation.set(sr.p,-st.h*D,sr.r);
     moored.forEach(([g,x,z,h,L])=>{const r=sea.float(g,x,z,h,L,2,t,dt,(g.userData.wl||0)*.5);g.rotation.order='YXZ';g.rotation.x=r.p;g.rotation.z=r.r});
     bowF.update(st.u,t);
@@ -342,7 +348,7 @@ function startMoor3D(mode){
     $('#m4lp').classList.toggle('on',st.lines[m4wind(st)<0?'w':'l']);$('#m4ls').classList.toggle('on',st.lines[m4wind(st)>0?'w':'l']);$('#m4lazy').classList.toggle('on',st.lazy);
     host.querySelectorAll('[data-b]').forEach(b=>b.classList.toggle('on',st.bt===+b.dataset.b&&st.bt!==0));
     const Y=st.camYaw,wdx=Math.sin((st.wind.from+180)*D),wdz=-Math.cos((st.wind.from+180)*D),up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
-    $('#m4wa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#m4wt').textContent=`${st.wind.kn} уз · ${compassName(st.wind.from)}`;
+    $('#m4wa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#m4wt').textContent=`${Math.round(st.wind.kn)} уз · ${compassName(st.wind.from)}`;
     if(now-lastP>120){lastP=now;panel()}
     st.raf=requestAnimationFrame(frame);
   }
@@ -351,14 +357,15 @@ function startMoor3D(mode){
     $('#inst').innerHTML=`<div><span>Скорость · speed</span><b>${Math.abs(kn).toFixed(1)} уз${kn<-.05?' <small style="font-size:12px;color:var(--muted)">назад</small>':''}</b></div><div><span>Курс · heading</span><b>${String(Math.round(st.h)).padStart(3,'0')}°</b></div>
       <div style="grid-column:1/-1"><span>Рычаг газа · throttle</span><b>${M4N[st.thrI][0]} <small style="font-size:12px;color:var(--muted)">${M4N[st.thrI][1]}</small></b></div>
       <div><span>Двигатель · engine</span><b>${st.eng?'работает':'заглушен'}</b></div><div><span>Корма до причала</span><b>${inB?Math.max(0,g).toFixed(1)+' м':'—'}</b></div>
-      <div><span>Ветер · wind</span><b>${st.wind.kn} уз ${compassName(st.wind.from)}</b></div><div><span>Руль · rudder</span><b>${Math.abs(st.rud)<.05?'прямо':(Math.round(Math.abs(st.rud)*35))+'° '+(st.rud>0?'пр':'лев')}</b></div>`;
+      <div><span>Ветер · wind</span><b>${Math.round(st.wind.kn)} уз ${compassName(st.wind.from)}</b></div><div><span>Руль · rudder</span><b>${Math.abs(st.rud)<.05?'прямо':(Math.round(Math.abs(st.rud)*35))+'° '+(st.rud>0?'пр':'лев')}</b></div>`;
     if(!st.running)return;
     const v=Math.abs(kn);
+    if(min){hint(v>2.2?'Слишком быстро для марины. Сбавь ход.':'',v>2.2?'warn':'');if(!lesson)renderSteps();return}
     hint(st.held?'Корма на швартовах.':st.eng&&st.thrI<2&&v<1.2?'На заднем ходу корму тянет влево — [[заброс винта]]. Поправляй штурвалом.':v>2.2?'Слишком быстро для марины. Сбавь ход.':!st.eng?'Двигатель заглушен.':'Ход безопасный.',v>2.2?'warn':st.thrI<2?'':'good');
     if(!lesson)renderSteps();
   }
-  say(lesson?'Мастер-класс: я подсвечиваю, что делать, и жду, пока сделаешь. Не спеши — в марине выигрывает самый медленный.':`Теперь сам. Ветер ${st.wind.kn} узлов ${windFrom(st.wind.from)}, порядок тот же. Если застрянешь, нажми «Подсказка».`);
-  if(lesson)enterStep();else{renderSteps();practiceHint(true)}
+  say(lesson?'Мастер-класс: я подсвечиваю, что делать, и жду, пока сделаешь. Не спеши — в марине выигрывает самый медленный.':`Теперь сам. Ветер ${st.wind.kn} узлов ${windFrom(st.wind.from)}${cond.gust?', порывистый':''}, порядок тот же.${S0.h===270?' Сегодня заходим с другой стороны: разворачиваться к месту будешь влево, а [[заброс винта]] на заднем ходу тянет корму влево и нос вправо — против разворота.':''} Если застрянешь, нажми «Подсказка».`);
+  if(lesson)enterStep();else{renderSteps();if(!min)practiceHint(true)}
   st.raf=requestAnimationFrame(frame);
   return true;
 }

@@ -150,6 +150,14 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 @media (max-width:640px){.gloss{padding:16px}.gl{grid-template-columns:minmax(0,1fr)}}
 .exam{padding:18px;display:flex;justify-content:center}
 .exam .card{max-width:560px}
+/* карточка «Условия практики» перед упражнением */
+.card.cond{max-width:640px}
+.card.cond .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+@media (max-width:640px){.card.cond .cgrid{grid-template-columns:minmax(0,1fr)}}
+.card.cond .cgrp{margin:12px 0 0}
+.card.cond .cgrp .lbl{margin-bottom:6px}
+.card.cond .lbl .en{text-transform:none;letter-spacing:0}
+.card.cond #cEx{min-height:1.4em;margin:14px 0 4px}
 .qn{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 /* figure colours */
 .f-sea{fill:var(--panel2)} .f-hull{fill:var(--hull)} .f-teak{fill:var(--teak)} .f-sail{fill:var(--sail)}

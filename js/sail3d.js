@@ -10,7 +10,7 @@ function startSail3D(boatId,kind){
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
   const ui=document.createElement('div');
-  ui.innerHTML=`<div class="tools"><button id="sc">Камера: север ↑</button></div>
+  ui.innerHTML=`<div class="tools"><button id="sc">Камера: ветер сверху</button></div>
     <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР · TRUE WIND</span><b id="swt"></b></div></div>
     <div class="task3" id="stk"><p class="tt"><span id="stn"></span><b id="stc"></b></p>
       <ol><li id="st1"><i></i><span></span></li><li id="st2"><i></i><span></span><em class="trim"><s id="stz"></s><u id="stm"></u></em></li><li id="st3"><i>3</i><span>Удержи курс и парус 2–3 секунды</span><em><b id="shb"></b></em></li></ol></div>
@@ -27,7 +27,7 @@ function startSail3D(boatId,kind){
   scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:380,hor:sky,top:0x6fa7c4});
 
   /* вода: волны и рябь бегут по ветру, сетка едет за яхтой; ветер виден по ряби, порывам и редким штрихам в воздухе */
-  const sea=makeOcean(scene,{R:340,sun:[-25,45,18],wind:{from:0,kn:12},foam:.55,sky}),wisps=makeWisps(scene,{op:.5});let seaKey='';
+  const sea=makeOcean(scene,{R:340,sun:[-25,45,18],wind:{from:0,kn:12},foam:.55,sky}),wisps=makeWisps(scene,{op:.5});let seaSet=false;
   const wake=makeWake(scene,sea,{w0:.5,spread:3.4}),wakePts=[];
   /* буи-ориентиры, чтобы был виден ход */
   const BT=260,buoys=[];
@@ -69,7 +69,7 @@ function startSail3D(boatId,kind){
   const bow=makeBowFoam(me);
 
   const st={renderer,mode:'north',yaw:0,camYaw:0,dist:tack?44:46,aimStep:-1,heel:0,t:0,d0:0};S3=st;
-  const setMode=m=>{st.mode=m;$('#sc').textContent=m==='stern'?'Камера: за кормой':'Камера: север ↑'};
+  const setMode=m=>{st.mode=m;$('#sc').textContent=m==='stern'?'Камера: за кормой':'Камера: ветер сверху'};
   $('#sc').onclick=()=>setMode(st.mode==='stern'?'north':'stern');
   const onKey=e=>{if(S3===st&&e.code==='KeyC'&&$('#dlg').hidden)setMode(st.mode==='stern'?'north':'stern')};
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
@@ -91,16 +91,16 @@ function startSail3D(boatId,kind){
   const taskCard=(step,s,dt)=>{
     const card=$('#stk');if(st.okT>0)st.okT-=dt;
     if(st.lastStep!==sim.step){if(st.lastStep!==undefined)st.okT=1.8;st.lastStep=sim.step}
-    if(!step||!sim.running){card.hidden=!(st.okT>0);card.className='task3 done';$('#stn').textContent='Готово';$('#stc').textContent='Все четыре курса пройдены';setTurn(0,0);return}
+    if(!step||!sim.running){card.hidden=!(st.okT>0);card.className='task3 done';$('#stn').textContent='Готово';$('#stc').textContent='Все курсы пройдены';setTurn(0,0);return}
     card.hidden=false;card.className='task3'+(st.okT>0?' done':'');
     $('#stn').textContent=st.okT>0?'✓ Курс взят! Следующая задача':`Задача ${sim.step+1} из ${sim.steps.length}`;
     $("#stc").innerHTML=`${step.n} · ${step.lo}–${step.hi}° к ветру${en(step.en)}`;
     const r=norm(sim.boat.h-sim.wind.from),sg=r<0?-1:1,lo=sg>0?step.lo:-step.hi,hi=sg>0?step.hi:-step.lo,T=clamp(r,lo,hi),d=T-r;
-    const inCourse=Math.abs(d)<.5;setTurn(inCourse?0:r,inCourse?0:T);
-    li('st1',inCourse,inCourse?'Курс в зелёном секторе':`Руль <b>${d<0?'◀ влево':'вправо ▶'}</b> ещё на ${Math.ceil(Math.abs(d))}°: белая стрелка — в зелёный сектор`);
+    const inCourse=Math.abs(d)<.5;setTurn(inCourse||sim.min?0:r,inCourse||sim.min?0:T);
+    li('st1',inCourse,inCourse?(sim.min?'Курс взят':'Курс в зелёном секторе'):sim.min?`Возьми курс ${step.lo}–${step.hi}° к ветру: смотри прибор «Ветер к курсу» и флюгер на мачте`:`Руль <b>${d<0?'◀ влево':'вправо ▶'}</b> ещё на ${Math.ceil(Math.abs(d))}°: белая стрелка — в зелёный сектор`);
     const sailOk=s.eff>.7&&s.st!=='nogo';
-    li('st2',sailOk,sailOk?'Парус стоит ровно':s.st==='nogo'?'Нос в мёртвой зоне — сначала отверни от ветра':s.boom>s.opt?'Парус полощет: жми <b>«Выбрать» ↑</b>, пока метка не в зелёной зоне':'Парус перетянут: жми <b>«Травить» ↓</b>, пока метка не в зелёной зоне');
-    $('#stz').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#stz').style.width=(16/85*100)+'%';$('#stm').style.left=(s.boom/85*100)+'%';
+    li('st2',sailOk,sailOk?'Парус стоит ровно':sim.min?'Поставь парус: колдунчики должны лететь ровно':s.st==='nogo'?'Нос в мёртвой зоне — сначала отверни от ветра':s.boom>s.opt?'Парус полощет: жми <b>«Выбрать» ↑</b>, пока метка не в зелёной зоне':'Парус перетянут: жми <b>«Травить» ↓</b>, пока метка не в зелёной зоне');
+    $('#stz').hidden=sim.min;$('#stz').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#stz').style.width=(16/85*100)+'%';$('#stm').style.left=(s.boom/85*100)+'%';
     $('#st3').className=sim.hold>0?'now':'';$('#shb').style.width=(clamp(sim.hold/2.5,0,1)*100)+'%';
   };
   // День 3: карточка лавировки — галс, лейлайн, поворот, расстояние до знака
@@ -116,6 +116,7 @@ function startSail3D(boatId,kind){
     const fetch=rel*side>=LAY-2,over=rel*side>LAY+12,dir=side>0?'вправо ▶':'◀ влево';
     li('st2',toMark<10&&beat,s.st==='nogo'?'Поворот оверштаг идёт… стаксель перекладывается на другой борт':
       toMark<10&&beat?'Знак прямо по курсу — держи бейдевинд до него':
+      sim.min?'Лейлайнов нет: поворачивай, когда знак окажется примерно на траверзе — 90–100° от носа':
       over?`Ты пересёк лейлайн — поворачивай оверштаг сейчас: руль <b>${dir}</b>, к ветру`:
       fetch?`Ты на лейлайне (жёлтый пунктир) — <b>поворот оверштаг!</b> Руль <b>${dir}</b> и держи, пока нос не пройдёт ветер`:
       'Иди этим галсом до лейлайна — жёлтого пунктира от знака. Там поворот оверштаг');
@@ -127,7 +128,8 @@ function startSail3D(boatId,kind){
     const bx=b.x*K3,bz=b.y*K3,to=(w.from+180)*D,wdx=Math.sin(to),wdz=-Math.cos(to);
     // яхта: курс, крен на подветренный борт, лёгкая качка
     const heelT=s.side*.3*P.heel*s.eff*clamp((180-s.awa)/140,0,1)*(w.kn/12);st.heel+=(heelT-st.heel)*Math.min(1,dt*1.5);
-    if(seaKey!==w.from+':'+w.kn){seaKey=w.from+':'+w.kn;sea.setWind(w.from,w.kn)}
+    // волны — от среднего ветра (sim создаётся после сцены, поэтому на первом кадре), порывы и заходы меняют только рябь
+    const wb=w.base||w;if(!seaSet){seaSet=true;sea.setWind(wb.from,wb.kn)}else sea.gust(w.from,w.kn);
     sea.update(t,bx,bz);const r=sea.float(me,bx,bz,b.h,P.lenM/2,P.beamM/2,t,dt,me.userData.wl||0);me.position.x=bx;me.position.z=bz;
     me.rotation.set(r.p,-b.h*D,st.heel+r.r);
     me.userData.helm(b.rud);
@@ -143,15 +145,15 @@ function startSail3D(boatId,kind){
     buoys.forEach(g=>{const u=g.userData;let rx=u.x-bx,rz=u.z-bz;rx=((rx+BT/2)%BT+BT)%BT-BT/2;rz=((rz+BT/2)%BT+BT)%BT-BT/2;u.x=bx+rx;u.z=bz+rz;
       g.position.set(u.x,sea.height(u.x,u.z,t)-.25,u.z);g.rotation.z=Math.sin(t*1.1+u.p)*.08});
     if(mark){const mx=sim.buoy.x*K3,mz=sim.buoy.y*K3;mark.position.set(mx,sea.height(mx,mz,t)-.3,mz);mark.rotation.z=Math.sin(t*1.2)*.06;
-      mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D}
+      mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D;mark.userData.lay.visible=!sim.min}
     horizon.position.set(bx,0,bz);skyD.dome.position.set(bx,0,bz);skyD.clouds.position.set(bx,0,bz);
     // роза курсов
     rose.position.set(bx,.36,bz);rose.rotation.y=-w.from*D;needle.rotation.y=-norm(b.h-w.from)*D;
     const step=sim.steps&&sim.steps[sim.step];
     if(!tack&&step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').innerHTML=`${step.n}${en(step.en)}`}
-    aim.forEach(m=>m.visible=!tack&&!!step&&sim.running);
-    // камера: изометрия над яхтой, по умолчанию ветер сверху вниз
-    const wantYaw=(st.mode==='stern'?-b.h*D:0)+st.yaw;
+    aim.forEach(m=>m.visible=!tack&&!!step&&sim.running&&!sim.min);
+    // камера: изометрия над яхтой, по умолчанию ветер (средний, без заходов) сверху вниз
+    const wantYaw=(st.mode==='stern'?-b.h*D:-wb.from*D)+st.yaw;
     if(first)st.camYaw=wantYaw;else st.camYaw+=norm((wantYaw-st.camYaw)/D)*D*Math.min(1,dt*2.5);
     const pit=.8,k=first?1:1-Math.exp(-dt*4),dist=st.dist*Math.max(1,1/cam.aspect)**.7;first=false;
     // яхта чуть ниже центра, чтобы карточка задания сверху её не закрывала
@@ -162,12 +164,12 @@ function startSail3D(boatId,kind){
     renderer.render(scene,cam);
     // HUD
     const Y=st.camYaw,up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
-    $('#swa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#swt').textContent=`${w.kn} уз · ${compassName(w.from)}`;
+    $('#swa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#swt').textContent=`${Math.round(w.kn)} уз · ${compassName(w.from)}`;
     if(tack)tackCard(s,dt);else taskCard(step,s,dt);
     const mg=$('#smg');if(sim.msgT>0&&sim.msg){mg.hidden=false;mg.textContent=sim.msg;mg.className='hud3 msg '+(sim.msgC||'');mg.style.opacity=Math.min(1,sim.msgT)}else mg.hidden=true;
     const nb=w.from*D;place($('#slN'),bx+Math.sin(nb)*14.5,.4,bz-Math.cos(nb)*14.5);
     if(tack)placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3);
-    else if(step&&sim.running){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
+    else if(step&&sim.running&&!sim.min){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
   };
   return true;
 }
