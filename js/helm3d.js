@@ -202,12 +202,12 @@ function startHelm3D(mode){
     st.running=false;done.helm=true;
     if(cur==='course'&&crs.lesson&&crs.lesson.practice==='helm3d')done['c:'+crs.lesson.id]=true;
     store.set(done);renderTabs();renderSteps();
-    showDialog(`<h3>Рулёжка сдана</h3><p>Время ${Math.round(st.t)} с, касаний буёв: ${st.touches}, ошибок с винтом у человека: ${st.errs}. Ты прошёл слалом, обошёл знак, подобрал человека и прошёл ворота задним ходом.</p><div class="row"><button class="btn ghost" id="h5again">Ещё раз</button>${cur==='course'?'<button class="btn" id="h5back">К урокам</button>':''}</div>`);
+    showDialog(`<h3>Рулёжка сдана</h3><p>Время ${Math.round(st.t)} с, касаний буёв: ${st.touches}, ошибок с винтом у человека: ${st.errs}. Ты прошёл слалом, обошёл знак, подобрал человека и прошёл ворота задним ходом.</p>${practiceDone('helm',true,st.t,{buoy:st.touches,prop:st.errs},bid)}<div class="row"><button class="btn ghost" id="h5again">Ещё раз</button>${cur==='course'?'<button class="btn" id="h5back">К урокам</button>':''}</div>`);
     $('#h5again').onclick=()=>{hideDialog();stopHelm3D();startPractice('helm3d')};
     if(cur==='course')$('#h5back').onclick=()=>{hideDialog();stopAll();renderCourseHome()};
   }
   function fail(t){st.running=false;st.u=st.v=st.r=0;
-    showDialog(`<h3>Авария</h3><p>${rich(t)}</p><div class="row"><button class="btn" id="h5again">Ещё раз</button></div>`);
+    showDialog(`<h3>Авария</h3><p>${rich(t)}</p>${practiceDone('helm',false,st.t,{buoy:st.touches,prop:st.errs+1},bid)}<div class="row"><button class="btn" id="h5again">Ещё раз</button></div>`);
     $('#h5again').onclick=()=>{hideDialog();stopHelm3D();startPractice('helm3d')}}
   function renderSteps(){
     if(lesson){$('#taskLbl').textContent='Мастер-класс · рулёжка под мотором';

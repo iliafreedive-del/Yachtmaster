@@ -92,11 +92,11 @@ function runQuiz(list,onDone){
   };
   step();
 }
-function endCard(title,text,ok){
+function endCard(title,text,ok,extra){
   // практика, открытая из урока вкладки «Курс»: урок засчитан, кнопка ведёт обратно к урокам
   const L=cur==='course'&&typeof crs!=='undefined'?crs.lesson:null;
   if(L&&ok)markDone('c:'+L.id);
-  showDialog(`<h3>${title}</h3><p>${text}</p><div class="row"><button class="btn${ok?' ghost':''}" id="again">Ещё раз</button>${L?'<button class="btn" id="next">К урокам</button>':ok&&cur!=='exam'?'<button class="btn" id="next">Следующая глава</button>':''}</div>`);
+  showDialog(`<h3>${title}</h3><p>${text}</p>${extra||''}<div class="row"><button class="btn${ok?' ghost':''}" id="again">Ещё раз</button>${L?'<button class="btn" id="next">К урокам</button>':ok&&cur!=='exam'?'<button class="btn" id="next">Следующая глава</button>':''}</div>`);
   $('#again').onclick=()=>{hideDialog();const p=L?L.practice:chap(cur).practice;stopAll();startPractice(p)};
   if(L)$('#next').onclick=()=>{hideDialog();stopAll();renderCourseHome()};
   else if(ok&&cur!=='exam')$('#next').onclick=()=>{hideDialog();openChapter(nextId())};

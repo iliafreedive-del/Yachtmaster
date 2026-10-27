@@ -250,7 +250,7 @@ function startMoor3D(mode){
     st.hintT+=dt;if(!min)practiceHint(false);
     if(st.coachT>0){st.coachT-=dt;if(st.coachT<=0)$('#m4coach').hidden=true}
     if(M4DONE.off(st)){st.running=false;markDone('day4');
-      endCard('День 4 пройден',`Яхта стоит кормой к причалу: швартовы на берегу, муринг на носу, двигатель заглушен. Время ${Math.round(st.t)} с, касаний соседей: ${st.touches}, ошибок в порядке швартовов: ${st.errs}. Остался экзамен по теории.`,true)}
+      endCard('День 4 пройден',`Яхта стоит кормой к причалу: швартовы на берегу, муринг на носу, двигатель заглушен. Время ${Math.round(st.t)} с, касаний соседей: ${st.touches}, ошибок в порядке швартовов: ${st.errs}. Остался экзамен по теории.`,true,practiceDone('day4',true,st.t,{touch:st.touches,order:st.errs,fast:st.fastN},bid))}
   }
   function renderSteps(){
     if(lesson){$('#taskLbl').textContent='Мастер-класс · швартовка кормой';
@@ -259,7 +259,7 @@ function startMoor3D(mode){
       const first=PR.findIndex(x=>!d[x.id]);
       $('#steps').innerHTML=PR.map((s,i)=>`<li class="${d[s.id]?'done':i===first?'now':''}"><i>${d[s.id]?'✓':i+1}</i><span>${s.n}${en(s.en)}</span></li>`).join('')}
   }
-  function fail(t){st.running=false;st.u=st.v=st.r=0;endCard('Авария',t,false)}
+  function fail(t){st.running=false;st.u=st.v=st.r=0;endCard('Авария',t,false,lesson?'':practiceDone('day4',false,st.t,{touch:st.touches+1,order:st.errs,fast:st.fastN},bid))}
 
   /* ---------- физика ---------- */
   function physics(dt){
@@ -298,7 +298,7 @@ function startMoor3D(mode){
       if(what==='о соседнюю яхту'&&!st.fend){fail('Касание соседней яхты без кранцев — царапина на борту. Кранцы вешают до захода в ряд.');return}
       if(fresh){st.touches++;msg(`Касание ${what}. ${st.fend?'Кранцы спасли, но шкипер недоволен.':''}`,'warn')}break}
     const kn=Math.abs(st.u)*MS2KN;
-    if(!lesson&&kn>3.2&&st.speedWarn<=0){msg('Слишком быстро для марины. Держи 1–2 узла.','warn');st.speedWarn=8}st.speedWarn-=dt;
+    if(!lesson&&kn>3.2&&st.speedWarn<=0){msg('Слишком быстро для марины. Держи 1–2 узла.','warn');st.speedWarn=8;st.fastN=(st.fastN||0)+1}st.speedWarn-=dt;
     st.wt+=dt;if(st.wt>.18&&(Math.abs(st.u)>.25||Math.abs(thr)>0)){st.wt=0;const[sx,sz]=m4w(st,0,thr<0?B.L-1:B.L+.3);st.wake.push({x:sx,z:sz,a:1});if(st.wake.length>40)st.wake.shift()}
     st.wake.forEach(p=>p.a-=dt*.3);
   }
