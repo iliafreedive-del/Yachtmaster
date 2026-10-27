@@ -181,8 +181,7 @@ function startMoor3D(mode){
     w.addEventListener('pointerdown',e=>{wd=ang(e);w.setPointerCapture(e.pointerId);e.preventDefault()});
     w.addEventListener('pointermove',e=>{if(wd===null)return;const a=ang(e);let d=a-wd;d=((d+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;wd=a;st.rud=clamp(st.rud+d/(1.5*Math.PI),-1,1)});
     ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>w.addEventListener(ev,()=>wd=null))}
-  const VIEWS={helm:'у штурвала',third:'за кормой',top:'сверху'};
-  $('#m4cam').onclick=()=>{st.view=st.view==='helm'?'third':st.view==='third'?'top':'helm';st.yaw=0;$('#m4cam').textContent='Камера: '+VIEWS[st.view]};
+  const views=camViews($('#m4cam'),'moor',[['helm','у штурвала'],['third','за кормой'],['top','сверху']],'helm',v=>{st.view=v;st.yaw=0});st.view=views.get();
   $('#m4mode').onclick=()=>{moorMode=lesson?'practice':'lesson';stopMoor3D();startPractice('moor3d')};
   $('#m4rst').onclick=()=>{stopMoor3D();condSkip=true;startPractice('moor3d')};
   if(!lesson)$('#m4hint').onclick=()=>practiceHint(true);
@@ -192,7 +191,7 @@ function startMoor3D(mode){
     if(e.repeat&&/Arrow|Key[WS]/.test(e.code)){e.preventDefault();return}
     if(e.code==='ArrowUp'||e.code==='KeyW'){setThr(st.thrI+1);e.preventDefault()}
     else if(e.code==='ArrowDown'||e.code==='KeyS'){setThr(st.thrI-1);e.preventDefault()}
-    else if(e.code==='KeyC')$('#m4cam').click()};
+    else if(views.key(e))e.preventDefault()};
   const ku=e=>{if(KM[e.code])st.k[KM[e.code]]=false};
   window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
   st.off=()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku)};
@@ -205,7 +204,7 @@ function startMoor3D(mode){
     host.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));
     const s=L[st.si];st.okT=0;
     (s.hl||[]).forEach(q=>{const e=host.querySelector(q);if(e)e.classList.add('hl')});
-    $('#m4coach').hidden=false;
+    $('#m4coach').hidden=false;$('#m4coach').classList.remove('min');
     $('#m4coach').innerHTML=`<p class="qn">Мастер-класс · шаг ${st.si+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="m4next">Дальше</button></div>':''}`;
     if(s.info)$('#m4next').onclick=()=>{st.si++;enterStep()};
     renderSteps();
@@ -226,7 +225,7 @@ function startMoor3D(mode){
   const prDone=()=>({fend:st.fend,prep:st.prep,engine:st.engOnce,back:st.backOnce,stop:st.held,wline:st.lines.w,lline:st.lines.l,lazy:st.lazy,off:M4DONE.off(st)});
   function practiceHint(now){const d=prDone(),p=PR.find(x=>!d[x.id]);if(!p)return;
     if(p.id!==st.hintId){st.hintId=p.id;st.hintT=0}
-    if(now||st.hintT>15){st.hintT=-15;$('#m4coach').hidden=false;$('#m4coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=8}}
+    if(now||st.hintT>15){st.hintT=-15;$('#m4coach').hidden=false;$('#m4coach').classList.remove('min');$('#m4coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=8}}
   function practiceTick(dt){
     if(M4DONE.back(st))st.backOnce=true;
     st.hintT+=dt;if(!min)practiceHint(false);

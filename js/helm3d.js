@@ -126,8 +126,7 @@ function startHelm3D(mode){
     w.addEventListener('pointerdown',e=>{wd=ang(e);w.setPointerCapture(e.pointerId);e.preventDefault()});
     w.addEventListener('pointermove',e=>{if(wd===null)return;const a=ang(e);let d=a-wd;d=((d+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;wd=a;st.rud=clamp(st.rud+d/(1.5*Math.PI),-1,1)});
     ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>w.addEventListener(ev,()=>wd=null))}
-  const VIEWS={helm:'у штурвала',third:'за кормой',top:'сверху'};
-  $('#h5cam').onclick=()=>{st.view=st.view==='helm'?'third':st.view==='third'?'top':'helm';st.yaw=0;$('#h5cam').textContent='Камера: '+VIEWS[st.view]};
+  const views=camViews($('#h5cam'),'helm',[['helm','у штурвала'],['third','за кормой'],['top','сверху']],'third',v=>{st.view=v;st.yaw=0});st.view=views.get();
   $('#h5mode').onclick=()=>{helmMode=lesson?'practice':'lesson';stopHelm3D();startPractice('helm3d')};
   $('#h5rst').onclick=()=>{stopHelm3D();condSkip=true;startPractice('helm3d')};
   if(!lesson)$('#h5hint').onclick=()=>practiceHint(true);
@@ -137,7 +136,7 @@ function startHelm3D(mode){
     if(e.repeat&&/Arrow|Key[WS]/.test(e.code)){e.preventDefault();return}
     if(e.code==='ArrowUp'||e.code==='KeyW'){setThr(st.thrI+1);e.preventDefault()}
     else if(e.code==='ArrowDown'||e.code==='KeyS'){setThr(st.thrI-1);e.preventDefault()}
-    else if(e.code==='KeyC')$('#h5cam').click()};
+    else if(views.key(e))e.preventDefault()};
   const ku=e=>{if(KM[e.code])st.k[KM[e.code]]=false};
   window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
   st.off=()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku)};
@@ -154,7 +153,7 @@ function startHelm3D(mode){
     ring.visible=s.id==='back'||s.id==='stop2';
     if(s.id==='walk'&&E.walk<.5)msg('У этой лодки [[заброс винта]] слабый: корма почти не уходит. Попробуй потом однокорпусную парусную яхту — выбери её во вкладке «Флот».','warn');
     (s.hl||[]).forEach(q=>{const e=host.querySelector(q);if(e)e.classList.add('hl')});
-    $('#h5coach').hidden=false;
+    $('#h5coach').hidden=false;$('#h5coach').classList.remove('min');
     $('#h5coach').innerHTML=`<p class="qn">Мастер-класс · шаг ${st.si+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="h5next">Дальше</button></div>':''}`;
     if(s.info)$('#h5next').onclick=()=>{st.si++;enterStep()};
     renderSteps();
@@ -178,7 +177,7 @@ function startHelm3D(mode){
   const PR=HELM.practice;
   function practiceHint(now){const p=PR.find(x=>!st.pr[x.id]);if(!p)return;
     if(p.id!==st.hintId){st.hintId=p.id;st.hintT=0}
-    if(now||st.hintT>15){st.hintT=-15;$('#h5coach').hidden=false;$('#h5coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=8}}
+    if(now||st.hintT>15){st.hintT=-15;$('#h5coach').hidden=false;$('#h5coach').classList.remove('min');$('#h5coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=8}}
   function practiceTick(dt,px,pz){
     const P=st.pr;
     // ворота по порядку
