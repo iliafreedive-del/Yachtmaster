@@ -46,7 +46,12 @@ function startSail3D(boatId,kind){
     const x=Math.sin(b*D)*r,z=-Math.cos(b*D)*r;const h=mesh3(new THREE.IcosahedronGeometry(1,1),M3(c),x,-2,z,horizon);h.scale.set(sx,sy,sx*.7);
     mesh3(new THREE.CylinderGeometry(sx*1.02,sx*1.08,1.4,12),M3(0xf0d6a0),x,-.4,z,horizon).scale.z=.7});
   {const x=Math.sin(70*D)*262,z=-Math.cos(70*D)*262;for(let k=0;k<4;k++)mesh3(new THREE.CylinderGeometry(1.6-k*.15,1.75-k*.15,2.6,10),M3(k%2?0xffffff:0xd8433a),x,9+k*2.6,z,horizon)}
-  [[-60,-150,.9,0xe2564d],[95,-120,-.6,0xfaf8f1],[-110,90,2.2,0x8fd0e0]].forEach(([x,z,r,c])=>{const y=makeYacht({band:0x24394a,sails:true,sail:c});y.position.set(x,0,z);y.rotation.y=r;horizon.add(y)});
+  /* чужие яхты под парусами: разные лодки флота, у каждой свой курс к ветру, паруса стоят по курсу, яхта кренится и идёт.
+     Держатся в кольце 60–240 м от нас: ушедшая далеко поворачивает обратно, подошедшая близко отворачивает */
+  const others=(hq?[['cruiser',0xe2564d],['sloop',0xfaf8f1],['cat',0x8fd0e0],['cruiser',0xfaf8f1],['sloop',0xf2c23a]]:[['cruiser',0xe2564d],['cat',0x8fd0e0],['sloop',0xfaf8f1]]).map(([kind,jib],i)=>{
+    const g=makeBoat(kind,{band:[0x8a2f2a,0x24394a,0x1d5a3c,0x6a4a8a,0x2a6f8a][i],rig:true,jib});g.rotation.order='YXZ';scene.add(g);
+    return{g,kind,P:BOATS[kind],twa:[55,95,140,70,165][i]*(i%2?-1:1),h:null,x:0,z:0,heel:0,side:0}});
+  const steerOther=(o,want,from)=>{let tw=norm(from-want);const ng=o.P.noGo+6;if(Math.abs(tw)<ng)tw=(tw<0?-1:1)*ng;o.twa=tw};
 
   /* роза курсов вокруг яхты: красная мёртвая зона, зелёный сектор задания, стрелка курса */
   const rose=new THREE.Group();scene.add(rose);
@@ -69,13 +74,13 @@ function startSail3D(boatId,kind){
   const bow=makeBowFoam(me);
 
   /* камеры: у штурвала (глаза рулевого, видно паруса и колдунчики), за кормой (низко, по курсу), сверху с ветром вверху, сверху по курсу */
-  const st={renderer,mode:'wind',yaw:0,pit:0,camYaw:0,dist:tack?44:46,cdist:24,aimStep:-1,heel:0,t:0,d0:0,eyeX:0};S3=st;
+  const st={renderer,mode:'wind',yaw:0,pit:0,camYaw:0,dist:tack?44:46,cdist:24,aimStep:-1,heel:0,t:0,d0:0,eyeX:0,others};S3=st;
   const views=camViews($('#sc'),'sail',[['helm','у штурвала'],['chase','за кормой'],['wind','сверху, ветер вверху'],['course','сверху, по курсу']],'wind',m=>{st.mode=m;st.yaw=0;st.pit=0;st.cut=true});
   st.mode=views.get();
   const onKey=e=>{if(S3===st&&$('#dlg').hidden&&views.key(e))e.preventDefault()};
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
   dragCamera(renderer.domElement,(dx,dy)=>{st.yaw-=dx*.006;if(st.mode==='helm'||st.mode==='chase')st.pit=clamp(st.pit+dy*.004,-.5,.6)},
-    dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,10,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
+    dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,16,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
   // глаза рулевого в координатах лодки (нос к −Z, правый борт к +X): у наветренного штурвала, у катамарана — пост у правого борта
   const EYE={cruiser:[.85,3,6.3],cat:[2.15,2.5,3.9],sloop:[.75,2.5,3.8]}[boatId]||[.85,3,6],eyeV=new THREE.Vector3();
   st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
@@ -150,6 +155,17 @@ function startSail3D(boatId,kind){
       g.position.set(u.x,sea.height(u.x,u.z,t)-.25,u.z);g.rotation.z=Math.sin(t*1.1+u.p)*.08});
     if(mark){const mx=sim.buoy.x*K3,mz=sim.buoy.y*K3;mark.position.set(mx,sea.height(mx,mz,t)-.3,mz);mark.rotation.z=Math.sin(t*1.2)*.06;
       mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D;mark.userData.lay.visible=!sim.min}
+    others.forEach(o=>{
+      if(o.h===null){const a=Math.random()*Math.PI*2,r=60+Math.random()*170;o.x=bx+Math.sin(a)*r;o.z=bz-Math.cos(a)*r;o.h=norm(w.from-o.twa)}
+      const dx=bx-o.x,dz=bz-o.z,dist=Math.hypot(dx,dz),toUs=Math.atan2(dx,-dz)/D;
+      if(dist>240&&Math.abs(norm(toUs-o.h))>70)steerOther(o,toUs+(Math.random()*80-40),wb.from);        // далеко — поворачивает к нам
+      else if(dist<45&&Math.abs(norm(toUs-o.h))<60)steerOther(o,toUs+180+(Math.random()*60-30),wb.from); // близко — отворачивает
+      const tgtH=norm(w.from-o.twa);o.h=(o.h+clamp(norm(tgtH-o.h),-6*dt,6*dt)+360)%360;
+      const rw=norm(w.from-o.h),awa=Math.abs(rw),side=rw<0?-1:1,kn=Math.min(polar(awa,o.P.noGo)*o.P.speed*(w.kn/12),hullKn(o.kind,o.P));
+      o.x+=Math.sin(o.h*D)*kn*.5144*dt;o.z-=Math.cos(o.h*D)*kn*.5144*dt;
+      if(side!==o.side||Math.abs(awa-(o.awa||0))>8){o.side=side;o.awa=awa;const bm=clamp(awa/2-10,6,85);trimSails(o.g.userData.rig,bm,Math.min(bm*.85+4,Math.max(awa-6,2)),side,.11,0,t)}
+      o.heel+=(side*.3*o.P.heel*clamp((180-awa)/140,0,1)*(w.kn/12)-o.heel)*Math.min(1,dt);
+      const r=sea.float(o.g,o.x,o.z,o.h,o.P.lenM/2,o.P.beamM/2,t,dt,o.g.userData.wl||0);o.g.position.x=o.x;o.g.position.z=o.z;o.g.rotation.set(r.p,-o.h*D,o.heel+r.r)});
     horizon.position.set(bx,0,bz);skyD.dome.position.set(bx,0,bz);skyD.clouds.position.set(bx,0,bz);
     // роза курсов
     rose.position.set(bx,.36,bz);rose.rotation.y=-w.from*D;needle.rotation.y=-norm(b.h-w.from)*D;
