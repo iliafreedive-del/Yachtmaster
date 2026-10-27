@@ -10,7 +10,7 @@ function startSail3D(boatId,kind){
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
   const ui=document.createElement('div');
-  ui.innerHTML=`<div class="tools"><button id="sc">Камера: ветер сверху</button></div>
+  ui.innerHTML=`<div class="tools"><button id="sc"></button></div>
     <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР · TRUE WIND</span><b id="swt"></b></div></div>
     <div class="task3" id="stk"><p class="tt"><span id="stn"></span><b id="stc"></b></p>
       <ol><li id="st1"><i></i><span></span></li><li id="st2"><i></i><span></span><em class="trim"><s id="stz"></s><u id="stm"></u></em></li><li id="st3"><i>3</i><span>Удержи курс и парус 2–3 секунды</span><em><b id="shb"></b></em></li></ol></div>
@@ -68,12 +68,16 @@ function startSail3D(boatId,kind){
   me.traverse(o=>{if(o.isMesh&&!(o.material&&o.material.isShaderMaterial)){o.castShadow=true;o.receiveShadow=true}});
   const bow=makeBowFoam(me);
 
-  const st={renderer,mode:'north',yaw:0,camYaw:0,dist:tack?44:46,aimStep:-1,heel:0,t:0,d0:0};S3=st;
-  const setMode=m=>{st.mode=m;$('#sc').textContent=m==='stern'?'Камера: за кормой':'Камера: ветер сверху'};
-  $('#sc').onclick=()=>setMode(st.mode==='stern'?'north':'stern');
-  const onKey=e=>{if(S3===st&&e.code==='KeyC'&&$('#dlg').hidden)setMode(st.mode==='stern'?'north':'stern')};
+  /* камеры: у штурвала (глаза рулевого, видно паруса и колдунчики), за кормой (низко, по курсу), сверху с ветром вверху, сверху по курсу */
+  const st={renderer,mode:'wind',yaw:0,pit:0,camYaw:0,dist:tack?44:46,cdist:24,aimStep:-1,heel:0,t:0,d0:0,eyeX:0};S3=st;
+  const views=camViews($('#sc'),'sail',[['helm','у штурвала'],['chase','за кормой'],['wind','сверху, ветер вверху'],['course','сверху, по курсу']],'wind',m=>{st.mode=m;st.yaw=0;st.pit=0;st.cut=true});
+  st.mode=views.get();
+  const onKey=e=>{if(S3===st&&$('#dlg').hidden&&views.key(e))e.preventDefault()};
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
-  dragCamera(renderer.domElement,dx=>{st.yaw-=dx*.006},dy=>{st.dist=clamp(st.dist+dy*.04,18,95)});
+  dragCamera(renderer.domElement,(dx,dy)=>{st.yaw-=dx*.006;if(st.mode==='helm'||st.mode==='chase')st.pit=clamp(st.pit+dy*.004,-.5,.6)},
+    dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,10,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
+  // глаза рулевого в координатах лодки (нос к −Z, правый борт к +X): у наветренного штурвала, у катамарана — пост у правого борта
+  const EYE={cruiser:[.85,3,6.3],cat:[2.15,2.5,3.9],sloop:[.75,2.5,3.8]}[boatId]||[.85,3,6],eyeV=new THREE.Vector3();
   st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
 
   const v3=new THREE.Vector3(),tgt=new THREE.Vector3(),look=new THREE.Vector3();let first=true;
@@ -91,8 +95,8 @@ function startSail3D(boatId,kind){
   const taskCard=(step,s,dt)=>{
     const card=$('#stk');if(st.okT>0)st.okT-=dt;
     if(st.lastStep!==sim.step){if(st.lastStep!==undefined)st.okT=1.8;st.lastStep=sim.step}
-    if(!step||!sim.running){card.hidden=!(st.okT>0);card.className='task3 done';$('#stn').textContent='Готово';$('#stc').textContent='Все курсы пройдены';setTurn(0,0);return}
-    card.hidden=false;card.className='task3'+(st.okT>0?' done':'');
+    if(!step||!sim.running){card.hidden=!(st.okT>0);card.classList.add('done');$('#stn').textContent='Готово';$('#stc').textContent='Все курсы пройдены';setTurn(0,0);return}
+    card.hidden=false;card.classList.toggle('done',st.okT>0);
     $('#stn').textContent=st.okT>0?'✓ Курс взят! Следующая задача':`Задача ${sim.step+1} из ${sim.steps.length}`;
     $("#stc").innerHTML=`${step.n} · ${step.lo}–${step.hi}° к ветру${en(step.en)}`;
     const r=norm(sim.boat.h-sim.wind.from),sg=r<0?-1:1,lo=sg>0?step.lo:-step.hi,hi=sg>0?step.hi:-step.lo,T=clamp(r,lo,hi),d=T-r;
@@ -152,14 +156,23 @@ function startSail3D(boatId,kind){
     const step=sim.steps&&sim.steps[sim.step];
     if(!tack&&step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').innerHTML=`${step.n}${en(step.en)}`}
     aim.forEach(m=>m.visible=!tack&&!!step&&sim.running&&!sim.min);
-    // камера: изометрия над яхтой, по умолчанию ветер (средний, без заходов) сверху вниз
-    const wantYaw=(st.mode==='stern'?-b.h*D:-wb.from*D)+st.yaw;
-    if(first)st.camYaw=wantYaw;else st.camYaw+=norm((wantYaw-st.camYaw)/D)*D*Math.min(1,dt*2.5);
-    const pit=.8,k=first?1:1-Math.exp(-dt*4),dist=st.dist*Math.max(1,1/cam.aspect)**.7;first=false;
-    // яхта чуть ниже центра, чтобы карточка задания сверху её не закрывала
-    const lead=cam.aspect<1?6:5;tgt.set(bx-Math.sin(st.camYaw)*lead,1.5,bz-Math.cos(st.camYaw)*lead);
-    v3.set(tgt.x+Math.sin(st.camYaw)*Math.cos(pit)*dist,1.5+Math.sin(pit)*dist,tgt.z+Math.cos(st.camYaw)*Math.cos(pit)*dist);
-    cam.position.lerp(v3,k);look.lerp(tgt,k);cam.lookAt(look);
+    // камера. Сверху — изометрия: «ветер вверху» по среднему ветру (заходы видны по розе) или «по курсу»; за кормой — низко, по курсу;
+    // у штурвала — глаза рулевого, горизонт не кренится, а сами глаза идут с креном и качкой
+    const helm=st.mode==='helm',chase=st.mode==='chase',fov=helm?62:chase?45:30,near=helm?.1:.5;
+    if(cam.fov!==fov||cam.near!==near){cam.fov=fov;cam.near=near;cam.updateProjectionMatrix()}
+    const wantYaw=(st.mode==='wind'?-wb.from*D:-b.h*D)+st.yaw,cut=first||st.cut;st.cut=false;
+    if(cut)st.camYaw=wantYaw;else st.camYaw+=norm((wantYaw-st.camYaw)/D)*D*Math.min(1,dt*(helm?6:2.5));
+    if(helm){
+      st.eyeX+=(s.side*EYE[0]-st.eyeX)*Math.min(1,dt*2);me.updateMatrixWorld();eyeV.set(st.eyeX,EYE[1],EYE[2]);me.localToWorld(eyeV);
+      v3.copy(eyeV);tgt.set(eyeV.x-Math.sin(st.camYaw)*30,eyeV.y-1.2+st.pit*30,eyeV.z-Math.cos(st.camYaw)*30);
+      const kk=cut?1:1-Math.exp(-dt*14);cam.position.lerp(v3,kk);look.lerp(tgt,kk);
+    }else{
+      const pit=chase?.26+st.pit*.5:.8,k=cut?1:1-Math.exp(-dt*4),dist=chase?st.cdist*Math.max(1,1/cam.aspect)**.5:st.dist*Math.max(1,1/cam.aspect)**.7;
+      // яхта чуть ниже центра, чтобы карточка задания сверху её не закрывала; за кормой смотрим вперёд по курсу
+      const lead=chase?9:cam.aspect<1?6:5,ty=chase?2.5:1.5;tgt.set(bx-Math.sin(st.camYaw)*lead,ty,bz-Math.cos(st.camYaw)*lead);
+      v3.set(tgt.x+Math.sin(st.camYaw)*Math.cos(pit)*dist,ty+Math.sin(pit)*dist,tgt.z+Math.cos(st.camYaw)*Math.cos(pit)*dist);
+      cam.position.lerp(v3,k);look.lerp(tgt,k)}
+    first=false;cam.lookAt(look);
     sun.position.set(bx-25,45,bz+18);sun.target.position.set(bx,0,bz);
     renderer.render(scene,cam);
     // HUD

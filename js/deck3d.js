@@ -7,7 +7,7 @@ function start3D(){
   const host=$('#three');host.innerHTML='';
   const R=host.getBoundingClientRect();
   const renderer=makeRenderer(host);if(!renderer){no3D();return}
-  const ui=document.createElement('div');ui.innerHTML=`<div class="prompt" id="tp" hidden></div><div class="timer" id="tt" hidden></div><div class="tools"><button id="tc">Изометрия</button><button id="tl">Подписи</button><button id="th">Подсказка</button></div>`;host.appendChild(ui);
+  const ui=document.createElement('div');ui.innerHTML=`<div class="prompt" id="tp" hidden></div><div class="timer" id="tt" hidden></div><div class="tools"><button id="tc"></button><button id="tl">Подписи</button><button id="th">Подсказка</button></div>`;host.appendChild(ui);
   const labelsBox=document.createElement('div');host.appendChild(labelsBox);
 
   /* ---------- сцена: low-poly диорама марины ---------- */
@@ -175,11 +175,10 @@ function start3D(){
     else if(st.phase==='drill'){const t=st.drill.list[st.drill.i].t;
       if(id===t){hint(`Есть! ${hsName(id)}`,'good');drillNext(true)}else hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}
   };
-  const setMode=m=>{st.mode=m;$('#tc').textContent=m==='iso'?'За персонажем':'Изометрия'};
-  $('#tc').onclick=()=>setMode(st.mode==='iso'?'follow':'iso');
+  const views=camViews($('#tc'),'deck',[['follow','за персонажем'],['iso','сверху']],'follow',m=>{st.mode=m});st.mode=views.get();
   $('#tl').onclick=()=>{st.labels=!st.labels;$('#tl').textContent=st.labels?'Скрыть подписи':'Подписи'};
   $('#th').onclick=()=>{st.hintOn=!st.hintOn;$('#th').textContent=st.hintOn?'Скрыть подсказку':'Подсказка'};
-  const onKey=e=>{if(T3===st&&e.code==='KeyC'&&$('#dlg').hidden){setMode(st.mode==='iso'?'follow':'iso')}};
+  const onKey=e=>{if(T3===st&&$('#dlg').hidden&&views.key(e))e.preventDefault()};
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
   // камера мышью/пальцем
   dragCamera(renderer.domElement,(dx,dy)=>{if(st.mode==='iso')st.isoYaw-=dx*.006;else{st.yaw-=dx*.006;st.pitch=clamp(st.pitch+dy*.004,.12,1.2)}},

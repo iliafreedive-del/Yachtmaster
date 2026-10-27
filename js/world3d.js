@@ -53,3 +53,15 @@ function dragCamera(el,onDrag,onZoom){
   const end=()=>{drag=null;el.style.cursor='grab'};['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,end));
   el.addEventListener('wheel',e=>{e.preventDefault();onZoom(e.deltaY)},{passive:false});
 }
+/* единые камеры во всех 3D-сценах: кнопка «Камера: …» листает виды, C — следующий, 1–4 — выбрать сразу.
+   Выбор запоминается для каждой сцены (gals-cam-<scene>). views — [[id,'подпись'],…]; on(id) вызывается при каждой смене */
+function camViews(btn,scene,views,def,on){
+  const ids=views.map(v=>v[0]);let cur=null;try{cur=localStorage.getItem('gals-cam-'+scene)}catch(e){}
+  if(!ids.includes(cur))cur=def;
+  const set=id=>{cur=id;btn.textContent='Камера: '+views[ids.indexOf(id)][1];try{localStorage.setItem('gals-cam-'+scene,id)}catch(e){}on&&on(id)};
+  btn.title=`Камера: C — следующая, 1–${ids.length} — выбрать`;btn.onclick=()=>set(ids[(ids.indexOf(cur)+1)%ids.length]);
+  btn.textContent='Камера: '+views[ids.indexOf(cur)][1];
+  return{get:()=>cur,set,
+    key(e){if(e.code==='KeyC'){btn.click();return true}const n=/^(Digit|Numpad)([1-9])$/.exec(e.code);if(n&&+n[2]<=ids.length){set(ids[n[2]-1]);return true}return false}}}
+/* карточку мастер-класса и задания можно свернуть до заголовка, чтобы не закрывала вид */
+document.addEventListener('click',e=>{const h=e.target.closest&&e.target.closest('.coach .qn, .task3 .tt');if(h)h.parentElement.classList.toggle('min')});
