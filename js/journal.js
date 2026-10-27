@@ -19,7 +19,7 @@ const gotoBtn=l=>`<button class="btn ghost sm" data-goto="${l}">${gotoName(l)} �
 /* начать практику упражнения из журнала */
 function startEx(ex){
   if(ex==='helm'){openLesson('p1',0);helmMode='practice';startLessonPractice();return}
-  if(ex==='exam'){openChapter('exam');startPractice('exam');return}
+  if(ex==='exam'){openChapter('exam');if(typeof drRun==='function')drRun('exam');return}
   if(ex==='day4')moorMode='practice';
   openChapter(ex);startPractice(chap(ex).practice)}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-goto],[data-ex]');if(!b)return;
@@ -31,7 +31,7 @@ const fmtD=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short
 const condTxt=c=>c?[{low:'слабый',mid:'средний',high:'свежий'}[c.wind]||'',c.gust?'порывы':'',c.hints==='min'?'без подсказок':''].filter(Boolean).join(', '):'';
 function renderJournal(){
   show('board');hint('');$('#taskLbl').textContent='Вахтенный журнал · logbook';
-  const L=logGet(),pr=L.filter(r=>r.ex!=='exam'),exs=L.filter(r=>r.ex==='exam');
+  const L=logGet(),pr=L.filter(r=>r.ex!=='exam'&&EXN[r.ex]),exs=L.filter(r=>r.ex==='exam');
   // слабые места: в скольких из последних 10 попыток каждого упражнения встречалась ошибка
   const weak={};Object.keys(EXN).filter(x=>x!=='exam').forEach(x=>{const last=pr.filter(r=>r.ex===x).slice(-10);
     last.forEach(r=>{for(const k in r.iss||{}){const w=weak[k]||(weak[k]={k,ex:x,n:0,of:last.length});w.n++}})});
@@ -47,6 +47,7 @@ function renderJournal(){
       return `<div class="di"><p><b>${d.n}</b> ${en(d.en)} <span class="cnt">${EXN[w.ex]}: в ${w.n} из ${w.of} последних попыток</span></p><p>${rich(d.t)}</p><div class="row">${d.l?gotoBtn(d.l):''}<button class="btn ghost sm" data-ex="${w.ex}">Тренировать</button></div></div>`}).join(''):
       `<p class="ex">${pr.length?'Ошибок в последних попытках нет. Попробуй свежий ветер и режим «минимум подсказок».':'Пока пусто: пройди практику Дней 2–4 или «Рулёжки».'}</p>`}
     ${wr.length?`<p class="lbl" style="margin-top:14px">Экзамен: где были ошибки</p>${wr.map(([l,n])=>`<div class="row" style="align-items:center;margin:4px 0">${gotoBtn(l)}<span class="cnt">ошибок: ${n}</span></div>`).join('')}`:''}</div>
+   ${typeof drTopicStats==='function'?`<div class="card"><p class="qn">Теория по темам · theory</p><div class="jtop">${DTOPICS.map(t=>{const s=drTopicStats(t.id);return`<div><span>${t.n}</span><i class="dbar"><i style="width:${s.p}%"></i></i><small>${s.m} из ${s.n}</small></div>`}).join('')}</div><div class="row"><button class="btn ghost sm" data-ex="exam">Пробный экзамен</button></div></div>`:''}
    <div class="card"><p class="qn">Практика · practice</p><div class="tw"><table class="jt"><thead><tr><th>Упражнение</th><th>Попыток</th><th>Пройдено</th><th>Лучшее время</th><th>Последняя</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>
    ${exs.length?`<div class="card"><p class="qn">Экзамен · theory test</p><div class="tw"><table class="jt"><thead><tr><th>Когда</th><th>Результат</th><th></th></tr></thead><tbody>${exs.slice(-8).reverse().map(r=>`<tr><td>${fmtD(r.d)}</td><td>${r.score} из ${r.of}</td><td>${r.ok?'<span class="ok">сдан</span>':'не сдан'}</td></tr>`).join('')}</tbody></table></div></div>`:''}
    ${L.length?'<div class="row"><button class="btn ghost sm" id="jClr">Очистить журнал</button></div>':''}</div>`;
