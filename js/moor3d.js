@@ -103,12 +103,26 @@ function startMoor3D(mode){
   const bands=[0x24394a,0x8a2f2a,0x2a6f8a,0x1d5a3c,0x6a4a8a,0x24394a,0xb35a1f];
   const fenderM=M(0xf4f1e6);
   const addFenders=(g,list)=>list.forEach(([x,z])=>mesh(new THREE.CylinderGeometry(.13,.13,.6,8),fenderM,x,.6,z,g));
-  for(let k=-8;k<=8;k++){if(!k||Math.abs(k)===7)continue;const cx=slotX(k),motor=k===-4||k===5;
-    const g=motor?makeMotorboat(bands[(k+8)%7]):makeYacht({band:bands[(k+8)%7],cover:bands[(k+11)%7]});
-    const half=motor?[4.4,4.6]:[6,6],cz=1.2+half[0];g.position.set(cx,0,cz);g.rotation.y=Math.PI;scene.add(g);moored.push([g,cx,cz,180,motor?4.5:6]);
-    addFenders(g,[[2.25,-1],[-2.25,-1],[2.1,2.5],[-2.1,2.5]]);
-    obs.push({x0:cx-(motor?1.8:2.15),x1:cx+(motor?1.8:2.15),z0:1.2,z1:1.2+half[0]+half[1],bow:1})}
-  for(let x=-42;x<=42;x+=7){if(x===0)continue;const g=makeYacht({band:bands[(x+42)/7%7|0],cover:0x24394a});g.position.set(x,0,52.8);scene.add(g);moored.push([g,x,52.8,0,6]);obs.push({x0:x-2.15,x1:x+2.15,z0:46.8,z1:58.8,bow:-1})}
+  // каждый раз другая марина: соседи — разные лодки флота и цвета, кое-где свободные места. Рядом с нашим местом всегда две
+  // 40-футовые яхты, чтобы ширина места не менялась. DIM: полуширина для столкновений, длина и центр от транца, м
+  const DIM={cruiser:{hw:2.15,L:12,c:6},sloop:{hw:1.6,L:8.7,c:4.35},motor:{hw:1.8,L:9,c:4.4},cat:{hw:3.4,L:11.8,c:5.9}};
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const neighbor=(kind,band)=>kind==='motor'?makeMotorboat(band):makeBoat(kind,{band,cover:pick(bands)});
+  const flags=[],flagCols=[0xe2564d,0x1f4f7a,0xf2c23a,0x2e8b6a,0xfaf8f1,0x8a2f2a];
+  const addFlag=(x,z)=>{const f=new THREE.Mesh(new THREE.PlaneGeometry(.75,.48,5,1).translate(.375,0,0),M(pick(flagCols),{side:THREE.DoubleSide}));f.position.set(x,2.3,z);scene.add(f);
+    mesh(new THREE.CylinderGeometry(.02,.02,1,5),M(0xd9dee0),x,1.9,z);flags.push({f,ph:Math.random()*6})};
+  const busy=[];
+  for(let k=-8;k<=8;k++){if(!k||Math.abs(k)===7)continue;const near=Math.abs(k)===1;if(!near&&Math.random()<.15)continue;
+    const kind=near?'cruiser':pick(['cruiser','cruiser','sloop','sloop','motor']),d=DIM[kind],cx=slotX(k),cz=1.2+d.c;
+    const g=neighbor(kind,pick(bands));g.position.set(cx,0,cz);g.rotation.y=Math.PI;scene.add(g);moored.push([g,cx,cz,180,d.L/2]);
+    const fx=kind==='motor'?2.25:d.hw+.1;addFenders(g,[[fx,-1],[-fx,-1],[fx-.15,2.5],[-fx+.15,2.5]]);
+    if(Math.random()<.45)addFlag(cx-.9,1.5);if(kind==='cruiser'&&!near)busy.push(g);
+    obs.push({x0:cx-d.hw,x1:cx+d.hw,z0:1.2,z1:1.2+d.L,bow:1})}
+  // второй ряд у волнолома — носом к причалу; у торца иногда стоит катамаран
+  for(let x=-42;x<=42;x+=7){if(x===0||Math.random()<.12)continue;const kind=pick(['cruiser','cruiser','sloop']),d=DIM[kind],cz=58.8-d.c;
+    const g=neighbor(kind,pick(bands));g.position.set(x,0,cz);scene.add(g);moored.push([g,x,cz,0,d.L/2]);obs.push({x0:x-d.hw,x1:x+d.hw,z0:58.8-d.L,z1:58.8,bow:-1})}
+  if(Math.random()<.6){const x=(Math.random()<.5?-1:1)*49.5,d=DIM.cat,cz=58.8-d.c,g=makeBoat('cat',{band:pick(bands)});g.position.set(x,0,cz);scene.add(g);moored.push([g,x,cz,0,d.L/2]);
+    obs.push({x0:x-d.hw,x1:x+d.hw,z0:58.8-d.L,z1:58.8,bow:-1})}
 
   /* наше место: рамка, дорожка, точка разворота, муринг */
   const lineMat=c=>new THREE.LineBasicMaterial({color:c});
@@ -135,9 +149,14 @@ function startMoor3D(mode){
     k.build(scene);
     [-46,-31,-17,17,31,46].forEach((x,i)=>{const p=makePalm(5.5+(i%3)*.8,i%2?.8:-.8);p.position.set(x,1,-8.5);scene.add(p)});
     const crew=[[0xe2564d,0xffffff,-6,-3.2,.4],[0x2a6f8a,null,-5.2,-3.6,-2.6],[0xf2c14e,0x24394a,12,-6,1.2],[0xffffff,0x1d5a3c,20.5,-2.4,3]];
-    deco={walkers:[],dinghy:null};
+    deco={walkers:[],crew:[],dinghy:null};
     crew.forEach(([c,cap,x,z,ry])=>{const p=makePerson(c,cap);p.position.set(x,1,z);p.rotation.y=ry;scene.add(p)});
-    [[0x6a4a8a,-30,-5],[0x1f4f7a,30,-6.5]].forEach(([c,x,z],i)=>{const p=makePerson(c,i?0xf4f1e6:null,{hair:0x6b4a2a});p.position.set(x,1,z);scene.add(p);deco.walkers.push({p,x0:x,z,sp:i?-1:1})});
+    const shirts=[0x6a4a8a,0x1f4f7a,0xe2564d,0xf2c14e,0x3cbf7e,0xffffff,0x2a6f8a,0xb35a1f];
+    // прохожие: разные цвета, скорость и отрезок набережной
+    [[-30,-5],[30,-6.5],[-12,-6],[44,-5.5]].forEach(([x,z],i)=>{const p=makePerson(pick(shirts),Math.random()<.4?pick(shirts):null,{hair:pick([0x6b4a2a,0x2b1d14,0x8a5a2a,0xd8c08a])});p.position.set(x,1,z);scene.add(p);
+      deco.walkers.push({p,x0:x,z,sp:(i%2?-1:1)*(.6+Math.random()*.7),amp:8+Math.random()*10,ph:Math.random()*6})});
+    // экипажи соседей в кокпитах: кто-то стоит у штурвала, кто-то возится с концами
+    busy.sort(()=>Math.random()-.5).slice(0,3).forEach(g=>{const p=makePerson(pick(shirts),Math.random()<.5?pick(shirts):null);p.position.set((Math.random()-.5)*1.2,1.03,4.6+Math.random()*.4);p.rotation.y=Math.random()*6.3;g.add(p);deco.crew.push({p,ph:Math.random()*6})});
     deco.dinghy=makeDinghy(0x5d6770);const r=makePerson(0xf07a28,null);r.position.set(0,.05,.9);r.scale.setScalar(.95);deco.dinghy.add(r);scene.add(deco.dinghy);
   }
   scene.traverse(o=>{if(o.isMesh&&o!==sea.mesh&&o.material.transparent!==true){o.castShadow=true;o.receiveShadow=true}});
@@ -293,7 +312,8 @@ function startMoor3D(mode){
     if(M4!==st)return;
     const dt=Math.min(.05,(now-lastT)/1000);lastT=now;st.t+=st.running?dt*M4X:0;
     if(deco){const T=now/1000;skyD.clouds.rotation.y=T*.004;
-      deco.walkers.forEach(w=>{const s=Math.sin(T*.12+w.x0);w.p.position.x=w.x0+s*14*w.sp;w.p.rotation.y=Math.cos(T*.12+w.x0)*w.sp>0?-Math.PI/2:Math.PI/2;w.p.userData.walk(T*6,.45)});
+      deco.walkers.forEach(w=>{const a=T*.12*Math.abs(w.sp)+w.ph,s=Math.sin(a);w.p.position.x=w.x0+s*w.amp*Math.sign(w.sp);w.p.rotation.y=Math.cos(a)*w.sp>0?-Math.PI/2:Math.PI/2;w.p.userData.walk(T*6*Math.abs(w.sp),.45)});
+      deco.crew.forEach(c=>{const u=c.p.userData;u.arms[0].rotation.x=Math.sin(T*1.3+c.ph)*.5-.3;u.arms[1].rotation.x=Math.sin(T*1.1+c.ph*2)*.3;c.p.rotation.y+=Math.sin(T*.3+c.ph)*.002});
       const a=T*.12;deco.dinghy.position.set((deco.dx||1)*(40+Math.sin(a)*9),0,28+Math.cos(a)*6);deco.dinghy.rotation.y=(deco.dx||1)*(a+Math.PI/2)}
     for(let i=0;i<M4X&&st.running&&$('#dlg').hidden;i++){physics(dt);if(st.running)(lesson?lessonTick:practiceTick)(dt)}
     const t=now/1000;
@@ -305,7 +325,8 @@ function startMoor3D(mode){
     if(me.userData.helm)me.userData.helm(st.rud*1.5);else if(me.userData.wheel)me.userData.wheel.rotation.z=-st.rud*2.4;fend.visible=st.fend;coils.visible=st.prep&&!st.lines.w;
     // вода и флаг
     {const fp=flag.geometry.attributes.position;for(let i=0;i<fp.count;i++){const x=fp.getX(i);fp.setZ(i,Math.sin(x*3-t*7)*.12*x)}fp.needsUpdate=true;
-      flag.rotation.y=Math.PI/2-(st.wind.from+180)*D} // полотнище вытягивается по ветру
+      flag.rotation.y=Math.PI/2-(st.wind.from+180)*D; // полотнище вытягивается по ветру
+      flags.forEach(({f,ph})=>{const q=f.geometry.attributes.position;for(let i=0;i<q.count;i++){const x=q.getX(i);q.setZ(i,Math.sin(x*4-t*8+ph)*.1*x)}q.needsUpdate=true;f.rotation.y=flag.rotation.y})}
     wakePts.length=0;st.wake.forEach(f=>wakePts.push([f.x,f.z,f.a]));wake.update(wakePts,Math.abs(st.u)>.2?m4w(st,0,st.u<0?-B.L*.6:B.L):null,t);
     // метки шага
     const ls=lesson&&st.running?L[st.si]:null,mk=ls?ls.mark:'berth';
