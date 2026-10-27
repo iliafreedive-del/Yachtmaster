@@ -65,9 +65,11 @@ function startPractice(p){
   phase='practice';
   const inCourse=cur==='course'&&typeof crs!=='undefined'&&crs.lesson,
     back=()=>crumb(inCourse?'К уроку':'К брифингу',()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)},inCourse?crs.lesson.n:chap(cur).n+' · практика');
-  // День 4 и «Рулёжка»: сначала мастер-класс, после него — практика
+  // День 3, День 4 и «Рулёжка»: сначала мастер-класс, после него — практика
   if(p==='moor3d')moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');
   if(p==='helm3d')helmMode=helmMode||(done['helm-lesson']?'practice':'lesson');
+  // День 3: мастер-класс поворота с командами (js/sailcoach.js) — только в 3D
+  if(p==='tack')tackMode=window.THREE?tackMode||(done['day3-lesson']?'practice':'lesson'):'practice';
   // перед практикой — карточка «Условия» (js/practice.js); перезапуск той же практики идёт без неё
   const skip=condSkip;condSkip=false;
   if(!skip&&condNeed(p)){condCard(p,()=>{condSkip=true;startPractice(p)});$('#keysHelp').innerHTML='';back();focusStage();return}

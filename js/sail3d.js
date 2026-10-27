@@ -9,14 +9,17 @@ function startSail3D(boatId,kind){
   const host=$('#three');host.innerHTML='';host.hidden=false;
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
-  const ui=document.createElement('div');
-  ui.innerHTML=`<div class="tools"><button id="sc"></button></div>
+  const ui=document.createElement('div'),lesson=tack&&tackMode==='lesson';if(tack)ui.className='tk';
+  // День 3: кнопки команд экипажу и переключатель «мастер-класс / практика»; мастер-класс Дней 2 и 3 — в карточке #scCoach (js/sailcoach.js)
+  ui.innerHTML=`<div class="tools"><button id="sc"></button>${tack?`<button id="tkMode">${lesson?'К практике':'Мастер-класс'}</button>`:''}</div>
+    <div class="coach sea" id="scCoach" hidden></div>
+    ${tack?`<div class="crew3" id="tkCrew"><p class="cap">команды экипажу · crew</p><button class="hb" id="tkRA"></button><button class="hb" id="tkLH">Поворот!<small>Lee-ho · L</small></button></div><div class="toast" id="tkMsg" hidden></div>`:''}
     <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР · TRUE WIND</span><b id="swt"></b></div></div>
     <div class="task3" id="stk"><p class="tt"><span id="stn"></span><b id="stc"></b></p>
       <ol><li id="st1"><i></i><span></span></li><li id="st2"><i></i><span></span><em class="trim"><s id="stz"></s><u id="stm"></u></em></li><li id="st3"><i>3</i><span>Удержи курс и парус 2–3 секунды</span><em><b id="shb"></b></em></li></ol></div>
     <div class="hud3 msg" id="smg" hidden></div>
     <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>`;
-  host.appendChild(ui);
+  host.appendChild(ui);hudVars(ui);
 
   const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:110,far:420}).getHex();
   const cam=new THREE.PerspectiveCamera(30,R.width/R.height,.5,900),hq=gfxQ()==='high';
@@ -77,7 +80,11 @@ function startSail3D(boatId,kind){
   const st={renderer,mode:'wind',yaw:0,pit:0,camYaw:0,dist:tack?44:46,cdist:24,aimStep:-1,heel:0,t:0,d0:0,eyeX:0,others};S3=st;
   const views=camViews($('#sc'),'sail',[['helm','у штурвала'],['chase','за кормой'],['wind','сверху, ветер вверху'],['course','сверху, по курсу']],'wind',m=>{st.mode=m;st.yaw=0;st.pit=0;st.cut=true});
   st.mode=views.get();
-  const onKey=e=>{if(S3===st&&$('#dlg').hidden&&views.key(e))e.preventDefault()};
+  const onKey=e=>{if(S3!==st||!$('#dlg').hidden)return;
+    if(tack&&!e.repeat&&(e.code==='KeyR'||e.code==='KeyL')){crewCmd(e.code==='KeyR'?'ra':'lh');e.preventDefault();return}
+    if(views.key(e))e.preventDefault()};
+  if(tack){$('#tkRA').onclick=()=>crewCmd('ra');$('#tkLH').onclick=()=>crewCmd('lh');
+    $('#tkMode').onclick=()=>{tackMode=lesson?'practice':'lesson';stopAll();startPractice('tack')}}
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
   dragCamera(renderer.domElement,(dx,dy)=>{st.yaw-=dx*.006;if(st.mode==='helm'||st.mode==='chase')st.pit=clamp(st.pit+dy*.004,-.5,.6)},
     dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,16,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
@@ -123,11 +130,13 @@ function startSail3D(boatId,kind){
       !beat?`Приведись к ветру: держи ${P.noGo+5}–${LAY+8}° (белая стрелка у края красного сектора)`:
       !sailOk?(s.boom>s.opt?'Бейдевинд есть, но парус полощет: <b>«Выбрать» ↑</b>':'Парус перетянут: <b>«Травить» ↓</b>'):'Бейдевинд, парус стоит — яхта идёт острее к ветру');
     const fetch=rel*side>=LAY-2,over=rel*side>LAY+12,dir=side>0?'вправо ▶':'◀ влево';
+    // с экипажем поворот начинается с команд: что сказать или сделать сейчас
+    const go=!sim.crew||sim.cmd==='lh'?`руль <b>${dir}</b>, к ветру, и держи, пока нос не пройдёт ветер`:sim.cmd==='ready'?`экипаж ответил «Готов!» — <b>«Поворот!»</b> (L)`:sim.cmd==='ra'?'экипаж готовится…':`скомандуй <b>«Приготовиться к повороту»</b> (R)`;
     li('st2',toMark<10&&beat,s.st==='nogo'?'Поворот оверштаг идёт… стаксель перекладывается на другой борт':
       toMark<10&&beat?'Знак прямо по курсу — держи бейдевинд до него':
       sim.min?'Лейлайнов нет: поворачивай, когда знак окажется примерно на траверзе — 90–100° от носа':
-      over?`Ты пересёк лейлайн — поворачивай оверштаг сейчас: руль <b>${dir}</b>, к ветру`:
-      fetch?`Ты на лейлайне (жёлтый пунктир) — <b>поворот оверштаг!</b> Руль <b>${dir}</b> и держи, пока нос не пройдёт ветер`:
+      over?`Ты пересёк лейлайн — поворачивай оверштаг сейчас: ${go}`:
+      fetch?`Ты на лейлайне (жёлтый пунктир) — поворот оверштаг: ${go}`:
       'Иди этим галсом до лейлайна — жёлтого пунктира от знака. Там поворот оверштаг');
     $('#st3').querySelector('span').textContent=`До знака ${Math.round(d)} м`;$('#st3').className=d<25?'now':'';
     $('#shb').style.width=(clamp(1-d/st.d0,0,1)*100)+'%';$('#stz').parentNode.hidden=true;
@@ -171,7 +180,7 @@ function startSail3D(boatId,kind){
     rose.position.set(bx,.36,bz);rose.rotation.y=-w.from*D;needle.rotation.y=-norm(b.h-w.from)*D;
     const step=sim.steps&&sim.steps[sim.step];
     if(!tack&&step&&st.aimStep!==sim.step){st.aimStep=sim.step;setAim(step.lo,step.hi);$('#slA').innerHTML=`${step.n}${en(step.en)}`}
-    aim.forEach(m=>m.visible=!tack&&!!step&&sim.running&&!sim.min);
+    aim.forEach(m=>m.visible=!tack&&!!step&&sim.running&&!sim.min&&!sim.coach);
     // камера. Сверху — изометрия: «ветер вверху» по среднему ветру (заходы видны по розе) или «по курсу»; за кормой — низко, по курсу;
     // у штурвала — глаза рулевого, горизонт не кренится, а сами глаза идут с креном и качкой
     const helm=st.mode==='helm',chase=st.mode==='chase',fov=helm?62:chase?45:30,near=helm?.1:.5;
@@ -194,11 +203,12 @@ function startSail3D(boatId,kind){
     // HUD
     const Y=st.camYaw,up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
     $('#swa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#swt').textContent=`${Math.round(w.kn)} уз · ${compassName(w.from)}`;
-    if(tack)tackCard(s,dt);else taskCard(step,s,dt);
+    if(sim.coach){$('#stk').hidden=true;coachLive(dt)}else if(tack)tackCard(s,dt);else taskCard(step,s,dt);
+    if(tack)crewButtons();
     const mg=$('#smg');if(sim.msgT>0&&sim.msg){mg.hidden=false;mg.textContent=sim.msg;mg.className='hud3 msg '+(sim.msgC||'');mg.style.opacity=Math.min(1,sim.msgT)}else mg.hidden=true;
     const nb=w.from*D;place($('#slN'),bx+Math.sin(nb)*14.5,.4,bz-Math.cos(nb)*14.5);
     if(tack)placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3);
-    else if(step&&sim.running&&!sim.min){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
+    else if(step&&sim.running&&!sim.min&&!sim.coach){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
   };
   return true;
 }

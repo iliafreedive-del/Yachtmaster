@@ -52,12 +52,19 @@ function startSim(kind){
     const sd=again&&Math.random()<.5?-1:1;
     sim=Object.assign(base,{wind:gustWind({from,kn:condKn('points',cond)},cond.gust),boat:newBoat(0,0,(from+sd*90+360)%360,80),steps:ptSteps(P,again,min)});
     sim.view3d=in3d;sim.running=true;say(sim.steps[0].s);
+    // первый раз в 3D — короткий мастер-класс: руль и шкот (js/sailcoach.js). Парус сразу стоит — яхта не встанет, пока читаешь первый шаг
+    if(in3d&&!again&&!done['day2-lesson']){sim.boat.v=3.5;sim.boat.sheet=36;coachStart('points');say('Сначала короткий мастер-класс: как поворачивать и как работать шкотом. Потом — курсы к ветру.')}
   }
   if(kind==='tack'){
-    // знак против ветра; в повторных заходах он смещён в сторону, и яхта стартует то левым, то правым галсом
-    const vary=again||rnd,sd=vary&&Math.random()<.5?1:-1,mb=from+(vary?Math.random()*24-12:3.3),md=vary?900+Math.random()*300:1052;
-    sim=Object.assign(base,{wind:gustWind({from,kn:condKn('tack',cond)},cond.gust),boat:newBoat(0,0,(from-sd*(P.noGo+10)+360)%360,14),buoy:{x:Math.sin(mb*D)*md,y:-Math.cos(mb*D)*md},view3d:in3d,shRef:from,shT:0});sim.cam={x:0,y:-100};
-    runQuiz([
+    // знак против ветра; в повторных заходах он смещён в сторону, и яхта стартует то левым, то правым галсом.
+    // Мастер-класс (только в 3D): ровный ветер с севера, яхта идёт галфвиндом правого галса, знак далеко — до него не дойти
+    const lesson=in3d&&tackMode==='lesson',vary=!lesson&&(again||rnd),sd=vary&&Math.random()<.5?1:-1,mb=from+(vary?Math.random()*24-12:3.3),md=vary?900+Math.random()*300:1052;
+    sim=Object.assign(base,{wind:lesson?{from:0,kn:11}:gustWind({from,kn:condKn('tack',cond)},cond.gust),boat:lesson?newBoat(0,0,270,32):newBoat(0,0,(from-sd*(P.noGo+10)+360)%360,14),
+      buoy:{x:Math.sin(mb*D)*md,y:-Math.cos(mb*D)*md},view3d:in3d,shRef:from,shT:0,crew:in3d,cmd:'none',goodTacks:0,nocmd:0});sim.cam={x:0,y:-100};
+    if(lesson){sim.min=false;sim.boat.v=4.5;sim.running=true;coachStart('tack');say('Мастер-класс: я подсвечиваю, что нажать, и жду, пока сделаешь. Поворот оверштаг — это команда, ответ экипажа, руль.')}
+    // в 3D командам учит мастер-класс, а в практике экипаж ждёт команд перед каждым поворотом
+    else if(in3d){sim.running=true;say('Знак лежит прямо против ветра. Иди [[бейдевинд|бейдевиндом]] и меняй [[галс]] поворотом [[оверштаг]]. Перед каждым поворотом — «Приготовиться к повороту», ответ «Готов!», «Поворот!».')}
+    else runQuiz([
       {q:'Шкипер: «Приготовиться к повороту [[оверштаг]]!» <span class="en">(Ready about!)</span> Что отвечает экипаж, когда стоит на шкотах?',o:['«Готов!» (Ready!)','«Поворот!»','«Есть отдать якорь!»'],a:0,e:'Экипаж отвечает «Готов!», только когда стоит у своих шкотов. Без ответа шкипер не поворачивает.'},
       {q:'Шкипер: «Поворот!» <span class="en">(Lee-ho!)</span> Что делает матрос на [[стаксель|стакселе]]?',o:['Выбирает гика-шкот до упора','Отдаёт рабочий стаксель-шкот и выбирает шкот на другом борту','Убирает стаксель'],a:1,e:'Когда нос проходит линию ветра, старый шкот отдают, а новый быстро выбирают на другой лебёдке.'}
     ],()=>{sim.running=true;say('Знак лежит прямо против ветра. Иди [[бейдевинд|бейдевиндом]] и меняй [[галс]] поворотом [[оверштаг]]. Перед поворотом набери ход!');$('#stage').focus()});
@@ -93,7 +100,7 @@ function update(dt){
     if(irons)dh-=Math.sign(s.rw||1)*3.5*(1-clamp(b.v/3,0,1));
     b.h=(b.h+dh*dt+360)%360;
     if(sim.lastSide&&s.side!==sim.lastSide){
-      if(s.awa<90){sim.tacks++;flash(`Поворот оверштаг (tack)! Теперь ${s.side>0?'правый галс (starboard tack)':'левый галс (port tack)'}: ветер дует в ${s.side>0?'правый':'левый'} борт.`,'good')}
+      if(s.awa<90){sim.tacks++;flash(`Поворот оверштаг (tack)! Теперь ${s.side>0?'правый галс (starboard tack)':'левый галс (port tack)'}: ветер дует в ${s.side>0?'правый':'левый'} борт.`,'good');if(sim.crew)tackCmd()}
       // фордевинд под контролем — гик выбран к диаметральной плоскости и перелетает коротко; с вытравленным гиком — случайный, опасный
       else if(b.sheet<=GYBE_OK){sim.gybes++;flash('Поворот фордевинд (gybe) под контролем: гик был выбран и перешёл на другой борт коротко. Теперь потрави гика-шкот.','good')}
       else{sim.gybes++;sim.crash=(sim.crash||0)+1;flash(`Неконтролируемый фордевинд (accidental gybe)! Гик (boom) с ${Math.round(s.boom)}° перелетел через кокпит — так бьёт по голове и ломает такелаж. Перед поворотом выбирай гика-шкот почти до упора.`,'bad')}}
@@ -123,6 +130,8 @@ function update(dt){
 function flash(t,c){sim.msg=t;sim.msgC=c;sim.msgT=6}
 function mission(dt){
   const b=sim.boat;
+  if(sim.coach){coachTick(dt);return} // мастер-класс: задания ждут (js/sailcoach.js)
+  if(sim.crew)crewTick(dt);
   if(sim.kind==='points'){
     const st=sim.steps[sim.step],s=sim.ss;
     if(s.awa>=st.lo&&s.awa<=st.hi&&s.eff>.7&&s.st!=='nogo')sim.hold+=dt;else sim.hold=Math.max(0,sim.hold-dt*2);
@@ -132,7 +141,7 @@ function mission(dt){
   }
   if(sim.kind==='tack'){
     if(Math.hypot(b.x-sim.buoy.x,b.y-sim.buoy.y)<40){sim.running=false;markDone('day3');
-      endCard('День 3 пройден',`Ты дошёл до знака против ветра за ${Math.round(sim.t)} с, поворотов оверштаг: ${sim.tacks}.${sim.gybes?` Поворотов фордевинд: ${sim.gybes} — против ветра они не нужны${sim.crash?`, из них неконтролируемых ${sim.crash}`:''}.`:''} Так яхта и ходит против ветра: галс за галсом.`,true,debrief2('day3'))}
+      endCard('День 3 пройден',`Ты дошёл до знака против ветра за ${Math.round(sim.t)} с, поворотов оверштаг: ${sim.tacks}${sim.crew&&sim.tacks?`, из них с командами экипажу: ${sim.goodTacks}`:''}.${sim.gybes?` Поворотов фордевинд: ${sim.gybes} — против ветра они не нужны${sim.crash?`, из них неконтролируемых ${sim.crash}`:''}.`:''} Так яхта и ходит против ветра: галс за галсом.`,true,debrief2('day3'))}
   }
   if(sim.kind==='moor'){
     const fx=Math.sin(b.h*D),fy=-Math.cos(b.h*D),px=-fy,py=fx;
@@ -151,7 +160,7 @@ function mission(dt){
 function fail(t){sim.running=false;endCard('Авария',t,false)}
 /* разбор Дней 2–3 для журнала: неконтролируемые фордевинды, левентик, доля времени с полощущим или перетянутым парусом, лишние повороты */
 function debrief2(ex){if(typeof practiceDone!=='function')return'';const pct=x=>{const p=Math.round(100*x/Math.max(1,sim.t));return p>=30?p:0};
-  return practiceDone(ex,true,sim.t,{gybe:sim.crash,irons:sim.irons,luff:pct(sim.luffT),over:pct(sim.overT),tacks:ex==='day3'&&sim.tacks>4?sim.tacks:0},sim.boatId)}
+  return practiceDone(ex,true,sim.t,{gybe:sim.crash,irons:sim.irons,luff:pct(sim.luffT),over:pct(sim.overT),tacks:ex==='day3'&&sim.tacks>4?sim.tacks:0,nocmd:sim.nocmd||0},sim.boatId)}
 
 function W2S(x,y){return[(x-sim.cam.x)+W/2,(y-sim.cam.y)+H/2]}
 function draw(){

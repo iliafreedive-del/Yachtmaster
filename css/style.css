@@ -694,3 +694,36 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
   .hb small{font-size:9px}
   .three .tools.fleet2{max-width:64%}
 }
+
+/* ---------- мастер-классы в море и команды экипажу (js/sailcoach.js, sail3d.js) ---------- */
+.coach .live{font-size:12.5px;line-height:1.35;color:var(--buoy);min-height:1.35em}
+.coach>p.live,.coach>.row{flex:none}
+.coach.sea{max-height:calc(100% - 150px);overflow:auto}
+.crew3{position:absolute;right:12px;bottom:74px;z-index:3;display:flex;flex-direction:column;gap:5px;width:190px;background:rgba(10,29,42,.86);border:1px solid var(--line);border-radius:12px;padding:6px 8px}
+.crew3 .cap{margin:0;font-family:var(--f-mono);font-size:10px;color:var(--muted);text-align:center;letter-spacing:.03em}
+.crew3 .hb{width:100%}
+.crew3 .hb:disabled{opacity:.5;cursor:default}
+.tk .toast{top:46%}
+@container (max-width:820px) and (min-height:521px){.coach.sea{top:12px;max-height:max(150px,calc(100% - 270px))}}
+/* телефон: команды — полосой над кнопками руля и шкота, камера и ветер — выше неё */
+@media (max-width:600px){
+  .tk .crew3{left:12px;right:12px;width:auto;bottom:70px;flex-direction:row;padding:5px}
+  .tk .crew3 .cap{display:none}
+  .tk .crew3 .hb{flex:1 1 0;min-height:42px}
+  .tk .tools{bottom:134px}
+  .tk .hud3.wind{bottom:calc(142px + var(--tl,34px))}
+}
+/* телефон боком: команды в строку справа над шкотами, карточка задания — не ниже них */
+@container (max-height:520px){
+  .crew3{flex-direction:row;width:auto;bottom:70px;padding:5px}
+  .crew3 .cap{display:none}
+  .crew3 .hb{min-height:36px}
+  .tk .task3{max-height:calc(100% - 140px)}
+  .coach.sea{max-height:calc(100% - 140px)}
+}
+/* День 3 шире телефона: ветер и сообщения — сразу под кнопками камеры, даже если они легли в два ряда; боком кнопки не заходят под карточку задания */
+@media (min-width:601px){
+  .tk .hud3.wind{top:calc(var(--tl,32px) + 20px)}
+  .tk .hud3.msg{top:calc(var(--tl,32px) + 76px)}
+}
+@container (max-height:520px){.tk .tools{right:calc(min(340px,100% - 24px) + 24px)}}
