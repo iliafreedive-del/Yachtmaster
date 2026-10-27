@@ -209,4 +209,6 @@ function atmos3d(scene,renderer,o){
 function renderGfx(){const row=$('#gfxRow');if(!row)return;const q=gfxQ();
   row.innerHTML=`Графика · graphics: ${[['high','высокая'],['low','экономная']].map(([k,n])=>`<button data-q="${k}" aria-pressed="${q===k}">${n}</button>`).join(' ')}`;
   row.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.q===gfxQ())return;setGfxQ(b.dataset.q);renderGfx();
-    if($('#three').hidden)return;if(cur==='fleet'){stopAll();startFleet()}else if(phase==='practice'){const p=chap(cur).practice;stopAll();startPractice(p)}})}
+    if($('#three').hidden)return;if(cur==='fleet'){stopAll();startFleet();return}if(cur==='anatomy'){openChapter('anatomy');return}
+    // практика из урока «Курса» берёт упражнение из урока, остальные — из главы
+    if(phase!=='practice')return;const p=cur==='course'?typeof crs!=='undefined'&&crs.lesson&&crs.lesson.practice:chap(cur)&&chap(cur).practice;if(!p)return;stopAll();startPractice(p)})}

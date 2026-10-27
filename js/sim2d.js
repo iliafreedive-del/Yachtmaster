@@ -5,6 +5,7 @@ function resize(){const r=cv.getBoundingClientRect();DPR=Math.min(2,window.devic
 window.addEventListener('resize',()=>{if(sim)resize()});
 const PXKN=7;let sim=null,raf=0,lastT=0;
 $('#sheetR').addEventListener('input',e=>{if(sim&&!sim.engine)sim.boat.sheet=+e.target.value});
+const GYBE_OK=25; // фордевинд «под контролем», если гика-шкот выбран до этого угла гика, ° (учебный порог)
 const THR=[-1,-.5,0,.5,1],THRN=[['Полный назад','full astern'],['Малый назад','slow astern'],['Нейтраль','neutral'],['Малый вперёд','slow ahead'],['Полный вперёд','full ahead']];
 function throttleStep(d){sim.thrI=clamp(sim.thrI+d,0,4);sim.boat.thr=THR[sim.thrI]}
 /* поляра: скорость яхты от угла к ветру; ng — граница мёртвой зоны у выбранной лодки */
@@ -64,11 +65,19 @@ function update(dt){
   if(!sim.engine){
     if(keys.up)b.sheet=clamp(b.sheet-35*dt,0,85);if(keys.down)b.sheet=clamp(b.sheet+35*dt,0,85);
     const P=sim.P,s=sailState(b,w,P.noGo);sim.ss=s;
-    const target=polar(s.awa,P.noGo)*s.eff*(w.kn/12)*P.speed;b.v+=(target-b.v)*dt*(target<b.v?.5:.32)*P.accel;
-    b.h=(b.h+b.rud*Math.min(38,7+b.v*5)*P.turn*dt+360)%360;
+    // в левентике паруса не тянут: яхта катится по инерции (корпус тормозит медленнее, чем полощущий парус) и потом идёт назад
+    const irons=s.awa<P.noGo,target=irons?-.35*(w.kn/12):polar(s.awa,P.noGo)*s.eff*(w.kn/12)*P.speed;
+    b.v+=(target-b.v)*dt*(irons&&target<b.v?.22:target<b.v?.5:.32)*P.accel;
+    // руль работает от обтекания: нет хода — нет руля, на заднем ходу перо поворачивает корму в обратную сторону.
+    // Без хода в мёртвой зоне ветер сам уваливает нос на ближний галс — так яхта «выпадает» из левентика
+    let dh=b.rud*(clamp(b.v*6,-5,34)+1)*P.turn;
+    if(irons)dh-=Math.sign(s.rw||1)*3.5*(1-clamp(b.v/3,0,1));
+    b.h=(b.h+dh*dt+360)%360;
     if(sim.lastSide&&s.side!==sim.lastSide){
       if(s.awa<90){sim.tacks++;flash(`Поворот оверштаг (tack)! Теперь ${s.side>0?'правый галс (starboard tack)':'левый галс (port tack)'}: ветер дует в ${s.side>0?'правый':'левый'} борт.`,'good')}
-      else{sim.gybes++;flash('Поворот фордевинд (gybe) — гик (boom) перелетел через кокпит! На настоящей яхте перед этим выбирают гика-шкот.','warn')}}
+      // фордевинд под контролем — гик выбран к диаметральной плоскости и перелетает коротко; с вытравленным гиком — случайный, опасный
+      else if(b.sheet<=GYBE_OK){sim.gybes++;flash('Поворот фордевинд (gybe) под контролем: гик был выбран и перешёл на другой борт коротко. Теперь потрави гика-шкот.','good')}
+      else{sim.gybes++;sim.crash=(sim.crash||0)+1;flash(`Неконтролируемый фордевинд (accidental gybe)! Гик (boom) с ${Math.round(s.boom)}° перелетел через кокпит — так бьёт по голове и ломает такелаж. Перед поворотом выбирай гика-шкот почти до упора.`,'bad')}}
     sim.lastSide=s.side;
     if(s.awa<P.noGo){sim.nogoT+=dt;if(sim.nogoT>4&&!sim.nogoWarned){sim.nogoWarned=true;flash('Застряли в левентике (in irons), носом к ветру. Отверни, набери ход и только потом поворачивай.','bad')}}else{sim.nogoT=0;sim.nogoWarned=false}
   } else {
@@ -94,12 +103,12 @@ function mission(dt){
     const st=sim.steps[sim.step],s=sim.ss;
     if(s.awa>=st.lo&&s.awa<=st.hi&&s.eff>.7)sim.hold+=dt;else sim.hold=Math.max(0,sim.hold-dt*2);
     if(sim.hold>=2.5){sim.hold=0;sim.step++;
-      if(sim.step>=sim.steps.length){sim.running=false;markDone('day2');endCard('День 2 пройден','Ты прошёл галфвинд, бейдевинд, бакштаг и фордевинд и на каждом поставил парус. Завтра идём против ветра.',true);return}
+      if(sim.step>=sim.steps.length){sim.running=false;markDone('day2');endCard('День 2 пройден',`Ты прошёл галфвинд, бейдевинд, бакштаг и фордевинд и на каждом поставил парус.${sim.crash?` Неконтролируемых фордевиндов: ${sim.crash} — в следующий раз перед поворотом кормой через ветер выбери гика-шкот.`:''} Завтра идём против ветра.`,true);return}
       say(sim.steps[sim.step].s);flash('Курс взят и удержан. Следующий!','good')}
   }
   if(sim.kind==='tack'){
     if(Math.hypot(b.x-sim.buoy.x,b.y-sim.buoy.y)<40){sim.running=false;markDone('day3');
-      endCard('День 3 пройден',`Ты дошёл до знака против ветра за ${Math.round(sim.t)} с, поворотов оверштаг: ${sim.tacks}.${sim.gybes?` Поворотов фордевинд: ${sim.gybes} — против ветра они не нужны.`:''} Так яхта и ходит против ветра: галс за галсом.`,true)}
+      endCard('День 3 пройден',`Ты дошёл до знака против ветра за ${Math.round(sim.t)} с, поворотов оверштаг: ${sim.tacks}.${sim.gybes?` Поворотов фордевинд: ${sim.gybes} — против ветра они не нужны${sim.crash?`, из них неконтролируемых ${sim.crash}`:''}.`:''} Так яхта и ходит против ветра: галс за галсом.`,true)}
   }
   if(sim.kind==='moor'){
     const fx=Math.sin(b.h*D),fy=-Math.cos(b.h*D),px=-fy,py=fx;
@@ -197,6 +206,8 @@ function drawHUD(){
     ctx.fillStyle=C.muted;ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';ctx.fillText('УДЕРЖАНИЕ КУРСА',x+10,23)}
 }
 function compassName(a){return['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(((a%360)+360)%360/45)%8]}
+/* «с востока» — откуда дует ветер, для фраз шкипера */
+function windFrom(a){return'с '+['севера','северо-востока','востока','юго-востока','юга','юго-запада','запада','северо-запада'][Math.round(((a%360)+360)%360/45)%8]}
 function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function wrap(t,mw){const ws=t.split(' ');const out=[];let l='';for(const w of ws){const tl=l?l+' '+w:w;if(ctx.measureText(tl).width>mw-24&&l){out.push(l);l=w}else l=tl}if(l)out.push(l);return out}
 let lastPanel=0;
@@ -209,7 +220,8 @@ function updatePanel(){
       <div style="grid-column:1/-1"><span>Курс к ветру · point of sail</span><b>${pn} <small style="font-size:12px;color:var(--muted)">${pe}</small></b></div>`;
     $('#zone').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#zone').style.width=(16/85*100)+'%';$('#mk').style.left=(s.boom/85*100)+'%';
     if(document.activeElement!==$('#sheetR'))$('#sheetR').value=Math.round(b.sheet);
-    if(sim.running){const m={nogo:['[[левентик|Левентик]]: нос в мёртвой зоне, паруса не тянут. Отверни от ветра.','bad'],luff:['Парус [[полощет]] — выбери [[шкот]] (↑).','warn'],over:['Парус перетянут, яхта тормозит — потрави [[шкот]] (↓).','warn'],good:['Парус стоит ровно, [[колдунчики]] летят.','good']}[s.st];hint(m[0],m[1])}
+    if(sim.running){const m={nogo:['[[левентик|Левентик]]: нос в мёртвой зоне, паруса не тянут. Отверни от ветра.','bad'],luff:['Парус [[полощет]] — выбери [[шкот]] (↑).','warn'],over:['Парус перетянут, яхта тормозит — потрави [[шкот]] (↓).','warn'],good:['Парус стоит ровно, [[колдунчики]] летят.','good']}[s.st];
+      if(s.st==='good'&&s.awa>160&&b.sheet>GYBE_OK)hint('Ветер почти в корму. Если он перейдёт на другой борт, [[гик]] перелетит через кокпит. Для поворота [[фордевинд]] сначала выбери [[гика-шкот]] (↑).','warn');else hint(m[0],m[1])}
     if(sim.kind==='points'){$('#taskLbl').textContent='Практика · курсы к ветру · points of sail';$('#steps').innerHTML=sim.steps.map((st,i)=>`<li class="${i<sim.step?'done':i===sim.step?'now':''}"><i>${i<sim.step?'✓':i+1}</i><span>${st.n} · ${st.lo}–${st.hi}°${en(st.en)}</span></li>`).join('')}
     if(sim.kind==='tack'){const d=Math.hypot(b.x-sim.buoy.x,b.y-sim.buoy.y)*2/185;$('#taskLbl').textContent='Практика · лавировка · beating';
       $('#steps').innerHTML=`<li class="now"><i>→</i>До знака ${d.toFixed(1)} кбт</li><li><i>${sim.tacks}</i><span>Поворотов оверштаг${en('tacks')}</span></li><li><i>${Math.round(sim.t)}</i>Секунд в пути</li>`}

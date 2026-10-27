@@ -110,7 +110,7 @@ function startSail3D(boatId,kind){
     const brg=Math.atan2(mx-bx,-(mz-bz))/D,rel=norm(brg-w.from),side=s.side,toMark=Math.abs(norm(brg-b.h));
     $('#stn').textContent=sim.running?`Лавировка · поворотов: ${sim.tacks}`:'Готово';$("#stc").innerHTML=`Дойди до знака против ветра${en('beat to the windward mark')}`;
     const beat=s.awa>=P.noGo&&s.awa<=LAY+12,sailOk=s.eff>.6&&s.st!=='nogo';
-    li('st1',beat&&sailOk,s.st==='nogo'?(b.v>1.5?'Нос проходит линию ветра — не останавливай руль':'Мало хода в мёртвой зоне: отверни от ветра и разгонись'):
+    li('st1',beat&&sailOk,s.st==='nogo'?(b.v>1.5?'Нос проходит линию ветра — не останавливай руль':'Мало хода — яхта встала в левентик. Нос сам уйдёт под ветер: дай ему упасть, разгонись и поворачивай снова на полном ходу'):
       !beat?`Приведись к ветру: держи ${P.noGo+5}–${LAY+8}° (белая стрелка у края красного сектора)`:
       !sailOk?(s.boom>s.opt?'Бейдевинд есть, но парус полощет: <b>«Выбрать» ↑</b>':'Парус перетянут: <b>«Травить» ↓</b>'):'Бейдевинд, парус стоит — яхта идёт острее к ветру');
     const fetch=rel*side>=LAY-2,over=rel*side>LAY+12,dir=side>0?'вправо ▶':'◀ влево';
@@ -132,7 +132,9 @@ function startSail3D(boatId,kind){
     me.rotation.set(r.p,-b.h*D,st.heel+r.r);
     me.userData.helm(b.rud);
     const ss=s.st,camber=ss==='good'?.11:ss==='over'?.07:ss==='luff'?.03:0,flap=ss==='nogo'?.07:ss==='luff'?.05:0;
-    trimSails(me.userData.rig,s.boom,Math.min(s.boom*.85+4,Math.max(s.awa-6,2)),s.side,camber,flap,t);
+    // гик не прыгает на другой борт, а перелетает: через диаметральную плоскость — быстро (при фордевинде с вытравленным шкотом это удар)
+    {const tb=s.side*s.boom;if(st.bd==null)st.bd=tb;const cross=Math.sign(tb)!==Math.sign(st.bd),mx=(cross?260:70)*dt;st.bd+=clamp(tb-st.bd,-mx,mx)}
+    trimSails(me.userData.rig,Math.abs(st.bd),Math.min(s.boom*.85+4,Math.max(s.awa-6,2)),Math.sign(st.bd)||s.side,camber,flap,t);
     telltales(me.userData.rig,ss,t);vane.rotation.y=-s.rw*D;bow.update(b.v*.5144,t);
     // ветер в воздухе и кильватер
     wisps.update(dt,[bx,bz],w.from,sim.running?w.kn:w.kn*.5,st.dist/40);
