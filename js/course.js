@@ -10,7 +10,7 @@ function startCourse(){crs.view='home';renderCourseHome()}
 /* после практики: убрать приборы, выбор лодки и подсказки клавиш */
 function courseBoard(){stopLabs();show('board');padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML=''}
 function renderCourseHome(){
-  courseBoard();
+  courseBoard();crumb();
   const total=allLessons().length,nd=allLessons().filter(l=>done['c:'+l.id]).length;
   $('#board').innerHTML=`<div class="course"><div class="chead"><p class="eyebrow">Курс · ${nd} из ${total} уроков</p><h2>Теория и практика шкипера</h2>
     <p>Уроки идут в том же порядке, что и учебный курс Bareboat Skipper Theory. В каждом — схемы, интерактивные тренажёры и контрольные вопросы. Урок засчитан, когда ответил верно на 70% вопросов.</p></div>
@@ -24,11 +24,12 @@ function renderCourseHome(){
 }
 function openLesson(id,i){
   if(cur!=='course'){stopAll();cur='course';renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML=''}
-  crs.lesson=findLesson(id);crs.i=i||0;crs.view='lesson';renderLessonSlide();
+  crs.lesson=findLesson(id);crs.i=i||0;crs.view='lesson';renderLessonSlide();focusStage();
 }
 function renderLessonSlide(){
   courseBoard();
   const L=crs.lesson,s=L.slides[crs.i],last=crs.i===L.slides.length-1,n=L.mod.lessons.length;
+  crumb('Все уроки',renderCourseHome,L.n);
   const right=s.lab?`<div class="lab" id="lab"></div>`:(s.f||'');
   const srcs=last&&L.src?`<details class="srcs"><summary>Источники урока</summary><ul>${L.src.map(x=>`<li>${x.replace(/(https?:\/\/\S+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>')}</li>`).join('')}</ul></details>`:'';
   $('#board').innerHTML=`<div class="slide${s.lab?' haslab':''}"><div class="txt"><p class="eyebrow">Урок ${L.k+1} из ${n} · ${L.n} · ${crs.i+1}/${L.slides.length}</p><h2>${s.h}</h2>${rich(s.t)}${s.lab&&s.f?s.f:''}${srcs}</div>${right}

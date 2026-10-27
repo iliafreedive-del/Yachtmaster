@@ -29,7 +29,10 @@
       <button class="fs-btn" id="fsBtn" type="button" hidden aria-label="Полноэкранный режим">⛶ <span>Весь экран</span></button>
     </div>
   </header>
-  <nav id="tabs"></nav>
+  <div class="topbar" id="bar">
+    <nav id="tabs"></nav>
+    <div class="crumb" id="crumb"><button class="crumb-b" id="crumbB" type="button" hidden>← <span id="crumbT"></span></button><span class="crumb-n" id="crumbN"></span><button class="crumb-up" id="crumbUp" type="button">Разделы ↑</button></div>
+  </div>
   <div class="grid">
     <div class="stage" id="stage" tabindex="0" aria-label="Учебная зона">
       <canvas id="cv"></canvas>
