@@ -7,7 +7,7 @@ function skyDome(scene,o){
   for(let i=0;i<p.count;i++){const t=clamp(p.getY(i)/R,0,1)**.55;c.copy(hor).lerp(top,t);col.push(c.r,c.g,c.b)}
   g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
   const dome=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));dome.renderOrder=-1;scene.add(dome);
-  const clouds=new THREE.Group(),cm=new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true,emissive:0x8a9aa4,fog:false});
+  const clouds=new THREE.Group(),cm=new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x8a9aa4,fog:false});
   for(let i=0;i<(o.n||14);i++){const cl=new THREE.Group(),a=i/(o.n||14)*Math.PI*2+Math.sin(i*7)*.3,r=R*(.55+.25*((i*37)%10)/10);
     for(let j=0;j<4+i%3;j++){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),cm);m.position.set(j*5-8+Math.sin(i+j)*2,Math.sin(i*3+j)*1.5,Math.cos(i+j*2)*3);m.scale.set(7+(j%2)*3,3+(j%3),5);cl.add(m)}
     cl.position.set(Math.sin(a)*r,R*(.13+.08*((i*13)%7)/7),-Math.cos(a)*r);cl.lookAt(0,cl.position.y,0);clouds.add(cl)}
