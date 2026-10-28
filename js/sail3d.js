@@ -9,7 +9,7 @@ function startSail3D(boatId,kind){
   const host=$('#three');host.innerHTML='';host.hidden=false;
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
-  const ui=document.createElement('div'),lesson=tack&&tackMode==='lesson';if(tack)ui.className='tk';
+  const ui=document.createElement('div'),lesson=tack&&(tackMode==='lesson'||tackMode==='gybe');if(tack)ui.className='tk';
   // День 3: кнопки команд экипажу и переключатель «мастер-класс / практика»; мастер-класс Дней 2 и 3 — в карточке #scCoach (js/sailcoach.js)
   ui.innerHTML=`<div class="tools"><button id="sc"></button>${tack?`<button id="tkMode">${lesson?'К практике':'Мастер-класс'}</button>`:''}</div>
     <div class="coach sea" id="scCoach" hidden></div>
@@ -18,7 +18,7 @@ function startSail3D(boatId,kind){
     <div class="task3" id="stk"><p class="tt"><span id="stn"></span><b id="stc"></b></p>
       <ol><li id="st1"><i></i><span></span></li><li id="st2"><i></i><span></span><em class="trim"><s id="stz"></s><u id="stm"></u></em></li><li id="st3"><i>3</i><span>Удержи курс и парус 2–3 секунды</span><em><b id="shb"></b></em></li></ol></div>
     <div class="hud3 msg" id="smg" hidden></div>
-    <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>`;
+    <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>${tack?'<div class="tlabel aim" id="slA2"></div>':''}`;
   host.appendChild(ui);hudVars(ui);
 
   const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:110,far:420}).getHex();
@@ -43,6 +43,11 @@ function startSail3D(boatId,kind){
     mark.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(mark);
     const lk=kit3();[-1,1].forEach(sd=>{const a=(180+sd*LAY)*D;for(let d=6;d<420;d+=9)lk.box(.35,.06,4,0xf2c23a,Math.sin(a)*d,0,-Math.cos(a)*d,0,-a,0)});
     mark.userData.lay=lk.build(new THREE.Group());scene.add(mark.userData.lay)}
+  // нижний знак — жёлтый, к нему спускаются после знака против ветра
+  let mark2=null;
+  if(tack){mark2=new THREE.Group();const mk=kit3();
+    mk.add(new THREE.CylinderGeometry(.9,1,2.2,16),0xf2c23a,0,.9,0).add(new THREE.CylinderGeometry(.92,.92,.35,16),0x1b2a33,0,1.4,0).add(new THREE.CylinderGeometry(.6,.9,.4,16),0xf2c23a,0,2.2,0).build(mark2);
+    mark2.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(mark2)}
   /* горизонт: острова и чужие яхты едут вместе с камерой, как задник */
   const horizon=new THREE.Group();scene.add(horizon);
   [[0,250,40,14,0x7ea55a],[70,270,28,10,0x6d9550],[150,240,34,16,0x8fb066],[215,260,24,9,0x7ea55a],[290,250,38,12,0x6d9550]].forEach(([b,r,sx,sy,c])=>{
@@ -84,7 +89,10 @@ function startSail3D(boatId,kind){
     if(tack&&!e.repeat&&(e.code==='KeyR'||e.code==='KeyL')){crewCmd(e.code==='KeyR'?'ra':'lh');e.preventDefault();return}
     if(views.key(e))e.preventDefault()};
   if(tack){$('#tkRA').onclick=()=>crewCmd('ra');$('#tkLH').onclick=()=>crewCmd('lh');
-    $('#tkMode').onclick=()=>{tackMode=lesson?'practice':'lesson';stopAll();startPractice('tack')}}
+    // из практики — выбор мастер-класса: оверштаг или фордевинд; из мастер-класса — назад в практику
+    $('#tkMode').onclick=()=>{const go=m=>{hideDialog();tackMode=m;stopAll();startPractice('tack')};if(lesson){go('practice');return}
+      showDialog(`<h3>Мастер-класс</h3><p>Какой поворот разобрать по шагам, с командами экипажу?</p><div class="row"><button class="btn" id="tkMc1">Оверштаг · tack</button><button class="btn" id="tkMc2">Фордевинд · gybe</button><button class="btn ghost" id="tkMc0">Отмена</button></div>`);
+      $('#tkMc1').onclick=()=>go('lesson');$('#tkMc2').onclick=()=>go('gybe');$('#tkMc0').onclick=()=>{hideDialog();$('#stage').focus()}}}
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
   dragCamera(renderer.domElement,(dx,dy)=>{st.yaw-=dx*.006;if(st.mode==='helm'||st.mode==='chase')st.pit=clamp(st.pit+dy*.004,-.5,.6)},
     dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,16,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
@@ -97,11 +105,11 @@ function startSail3D(boatId,kind){
     el.hidden=false;el.style.left=((v3.x+1)/2*renderer.domElement.clientWidth)+'px';el.style.top=((1-v3.y)/2*renderer.domElement.clientHeight)+'px'};
 
   // метка, которая за краем экрана прижимается к краю со стрелкой
-  const placeEdge=(el,x,y,z)=>{v3.set(x,y,z).project(cam);const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;let X=v3.x,Y=v3.y;
+  const placeEdge=(el,x,y,z,lbl,en2)=>{v3.set(x,y,z).project(cam);const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;let X=v3.x,Y=v3.y;
     // сверху экрана HUD ветра и карточка задания, поэтому верхний край ниже
     if(v3.z>1){X=-X;Y=-Y}const top=cam.aspect<1?.12:.58,off=v3.z>1||Math.abs(X)>.92||Y>top+.02||Y<-.8,m=Math.max(Math.abs(X)/.9,Y>0?Y/top:-Y/.78,1);if(off){X/=m;Y/=m}
     el.hidden=false;el.style.left=((X+1)/2*W)+'px';el.style.top=((1-Y)/2*H)+'px';
-    el.innerHTML=(off?`<b style="display:inline-block;transform:rotate(${Math.atan2(-Y,X)/D+90}deg)">▲</b> `:'')+`Знак · ${Math.round(Math.hypot(x-me.position.x,z-me.position.z))} м${en('windward mark')}`};
+    el.innerHTML=(off?`<b style="display:inline-block;transform:rotate(${Math.atan2(-Y,X)/D+90}deg)">▲</b> `:'')+`${lbl||'Знак'} · ${Math.round(Math.hypot(x-me.position.x,z-me.position.z))} м${en(en2||'windward mark')}`};
   // карточка задания: что сделать прямо сейчас, с галочками по шагам
   const li=(id,ok,txt)=>{const e=$('#'+id);e.className=ok?'ok':'';e.querySelector('i').textContent=ok?'✓':id.slice(2);e.querySelector('span').innerHTML=txt};
   const taskCard=(step,s,dt)=>{
@@ -122,6 +130,16 @@ function startSail3D(boatId,kind){
   // День 3: карточка лавировки — галс, лейлайн, поворот, расстояние до знака
   const tackCard=(s,dt)=>{
     const b=sim.boat,w=sim.wind,card=$('#stk');if(!sim.running&&!sim.tacks){card.hidden=false}
+    // второй отрезок: бакштагом к нижнему знаку, по пути поворот фордевинд с командами
+    if(sim.leg===2){const m2x=sim.buoy2.x*K3,m2z=sim.buoy2.y*K3,d2=Math.hypot(m2x-b.x*K3,m2z-b.y*K3),ng=sim.gybes-sim.gybes0;if(!st.d2)st.d2=d2;
+      $('#stn').textContent=sim.running?`Вниз по ветру · поворотов фордевинд: ${ng}`:'Готово';$('#stc').innerHTML=`Дойди до нижнего знака через поворот фордевинд${en('gybe and run to the leeward mark')}`;
+      const run=s.awa>=130&&s.awa<=168,sailOk=s.eff>.6&&s.st!=='nogo';
+      li('st1',run&&sailOk,s.awa<130?`Уваливайся: руль <b>${scDir(false)}</b>, от ветра — держи 135–165° к ветру, это бакштаг`:s.awa>168?'Ветер прямо в корму — так гик может перелететь сам. Приведись на бакштаг, 135–165°':!sailOk?(s.boom>s.opt?'Парус полощет: <b>«Выбрать» ↑</b>':'Парус перетянут для полного курса: <b>«Травить» ↓</b>'):'Бакштаг, парус стоит');
+      const go=!sim.crew||sim.cmd==='lh'?`руль <b>${scDir(false)}</b>, от ветра, плавно — корма через ветер`:sim.cmd==='ready'?`экипаж ответил «Готов!» — <b>«Поворот!»</b> (L)`:sim.cmd==='ra'?'экипаж готовится…':`скомандуй <b>«Приготовиться к повороту»</b> (R)`;
+      const brg2=Math.atan2(m2x-b.x*K3,-(m2z-b.y*K3))/D,to2=Math.abs(norm(brg2-b.h));
+      li('st2',ng>0,ng>0?(to2<12?'Поворот сделан, знак по курсу — держи':'Поворот сделан — курс на нижний знак, парус потрави'):b.sheet>GYBE_OK?`Перед поворотом выбери гика-шкот: <b>«Выбрать» ↑</b>, пока гик не ближе ${GYBE_OK}°`:`Гик выбран — поворот фордевинд: ${go}`);
+      $('#st3').querySelector('span').textContent=`До нижнего знака ${Math.round(d2)} м`;$('#st3').className=d2<25?'now':'';
+      $('#shb').style.width=(clamp(1-d2/st.d2,0,1)*100)+'%';$('#stz').parentNode.hidden=true;return}
     const mx=sim.buoy.x*K3,mz=sim.buoy.y*K3,bx=b.x*K3,bz=b.y*K3,d=Math.hypot(mx-bx,mz-bz);if(!st.d0)st.d0=d;
     const brg=Math.atan2(mx-bx,-(mz-bz))/D,rel=norm(brg-w.from),side=s.side,toMark=Math.abs(norm(brg-b.h));
     $('#stn').textContent=sim.running?`Лавировка · поворотов: ${sim.tacks}`:'Готово';$("#stc").innerHTML=`Дойди до знака против ветра${en('beat to the windward mark')}`;
@@ -163,7 +181,8 @@ function startSail3D(boatId,kind){
     buoys.forEach(g=>{const u=g.userData;let rx=u.x-bx,rz=u.z-bz;rx=((rx+BT/2)%BT+BT)%BT-BT/2;rz=((rz+BT/2)%BT+BT)%BT-BT/2;u.x=bx+rx;u.z=bz+rz;
       g.position.set(u.x,sea.height(u.x,u.z,t)-.25,u.z);g.rotation.z=Math.sin(t*1.1+u.p)*.08});
     if(mark){const mx=sim.buoy.x*K3,mz=sim.buoy.y*K3;mark.position.set(mx,sea.height(mx,mz,t)-.3,mz);mark.rotation.z=Math.sin(t*1.2)*.06;
-      mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D;mark.userData.lay.visible=!sim.min}
+      mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D;mark.userData.lay.visible=!sim.min&&sim.leg!==2}
+    if(mark2&&sim.buoy2){const mx=sim.buoy2.x*K3,mz=sim.buoy2.y*K3;mark2.position.set(mx,sea.height(mx,mz,t)-.3,mz);mark2.rotation.z=Math.sin(t*1.3+1)*.06}
     others.forEach(o=>{
       if(o.h===null){const a=Math.random()*Math.PI*2,r=60+Math.random()*170;o.x=bx+Math.sin(a)*r;o.z=bz-Math.cos(a)*r;o.h=norm(w.from-o.twa)}
       const dx=bx-o.x,dz=bz-o.z,dist=Math.hypot(dx,dz),toUs=Math.atan2(dx,-dz)/D;
@@ -207,7 +226,7 @@ function startSail3D(boatId,kind){
     if(tack)crewButtons();
     const mg=$('#smg');if(sim.msgT>0&&sim.msg){mg.hidden=false;mg.textContent=sim.msg;mg.className='hud3 msg '+(sim.msgC||'');mg.style.opacity=Math.min(1,sim.msgT)}else mg.hidden=true;
     const nb=w.from*D;place($('#slN'),bx+Math.sin(nb)*14.5,.4,bz-Math.cos(nb)*14.5);
-    if(tack)placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3);
+    if(tack){placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3,'Знак','windward mark');if(sim.buoy2)placeEdge($('#slA2'),sim.buoy2.x*K3,3,sim.buoy2.y*K3,'Нижний знак','leeward mark')}
     else if(step&&sim.running&&!sim.min&&!sim.coach){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
   };
   return true;
