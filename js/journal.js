@@ -20,6 +20,7 @@ const gotoBtn=l=>`<button class="btn ghost sm" data-goto="${l}">${gotoName(l)} â
 function startEx(ex){
   if(ex==='helm'){openLesson('p1',0);helmMode='practice';startLessonPractice();return}
   if(ex==='exam'){openChapter('exam');if(typeof drRun==='function')drRun('exam');return}
+  if(ex==='day1')deckMode='practice';
   if(ex==='day4')moorMode='practice';
   if(ex==='day3')tackMode='practice';
   openChapter(ex);startPractice(chap(ex).practice)}

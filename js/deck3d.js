@@ -1,13 +1,13 @@
 /* Галс · День 1 — 3D-марина, персонаж от третьего лица (Three.js r128) */
 /* =========================== 3D ПАЛУБА =========================== */
-let T3=null;
+let T3=null,deckMode=null; // deckMode: 'lesson' — мастер-класс по шагам (js/content/deck.js), 'practice' — приёмка по списку и команды шкипера
 function stop3D(){if(!T3)return;T3.running=false;cancelAnimationFrame(T3.raf);T3.ro&&T3.ro.disconnect();T3.off&&T3.off();T3.renderer.dispose();try{T3.renderer.forceContextLoss()}catch(e){}$('#three').innerHTML='';T3=null}
 function start3D(){
-  show('three');padMode('walk');$('#instBox').hidden=true;
+  show('three');padMode('walk');$('#instBox').hidden=true;const lesson=deckMode==='lesson';
   const host=$('#three');host.innerHTML='';
   const R=host.getBoundingClientRect();
   const renderer=makeRenderer(host);if(!renderer){no3D();return}
-  const ui=document.createElement('div');ui.innerHTML=`<div class="prompt" id="tp" hidden></div><div class="timer" id="tt" hidden></div><div class="tools"><button id="tc"></button><button id="tl">Подписи</button><button id="th">Подсказка</button></div>`;host.appendChild(ui);
+  const ui=document.createElement('div');ui.innerHTML=`<div class="prompt" id="tp" hidden></div><div class="timer" id="tt" hidden></div><div class="tools"><button id="tc"></button><button id="tm">${lesson?'К практике':'Мастер-класс'}</button><button id="tl">Подписи</button>${lesson?'':'<button id="th">Подсказка</button>'}</div><div class="coach" id="d1coach" hidden></div>`;host.appendChild(ui);
   const labelsBox=document.createElement('div');host.appendChild(labelsBox);
 
   /* ---------- сцена: low-poly диорама марины ---------- */
@@ -132,7 +132,7 @@ function start3D(){
     {s:'Кранец на левый борт, нас прижимает!',en:'Fender to port, we’re drifting onto them!',t:'fenderP'},{s:'Кранец на правый борт!',en:'Fender to starboard!',t:'fenderS'},
     {s:'Подай левый кормовой швартов!',en:'Pass the port stern line!',t:'sternP'},{s:'Правый кормовой швартов — потрави!',en:'Ease the starboard stern line!',t:'sternS'},
     {s:'Носовой швартов на утку!',en:'Make the bow line fast on the cleat!',t:'bowcleat'},{s:'Пожар в камбузе! Огнетушитель!',en:'Fire in the galley! Extinguisher!',t:'extinguisher'},{s:'К мачте — проверь фал грота!',en:'To the mast, check the main halyard!',t:'mast'}];
-  const st={running:true,raf:0,renderer,phase:'check',ci:0,yaw:0,pitch:.42,dist:6.2,mode:'follow',isoYaw:Math.PI/4,isoDist:24,labels:false,hintOn:false,taskT:0,drill:null,near:null,curSay:''};
+  const st={running:true,raf:0,renderer,phase:lesson?'lesson':'check',ci:0,li:0,t:0,talked:false,labelsN:0,acted:null,yaw:0,pitch:.42,dist:6.2,mode:'follow',isoYaw:Math.PI/4,isoDist:24,labels:false,hintOn:false,taskT:0,drill:null,near:null,curSay:''};
   T3=st;st.hero=hero;
   const walk=(x,z)=>{
     if(z>=9&&z<22&&Math.abs(x)<26)return true;               // понтон и набережная
@@ -149,10 +149,12 @@ function start3D(){
   const onDeck=()=>hero.position.z<5.9&&Math.abs(hero.position.x)<3;
   const sayT=t=>{st.curSay=t;say(t)};
   function curTarget(){
+    if(st.phase==='lesson'){const s=DECK.lesson[st.li];return s&&s.t_?(s.alt||[s.t_]):null}
     if(st.phase==='check'){const c=CHECK[st.ci];if(!c||c.id==='board')return null;if(c.id==='winch')return['winchP','winchS'];if(c.id==='fender')return['fenderP','fenderS'];return[c.id]}
     if(st.phase==='drill'&&st.drill)return[st.drill.list[st.drill.i].t];return null}
-  function sideTasks(){
-    if(st.phase==='check'){$('#taskLbl').textContent='Приёмка яхты · check-in';$('#steps').innerHTML=CHECK.map((c,i)=>`<li class="${i<st.ci?'done':i===st.ci?'now':''}"><i>${i<st.ci?'✓':i+1}</i><span>${c.n}${en(c.en)}</span></li>`).join('')}
+  function sideTasks(all){
+    if(st.phase==='lesson'||all){const L=DECK.lesson,li=all?99:st.li;$('#taskLbl').textContent='Мастер-класс · приёмка яхты · check-in';$('#steps').innerHTML=L.map((c,i)=>`<li class="${i<li?'done':i===li?'now':''}"><i>${i<li?'✓':i+1}</i><span>${c.n}${en(c.en)}</span></li>`).join('')}
+    else if(st.phase==='check'){$('#taskLbl').textContent='Приёмка яхты · check-in';$('#steps').innerHTML=CHECK.map((c,i)=>`<li class="${i<st.ci?'done':i===st.ci?'now':''}"><i>${i<st.ci?'✓':i+1}</i><span>${c.n}${en(c.en)}</span></li>`).join('')}
     else if(st.drill){$('#taskLbl').textContent='Команды шкипера · skipper\'s orders';const dc=st.drill.list[st.drill.i];$('#steps').innerHTML=`<li class="now"><i>${st.drill.i+1}/6</i>${dc?.s||''}</li><li><i>✓</i>Выполнено: ${st.drill.ok}</li><li><i>⏱</i>На каждую команду 20 секунд</li>`}}
   function checkStep(){sayT(CHECK[st.ci].say);hint('');st.taskT=0;sideTasks()}
   function passCheck(){const c=CHECK[st.ci];hint(c.w,'good');st.ci++;
@@ -160,36 +162,62 @@ function start3D(){
     setTimeout(()=>{if(T3===st&&st.phase==='check')checkStep()},1600)}
   function startDrill(){if(T3!==st)return;st.phase='pre';
     showDialog(`<h3>Приёмка закончена</h3><p>Теперь проверка. Шкипер будет отдавать команды, а ты беги к нужному месту и нажимай «Действие». На каждую команду 20 секунд, всего шесть.</p><p class="ex">Совет: в изометрии удобнее видеть всю яхту сразу.</p><div class="row"><button class="btn" id="dgo">Готов!</button></div>`);
-    $('#dgo').onclick=()=>{hideDialog();st.phase='drill';st.drill={list:DRILL.slice().sort(()=>Math.random()-.5).slice(0,6),i:0,ok:0,t:20};drillStep();$('#stage').focus()}}
+    $('#dgo').onclick=()=>{hideDialog();st.phase='drill';st.drill={list:DRILL.slice().sort(()=>Math.random()-.5).slice(0,6),i:0,ok:0,t:20,late:0,wrong:0};drillStep();$('#stage').focus()}}
   function drillStep(){const d=st.drill,c=d.list[d.i];d.t=20;sayT(`${c.s}<span class="en line">«${c.en}»</span>`);hint('');sideTasks()}
   function drillNext(ok){const d=st.drill;if(ok)d.ok++;d.i++;
     if(d.i>=d.list.length){st.phase='end';$('#tt').hidden=true;const pass=d.ok>=4;if(pass)markDone('day1');
-      endCard(pass?'День 1 пройден':'Экипаж пока путается',`Команд выполнено: ${d.ok} из 6. ${pass?'Ты знаешь яхту и быстро двигаешься по палубе. Завтра выходим в море и разбираемся с ветром.':'Включи «Подписи», походи по палубе и попробуй снова.'}`,pass);return}
+      endCard(pass?'День 1 пройден':'Экипаж пока путается',`Команд выполнено: ${d.ok} из 6. ${pass?'Ты знаешь яхту и быстро двигаешься по палубе. Завтра выходим в море и разбираемся с ветром.':'Включи «Подписи», походи по палубе и попробуй снова.'}`,pass,
+        practiceDone('day1',pass,st.t,{late:d.late,wrong:d.wrong},'cruiser'));return}
     drillStep()}
   st.act=()=>{
     if(!st.near)return;const id=st.near;
-    if(id==='oleg'){say(st.curSay);hint(st.phase==='check'&&st.ci===0?'Олег кивает на синюю яхту с трапом.':'Олег повторил задание.','');return}
-    if(st.phase==='check'){const t=curTarget();
+    if(id==='oleg'){st.talked=true;say(st.curSay);hint(st.phase==='check'&&st.ci===0?'Олег кивает на синюю яхту с трапом.':'Олег повторил задание.','');return}
+    if(st.phase==='lesson'){const s=DECK.lesson[st.li],tg=s.t_?(s.alt||[s.t_]):null;
+      if(tg&&tg.includes(id)&&!LDONE[s.id]){if(id==='locker')bodyM.color.set(0xf07a28);if(id==='helm')st.spin=2.4;st.acted=id;const c=CHECK.find(c=>c.id===s.id);hint(c?c.w:'Есть!','good')}
+      else hint(`Это ${HS[id].n.toLowerCase()}. Сейчас нужно другое — смотри на кольцо.`,'warn')}
+    else if(st.phase==='check'){const t=curTarget();
       if(t&&t.includes(id)){if(id==='locker')bodyM.color.set(0xf07a28);if(id==='helm')st.spin=2.4;passCheck()}
       else hint(`Это ${HS[id].n.toLowerCase()}. Сейчас нужно другое.`,'warn')}
     else if(st.phase==='drill'){const t=st.drill.list[st.drill.i].t;
-      if(id===t){hint(`Есть! ${hsName(id)}`,'good');drillNext(true)}else hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}
+      if(id===t){hint(`Есть! ${hsName(id)}`,'good');drillNext(true)}else{st.drill.wrong++;hint(`Это ${HS[id].n.toLowerCase()}, а шкипер просил другое.`,'bad')}}
   };
+  /* ---------- мастер-класс: шаги из js/content/deck.js; кольцо всегда у цели, подсветка кнопок, проверка каждого шага ---------- */
+  const L=DECK.lesson;
+  const LDONE={look:()=>Math.abs(st.yaw-st.yaw0)>1.2||Math.abs(st.isoYaw-st.iso0)>1.2||st.mode!==st.mode0,walk:()=>st.near==='oleg',talk:()=>st.talked,board:()=>onDeck(),labels:()=>st.labelsN>0,cam:()=>st.mode==='iso'};
+  function lessonEnter(){const s=L[st.li];st.yaw0=st.yaw;st.iso0=st.isoYaw;st.mode0=st.mode;st.talked=false;st.acted=null;
+    $('#stage').querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));(s.hl||[]).forEach(q=>{const e=$('#stage').querySelector(q);if(e)e.classList.add('hl')});
+    const box=$('#d1coach');box.hidden=false;box.classList.remove('min');
+    box.innerHTML=`<p class="qn">Мастер-класс · шаг ${st.li+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p><p class="live" id="d1live"></p>${s.info?'<div class="row"><button class="btn" id="d1next">Дальше</button></div>':''}`;
+    if(s.info)$('#d1next').onclick=lessonNext;
+    sayT(s.t);hint('');sideTasks()}
+  function lessonNext(){st.li++;if(st.li>=L.length){lessonDone();return}hint('Верно! Следующий шаг.','good');lessonEnter()}
+  function lessonDone(){st.phase='end';$('#stage').querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));$('#d1coach').hidden=true;$('#tp').hidden=true;
+    done['day1-lesson']=true;store.set(done);sideTasks(true);
+    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты знаешь, где на яхте жилеты, огнетушитель, штурвал, лебёдки, стопоры, брашпиль и кранцы, и умеешь ходить по палубе. В практике сначала приёмка по списку без подсветки (кнопка «Подсказка» покажет кольцо), потом команды шкипера на время: беги к нужному месту и жми «Действие».</p>
+      <div class="row"><button class="btn ghost" id="d1again">Ещё раз</button><button class="btn" id="d1prac">К практике</button></div>`);
+    const go=m=>{hideDialog();deckMode=m;stopAll();startPractice('deck3d')};$('#d1again').onclick=()=>go('lesson');$('#d1prac').onclick=()=>go('practice')}
+  function lessonTick(dt){const s=L[st.li];if(!s)return;
+    if(!s.info){const ok=LDONE[s.id]?LDONE[s.id]():st.acted&&(s.alt||[s.t_]).includes(st.acted);if(ok){lessonNext();return}}
+    st.liveT=(st.liveT||0)-dt;if(st.liveT>0)return;st.liveT=.25;const e=$('#d1live');if(!e)return;
+    const tg=curTarget();if(tg){const d=Math.min(...tg.map(id=>Math.hypot(hero.position.x-HS[id].p[0],hero.position.z-HS[id].p[2])));
+      e.textContent=d<1.35?(s.id==='walk'?'':'Ты у цели — жми «Действие»'):`До кольца ${Math.round(d)} м${s.id==='windlass'&&onDeck()?' · по боковому проходу вдоль рубки':''}`}
+    else e.textContent=s.id==='look'?'Тяни картинку в сторону':s.id==='board'?(onDeck()?'':'Трап — у кормы синей яхты'):''}
   const views=camViews($('#tc'),'deck',[['follow','за персонажем'],['iso','сверху']],'follow',m=>{st.mode=m});st.mode=views.get();
-  $('#tl').onclick=()=>{st.labels=!st.labels;$('#tl').textContent=st.labels?'Скрыть подписи':'Подписи'};
-  $('#th').onclick=()=>{st.hintOn=!st.hintOn;$('#th').textContent=st.hintOn?'Скрыть подсказку':'Подсказка'};
+  $('#tl').onclick=()=>{st.labels=!st.labels;st.labelsN++;$('#tl').textContent=st.labels?'Скрыть подписи':'Подписи'};
+  if($('#th'))$('#th').onclick=()=>{st.hintOn=!st.hintOn;$('#th').textContent=st.hintOn?'Скрыть подсказку':'Подсказка'};
+  $('#tm').onclick=()=>{deckMode=lesson?'practice':'lesson';stopAll();startPractice('deck3d')};
   const onKey=e=>{if(T3===st&&$('#dlg').hidden&&views.key(e))e.preventDefault()};
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
   // камера мышью/пальцем
   dragCamera(renderer.domElement,(dx,dy)=>{if(st.mode==='iso')st.isoYaw-=dx*.006;else{st.yaw-=dx*.006;st.pitch=clamp(st.pitch+dy*.004,.12,1.2)}},
     dy=>{if(st.mode==='iso')st.isoDist=clamp(st.isoDist+dy*.02,14,40);else st.dist=clamp(st.dist+dy*.005,3,11)});
   st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
-  checkStep();
+  if(lesson)lessonEnter();else checkStep();
   // стартовая позиция камеры
   cam.position.set(0,4,19);
   let last=performance.now(),t=0;const v3=new THREE.Vector3(),want=new THREE.Vector3(),tgt=new THREE.Vector3(),look=new THREE.Vector3(0,2,10);
   const loop=now=>{
-    if(T3!==st)return;const dt=Math.min(.05,(now-last)/1000);last=now;t+=dt;
+    if(T3!==st)return;const dt=Math.min(.05,(now-last)/1000);last=now;t+=dt;st.t+=dt;
     const dlgOpen=!$('#dlg').hidden;const yaw=st.mode==='iso'?st.isoYaw:st.yaw;
     if(!dlgOpen){
       const f=(keys.up?1:0)-(keys.down?1:0),s=(keys.right?1:0)-(keys.left?1:0);
@@ -215,12 +243,13 @@ function start3D(){
     oleg.rotation.y=Math.atan2(-(hero.position.x-oleg.position.x),-(hero.position.z-oleg.position.z))+Math.PI;
     // этапы
     if(st.phase==='check'){st.taskT+=dt;if(CHECK[st.ci]&&CHECK[st.ci].id==='board'&&onDeck())passCheck()}
-    if(st.phase==='drill'&&!dlgOpen){st.drill.t-=dt;$('#tt').hidden=false;$('#tt').textContent=Math.max(0,Math.ceil(st.drill.t))+' с';if(st.drill.t<=0){hint('Не успел. Следующая команда!','bad');drillNext(false)}}
+    if(st.phase==='lesson'&&!dlgOpen)lessonTick(dt);
+    if(st.phase==='drill'&&!dlgOpen){st.drill.t-=dt;$('#tt').hidden=false;$('#tt').textContent=Math.max(0,Math.ceil(st.drill.t))+' с';if(st.drill.t<=0){st.drill.late++;hint('Не успел. Следующая команда!','bad');drillNext(false)}}
     // ближайшая точка
     let best=null,bd=1.35;for(const id in HS){const h=HS[id].p;const d=Math.hypot(hero.position.x-h[0],hero.position.z-h[2]);if(d<bd){bd=d;best=id}}
     st.near=best;const tp=$('#tp');
-    if(best&&(st.phase==='check'||st.phase==='drill')){tp.hidden=false;tp.innerHTML=`<kbd>E</kbd>${HS[best].talk?'Поговорить: ':''}${hsName(best)}`}else tp.hidden=true;
-    const tg=curTarget();const showRing=tg&&(st.hintOn||(st.phase==='check'&&st.taskT>7));
+    if(best&&(st.phase==='check'||st.phase==='drill'||st.phase==='lesson')){tp.hidden=false;tp.innerHTML=`<kbd>E</kbd>${HS[best].talk?'Поговорить: ':''}${hsName(best)}`}else tp.hidden=true;
+    const tg=curTarget();const showRing=tg&&(st.hintOn||st.phase==='lesson'||(st.phase==='check'&&st.taskT>7));
     ring.visible=!!showRing;if(showRing){const h=HS[tg[0]].p;ring.position.set(h[0],1.08+me.position.y,h[2]);ring.scale.setScalar(1+Math.sin(t*5)*.12)}
     // камера: плавный переход между режимами
     tgt.set(hero.position.x,hero.position.y+1.2,hero.position.z);
