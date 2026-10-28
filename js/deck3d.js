@@ -80,7 +80,8 @@ function start3D(){
   const person=(shirt,capC,o)=>makePerson(shirt,capC,o);
   const hero=person(0x2f5d8a,0xf4f1e6);hero.position.set(0,1,13);scene.add(hero);const bodyM=hero.userData.body.material;
   const oleg=person(0xfbfaf6,0xf2a33a);oleg.position.set(1.9,1,10.2);oleg.rotation.y=Math.PI*.75;scene.add(oleg);
-  const npcs=[[0xe2564d,0x24394a,-22,-4,10.4,.9],[0x3cbf7e,0xfbfaf6,6,22,11.3,.7],[0xf2a33a,0x24394a,-9,-9,2,.6]].map(([a,b,x0,x1,z,s],i)=>{const p=person(a,b);p.position.set(x0,1,z);scene.add(p);return{p,x0,x1,z,s,dir:1,fin:i===2}});
+  // прохожие и стоящие — разного роста и цвета кожи, чтобы марина не выглядела толпой близнецов
+  const npcs=[[0xe2564d,0x24394a,-22,-4,10.4,.9],[0x3cbf7e,0xfbfaf6,6,22,11.3,.7],[0xf2a33a,0x24394a,-9,-9,2,.6]].map(([a,b,x0,x1,z,s],i)=>{const p=person(a,b,{h:[.95,1.06,.98][i],skin:[0xd9a97e,0xb07a4c,0xf1d2b6][i]});p.position.set(x0,1,z);scene.add(p);return{p,x0,x1,z,s,dir:1,fin:i===2}});
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.5,.05,8,28),new THREE.MeshBasicMaterial({color:0xf2a33a}));ring.rotation.x=Math.PI/2;ring.visible=false;scene.add(ring);
 
   /* ---------- детали марины: небо, пальмы, утки, колонки, круги, кафе, тузик, лодки на рейде, люди ---------- */
@@ -101,7 +102,7 @@ function start3D(){
   const dinghy=makeDinghy(0x5d6770);scene.add(dinghy);const rower=person(0xf2a33a,0x24394a);rower.position.set(0,.05,1.0);rower.scale.setScalar(.95);rower.userData.legs.forEach(l=>l.rotation.x=-1.4);dinghy.add(rower);
   const cruiser=makeBoat('motor',{band:0xb8423a});cruiser.scale.setScalar(.75);scene.add(cruiser);
   // люди на набережной: беседуют, рыбачит, сидят в кафе
-  const still=[[0xffffff,null,-6,15,1.2,{hair:0x2b1d14}],[0x2a6fa8,0xf4f1e6,-5.3,15.1,-1.6],[0xe0a23a,null,-18.75,17,-1.57,{hair:0x8a5a2a}],[0x3cbf7e,0x24394a,8.75,17,-1.57]].map(([a,b,x,z,r,o])=>{const p=person(a,b,o);p.position.set(x,1,z);p.rotation.y=r;scene.add(p);return p});
+  const still=[[0xffffff,null,-6,15,1.2,{hair:0x2b1d14}],[0x2a6fa8,0xf4f1e6,-5.3,15.1,-1.6],[0xe0a23a,null,-18.75,17,-1.57,{hair:0x8a5a2a}],[0x3cbf7e,0x24394a,8.75,17,-1.57]].map(([a,b,x,z,r,o],i)=>{const p=person(a,b,Object.assign({h:[1.03,.93,1,.96][i],skin:[0x8a5a3a,0xe8c3a0,0xd9a97e,0xb07a4c][i],pants:[0x24303a,0xd9cdb4,0x4a5a6a,0x24303a][i]},o));p.position.set(x,1,z);p.rotation.y=r;scene.add(p);return p});
   [still[2],still[3]].forEach(p=>{p.userData.legs.forEach(l=>l.rotation.x=-1.45);p.position.y=.62});
   const fisher=person(0x8fd0e0,0xf2a33a);fisher.position.set(24.6,.62,9.25);fisher.rotation.y=Math.PI;fisher.userData.legs.forEach(l=>l.rotation.x=-1.5);scene.add(fisher);
   {const rod=kit3();rod.rod([0,1.1,-.2],[0,3.2,-3.4],.015,0x3b3f41,4).line([0,3.2,-3.4],[0,-.2,-5]);rod.build(fisher)}

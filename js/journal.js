@@ -7,7 +7,7 @@ function logAdd(ex,rec){const a=logGet();a.push(Object.assign({ex,d:Date.now()},
 /* итог практики: запись в журнал и HTML разбора для финального окна. iss — {ключ DEBRIEF: число} */
 function practiceDone(ex,ok,t,iss,boat){
   const c=typeof condGet==='function'?condGet():{},is={};for(const k in iss)if(iss[k]>0&&DEBRIEF[k])is[k]=Math.round(iss[k]);
-  logAdd(ex,{ok,t:Math.round(t),boat,cond:{wind:c.wind,dir:c.dir,gust:c.gust,hints:c.hints},iss:is});
+  logAdd(ex,{ok,t:Math.round(t),boat,cond:{wind:c.wind,dir:c.dir,gust:c.gust,tod:c.tod,hints:c.hints},iss:is});
   return debriefHtml(is,ok)}
 function debriefHtml(iss,ok){
   const ks=Object.keys(iss);
@@ -30,7 +30,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   const l=b.dataset.goto;if(chap(l))openChapter(l);else openLesson(l,0)});
 
 const fmtD=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' '+new Date(d).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-const condTxt=c=>c?[{low:'слабый',mid:'средний',high:'свежий'}[c.wind]||'',c.gust?'порывы':'',c.hints==='min'?'без подсказок':''].filter(Boolean).join(', '):'';
+const condTxt=c=>c?[{low:'слабый',mid:'средний',high:'свежий'}[c.wind]||'',c.gust?'порывы':'',{morning:'утро',evening:'вечер'}[c.tod]||'',c.hints==='min'?'без подсказок':''].filter(Boolean).join(', '):'';
 function renderJournal(){
   show('board');hint('');$('#taskLbl').textContent='Вахтенный журнал · logbook';
   const L=logGet(),pr=L.filter(r=>r.ex!=='exam'&&EXN[r.ex]),exs=L.filter(r=>r.ex==='exam');
