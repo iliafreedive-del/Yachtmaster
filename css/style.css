@@ -84,6 +84,16 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .jt th{font-family:var(--f-mono);font-size:11px;font-weight:400;color:var(--muted);text-align:left;padding:4px 8px 6px 0;white-space:nowrap}
 .jt td{padding:7px 8px 7px 0;border-top:1px solid var(--line);vertical-align:top}
 .jt small{color:var(--muted)}.jt .ok{color:var(--stbd)}
+/* журнал на телефоне: таблица складывается в карточки — название, числа с подписями в строку, кнопка «Тренировать» под ними, ничего не уезжает за край */
+@media (max-width:600px){
+  .jt thead{display:none}
+  .jt,.jt tbody{display:block}
+  .jt tr{display:flex;flex-wrap:wrap;gap:2px 14px;border-top:1px solid var(--line);padding:8px 0}
+  .jt td{display:block;border:0;padding:0}
+  .jt td:first-child{flex:1 0 100%;font-weight:600}
+  .jt td[data-l]::before{content:attr(data-l) ' ';font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+  .jt td.act{flex:1 0 100%;padding-top:6px}
+}
 .btn:disabled{opacity:.4;cursor:default}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 /* slides */
@@ -661,7 +671,7 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
 }
 /* марина и рулёжка в узкой сцене: мастер-класс под кнопками и ветром, не длиннее места до пульта; длинный текст прокручивается, «Дальше» видна всегда */
 @container (max-width:820px) and (min-height:521px){
-  .coach{top:calc(var(--tl,32px) + 72px);max-height:max(150px,calc(100% - var(--tl,32px) - var(--hh,0px) - 88px))}
+  .coach{top:calc(var(--tl,32px) + 72px);max-height:min(max(150px,42%),max(150px,calc(100% - var(--tl,32px) - var(--hh,0px) - 88px)))}
   .coach>p:not(.qn){overflow:auto;min-height:0;overscroll-behavior:contain}
   .coach>.row{flex:none}
 }
