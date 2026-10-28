@@ -42,7 +42,7 @@ function renderJournal(){
   const wrong={};exs.slice(-5).forEach(r=>(r.wrong||[]).forEach(l=>{wrong[l]=(wrong[l]||0)+1}));
   const wr=Object.entries(wrong).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const rows=Object.keys(EXN).filter(x=>x!=='exam').map(x=>{const a=pr.filter(r=>r.ex===x),ok=a.filter(r=>r.ok),best=ok.length?Math.min(...ok.map(r=>r.t)):null,last=a[a.length-1];
-    return `<tr><td>${EXN[x]}</td><td>${a.length}</td><td>${ok.length}</td><td>${best!=null?best+' с':'—'}</td><td>${last?`${fmtD(last.d)}${last.ok?'':' · авария'}<br><small>${condTxt(last.cond)}</small>`:'—'}</td><td><button class="btn ghost sm" data-ex="${x}">Тренировать</button></td></tr>`}).join('');
+    return `<tr><td>${EXN[x]}</td><td data-l="попыток">${a.length}</td><td data-l="пройдено">${ok.length}</td><td data-l="лучшее">${best!=null?best+' с':'—'}</td><td data-l="последняя">${last?`${fmtD(last.d)}${last.ok?'':' · авария'}<br><small>${condTxt(last.cond)}</small>`:'—'}</td><td class="act"><button class="btn ghost sm" data-ex="${x}">Тренировать</button></td></tr>`}).join('');
   $('#board').innerHTML=`<div class="journal"><div class="card"><p class="qn">Вахтенный журнал · logbook</p><h3>Как идёт подготовка</h3>
     <p class="ex">Здесь собраны твои практики в этом браузере: время, условия и ошибки. Тренажёр запоминает ошибки и подсказывает, что повторить.</p></div>
    <div class="card"><p class="qn">Слабые места · weak spots</p>${wl.length?wl.map(w=>{const d=DEBRIEF[w.k];
@@ -51,7 +51,7 @@ function renderJournal(){
     ${wr.length?`<p class="lbl" style="margin-top:14px">Экзамен: где были ошибки</p>${wr.map(([l,n])=>`<div class="row" style="align-items:center;margin:4px 0">${gotoBtn(l)}<span class="cnt">ошибок: ${n}</span></div>`).join('')}`:''}</div>
    ${typeof drTopicStats==='function'?`<div class="card"><p class="qn">Теория по темам · theory</p><div class="jtop">${DTOPICS.map(t=>{const s=drTopicStats(t.id);return`<div><span>${t.n}</span><i class="dbar"><i style="width:${s.p}%"></i></i><small>${s.m} из ${s.n}</small></div>`}).join('')}</div><div class="row"><button class="btn ghost sm" data-ex="exam">Пробный экзамен</button></div></div>`:''}
    <div class="card"><p class="qn">Практика · practice</p><div class="tw"><table class="jt"><thead><tr><th>Упражнение</th><th>Попыток</th><th>Пройдено</th><th>Лучшее время</th><th>Последняя</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>
-   ${exs.length?`<div class="card"><p class="qn">Экзамен · theory test</p><div class="tw"><table class="jt"><thead><tr><th>Когда</th><th>Результат</th><th></th></tr></thead><tbody>${exs.slice(-8).reverse().map(r=>`<tr><td>${fmtD(r.d)}</td><td>${r.score} из ${r.of}</td><td>${r.ok?'<span class="ok">сдан</span>':'не сдан'}</td></tr>`).join('')}</tbody></table></div></div>`:''}
+   ${exs.length?`<div class="card"><p class="qn">Экзамен · theory test</p><div class="tw"><table class="jt"><thead><tr><th>Когда</th><th>Результат</th><th></th></tr></thead><tbody>${exs.slice(-8).reverse().map(r=>`<tr><td>${fmtD(r.d)}</td><td data-l="результат">${r.score} из ${r.of}</td><td data-l="итог">${r.ok?'<span class="ok">сдан</span>':'не сдан'}</td></tr>`).join('')}</tbody></table></div></div>`:''}
    ${L.length?'<div class="row"><button class="btn ghost sm" id="jClr">Очистить журнал</button></div>':''}</div>`;
   $('#board').scrollTop=0;
   if($('#jClr'))$('#jClr').onclick=()=>{if(!confirm('Удалить все записи журнала в этом браузере?'))return;try{localStorage.removeItem(LOG_KEY)}catch(e){}renderJournal()};
