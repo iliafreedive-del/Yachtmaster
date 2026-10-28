@@ -15,7 +15,7 @@ function markDone(k){done[k]=true;store.set(done);renderTabs()}
 function say(t){$('#say').innerHTML=rich(t)}
 function hint(t,cls=''){const h=$('#hint');h.innerHTML=rich(t||'');h.className='hint '+cls}
 const chap=id=>CH.find(c=>c.id===id);
-function nextId(){const i=TABS.findIndex(m=>m.id===cur);return CH[Math.min(i+1,CH.length-1)].id}
+function nextId(){const i=CH.findIndex(m=>m.id===cur);return CH[Math.min(i+1,CH.length-1)].id}
 
 /* ---------- layout helpers ---------- */
 function show(view){ // 'board' | 'canvas' | 'three'

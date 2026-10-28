@@ -80,6 +80,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .journal .card>.di{border-top:1px solid var(--line);padding-top:10px}
 .journal .row{display:flex;flex-wrap:wrap;gap:8px}
 .tw{overflow-x:auto}
+/* экран «Сегодня» (js/today.js): следующий шаг, сетка дней недели */
+.today .tstep{border-left:3px solid var(--buoy);padding:2px 0 2px 12px}
+.today .tn{margin:0 0 4px;font-size:18px;font-weight:600}.today .tn2{margin:0}
+.today .tdays{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.today .tdays button{font:inherit;text-align:left;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.today .tdays button small,.today .tdays button i{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.today .tdays button.ok{border-color:var(--stbd)}.today .tdays button.ok i{color:var(--stbd)}
+.today .tdays button.half{border-color:var(--buoy)}.today .tdays button.half i{color:var(--buoy)}
 .jt{width:100%;border-collapse:collapse;font-size:13.5px}
 .jt th{font-family:var(--f-mono);font-size:11px;font-weight:400;color:var(--muted);text-align:left;padding:4px 8px 6px 0;white-space:nowrap}
 .jt td{padding:7px 8px 7px 0;border-top:1px solid var(--line);vertical-align:top}

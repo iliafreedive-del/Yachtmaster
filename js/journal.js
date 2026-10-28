@@ -31,13 +31,14 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 
 const fmtD=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' '+new Date(d).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 const condTxt=c=>c?[{low:'слабый',mid:'средний',high:'свежий'}[c.wind]||'',c.gust?'порывы':'',{morning:'утро',evening:'вечер'}[c.tod]||'',c.hints==='min'?'без подсказок':''].filter(Boolean).join(', '):'';
+/* слабые места: в скольких из последних 10 попыток каждого упражнения встречалась ошибка. pr — записи практик (по умолчанию все из журнала) */
+function logWeak(pr){pr=pr||logGet().filter(r=>r.ex!=='exam'&&EXN[r.ex]);const weak={};
+  Object.keys(EXN).filter(x=>x!=='exam').forEach(x=>{const last=pr.filter(r=>r.ex===x).slice(-10);
+    last.forEach(r=>{for(const k in r.iss||{}){const w=weak[k]||(weak[k]={k,ex:x,n:0,of:last.length});w.n++}})});
+  return Object.values(weak).sort((a,b)=>b.n/b.of-a.n/a.of)}
 function renderJournal(){
   show('board');hint('');$('#taskLbl').textContent='Вахтенный журнал · logbook';
-  const L=logGet(),pr=L.filter(r=>r.ex!=='exam'&&EXN[r.ex]),exs=L.filter(r=>r.ex==='exam');
-  // слабые места: в скольких из последних 10 попыток каждого упражнения встречалась ошибка
-  const weak={};Object.keys(EXN).filter(x=>x!=='exam').forEach(x=>{const last=pr.filter(r=>r.ex===x).slice(-10);
-    last.forEach(r=>{for(const k in r.iss||{}){const w=weak[k]||(weak[k]={k,ex:x,n:0,of:last.length});w.n++}})});
-  const wl=Object.values(weak).sort((a,b)=>b.n/b.of-a.n/a.of);
+  const L=logGet(),pr=L.filter(r=>r.ex!=='exam'&&EXN[r.ex]),exs=L.filter(r=>r.ex==='exam'),wl=logWeak(pr);
   // экзамен: в каких уроках чаще ошибки (последние 5 попыток)
   const wrong={};exs.slice(-5).forEach(r=>(r.wrong||[]).forEach(l=>{wrong[l]=(wrong[l]||0)+1}));
   const wr=Object.entries(wrong).sort((a,b)=>b[1]-a[1]).slice(0,6);
