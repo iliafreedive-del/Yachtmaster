@@ -153,10 +153,10 @@ function startMoor3D(mode){
     crew.forEach(([c,cap,x,z,ry])=>{const p=makePerson(c,cap);p.position.set(x,1,z);p.rotation.y=ry;scene.add(p)});
     const shirts=[0x6a4a8a,0x1f4f7a,0xe2564d,0xf2c14e,0x3cbf7e,0xffffff,0x2a6f8a,0xb35a1f];
     // прохожие: разные цвета, скорость и отрезок набережной
-    [[-30,-5],[30,-6.5],[-12,-6],[44,-5.5]].forEach(([x,z],i)=>{const p=makePerson(pick(shirts),Math.random()<.4?pick(shirts):null,{hair:pick([0x6b4a2a,0x2b1d14,0x8a5a2a,0xd8c08a])});p.position.set(x,1,z);scene.add(p);
+    [[-30,-5],[30,-6.5],[-12,-6],[44,-5.5]].forEach(([x,z],i)=>{const p=makePerson(pick(shirts),Math.random()<.4?pick(shirts):null,{hair:pick([0x6b4a2a,0x2b1d14,0x8a5a2a,0xd8c08a]),skin:pick(SKINS),h:.9+Math.random()*.2,pants:pick([0x24303a,0x4a5a6a,0xd9cdb4,0x1f2f4a])});p.position.set(x,1,z);scene.add(p);
       deco.walkers.push({p,x0:x,z,sp:(i%2?-1:1)*(.6+Math.random()*.7),amp:8+Math.random()*10,ph:Math.random()*6})});
     // экипажи соседей в кокпитах: кто-то стоит у штурвала, кто-то возится с концами
-    busy.sort(()=>Math.random()-.5).slice(0,3).forEach(g=>{const p=makePerson(pick(shirts),Math.random()<.5?pick(shirts):null);p.position.set((Math.random()-.5)*1.2,1.03,4.6+Math.random()*.4);p.rotation.y=Math.random()*6.3;g.add(p);deco.crew.push({p,ph:Math.random()*6})});
+    busy.sort(()=>Math.random()-.5).slice(0,3).forEach(g=>{const p=makePerson(pick(shirts),Math.random()<.5?pick(shirts):null,{skin:pick(SKINS),h:.92+Math.random()*.16});p.position.set((Math.random()-.5)*1.2,1.03,4.6+Math.random()*.4);p.rotation.y=Math.random()*6.3;g.add(p);deco.crew.push({p,ph:Math.random()*6})});
     deco.dinghy=makeDinghy(0x5d6770);const r=makePerson(0xf07a28,null);r.position.set(0,.05,.9);r.scale.setScalar(.95);deco.dinghy.add(r);scene.add(deco.dinghy);
   }
   scene.traverse(o=>{if(o.isMesh&&o!==sea.mesh&&o.material.transparent!==true){o.castShadow=true;o.receiveShadow=true}});
@@ -312,7 +312,7 @@ function startMoor3D(mode){
     if(M4!==st)return;
     const dt=Math.min(.05,(now-lastT)/1000);lastT=now;st.t+=st.running?dt*M4X:0;
     if(deco){const T=now/1000;skyD.clouds.rotation.y=T*.004;
-      deco.walkers.forEach(w=>{const a=T*.12*Math.abs(w.sp)+w.ph,s=Math.sin(a);w.p.position.x=w.x0+s*w.amp*Math.sign(w.sp);w.p.rotation.y=Math.cos(a)*w.sp>0?-Math.PI/2:Math.PI/2;w.p.userData.walk(T*6*Math.abs(w.sp),.45)});
+      deco.walkers.forEach(w=>{const a=T*.12*Math.abs(w.sp)+w.ph,s=Math.sin(a);w.p.position.x=w.x0+s*w.amp*Math.sign(w.sp);w.p.rotation.y=Math.cos(a)*w.sp>0?-Math.PI/2:Math.PI/2;w.p.userData.walk(T*6*Math.abs(w.sp),.45*Math.min(1,Math.abs(Math.cos(a))*3))});
       deco.crew.forEach(c=>{const u=c.p.userData;u.arms[0].rotation.x=Math.sin(T*1.3+c.ph)*.5-.3;u.arms[1].rotation.x=Math.sin(T*1.1+c.ph*2)*.3;c.p.rotation.y+=Math.sin(T*.3+c.ph)*.002});
       const a=T*.12;deco.dinghy.position.set((deco.dx||1)*(40+Math.sin(a)*9),0,28+Math.cos(a)*6);deco.dinghy.rotation.y=(deco.dx||1)*(a+Math.PI/2)}
     for(let i=0;i<M4X&&st.running&&$('#dlg').hidden;i++){physics(dt);if(st.running)(lesson?lessonTick:practiceTick)(dt)}

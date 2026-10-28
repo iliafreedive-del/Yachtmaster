@@ -28,9 +28,11 @@ function skyEnv(renderer){
   const pm=new THREE.PMREMGenerator(renderer),rt=pm.fromScene(s,.02);pm.dispose();return rt.texture;
 }
 
-/* человек: туловище, голова, кепка, руки и ноги на шарнирах. userData.walk(t,amp) машет руками и ногами, body — туловище (цвет = жилет) */
+/* человек: туловище, голова, кепка, руки и ноги на шарнирах. userData.walk(t,amp) машет руками и ногами, body — туловище (цвет = жилет).
+   o.skin — цвет кожи (SKINS — палитра для прохожих), o.h — рост (1 = 1,8 м), o.hair — волосы без кепки, o.pants — штаны */
+const SKINS=[0xf1d2b6,0xe8c3a0,0xd9a97e,0xb07a4c,0x8a5a3a];
 function makePerson(shirt,cap,o){
-  o=o||{};const g=new THREE.Group(),skin=M3(o.skin||0xe8c3a0),pants=M3(o.pants||0x24303a),shirtM=M3(shirt);
+  o=o||{};const g=new THREE.Group(),skin=M3(o.skin||0xe8c3a0),pants=M3(o.pants||0x24303a),shirtM=M3(shirt);if(o.h)g.scale.setScalar(o.h);
   const body=mesh3(new THREE.CylinderGeometry(.2,.24,.62,8),shirtM,0,1.06,0,g);
   mesh3(new THREE.CylinderGeometry(.22,.2,.16,8),pants,0,.72,0,g);
   mesh3(new THREE.CylinderGeometry(.06,.07,.1,6),skin,0,1.42,0,g);
