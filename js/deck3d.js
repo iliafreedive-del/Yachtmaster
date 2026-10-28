@@ -11,10 +11,10 @@ function start3D(){
   const labelsBox=document.createElement('div');host.appendChild(labelsBox);
 
   /* ---------- сцена: low-poly диорама марины ---------- */
-  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:220}).getHex(),hq=gfxQ()==='high';
+  const scene=new THREE.Scene(),TD=tod3d(),sky=atmos3d(scene,renderer,{near:70,far:220}).getHex(),hq=gfxQ()==='high';
   const cam=new THREE.PerspectiveCamera(55,R.width/R.height,.1,500);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-18,30,14);sun.castShadow=true;
+  scene.add(new THREE.HemisphereLight(TD.hemi[0],TD.hemi[1],TD.hemi[2]));
+  const sun=new THREE.DirectionalLight(TD.sunCol,TD.sunI),SUN=TD.sun.map(v=>v*38);sun.position.set(SUN[0],SUN[1],SUN[2]);sun.castShadow=true;
   sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);const sc=sun.shadow.camera;sc.left=-30;sc.right=30;sc.top=30;sc.bottom=-30;sc.near=1;sc.far=90;sun.shadow.bias=-.0006;
   scene.add(sun);scene.add(sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,parent)=>mesh3(geo,mat,x,y,z,parent||scene);
@@ -23,7 +23,7 @@ function start3D(){
   {const p=bed.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,-2.6+Math.sin(x*.21)*.35+Math.cos(z*.17)*.35+Math.sin((x+z)*.07)*.4)}}
   mesh(bed,M(0x2f8f88),0,0,0);
   // вода в марине: мелкая рябь, сквозь неё видно дно; за маяком — зыбь открытого моря
-  const sea=makeOcean(scene,{R:200,y:.15,sun:[-18,30,14],wind:{from:300,kn:7},calm:.2,opacity:.78,foam:0,rip:.8,deep:0x1a5f69,shal:0x2b8a84,sky}),water=sea.mesh;
+  const sea=makeOcean(scene,{R:200,y:.15,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:{from:300,kn:7},calm:.2,opacity:.78,foam:0,rip:.8,deep:0x1a5f69,shal:0x2b8a84,sky}),water=sea.mesh;
   // набережная, город, холмы
   mesh(new THREE.BoxGeometry(62,4,26),M(0xa89c82),0,-1,25);
   for(let x=-26;x<=26;x+=6.5){if(Math.abs(x)<1)continue;mesh(new THREE.CylinderGeometry(.06,.06,2.6,6),M(0x3b4247),x,2.3,13.4);mesh(new THREE.SphereGeometry(.22,8,6),M(0xfff3c4,{emissive:0x332a10}),x,3.65,13.4)}
@@ -84,7 +84,7 @@ function start3D(){
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.5,.05,8,28),new THREE.MeshBasicMaterial({color:0xf2a33a}));ring.rotation.x=Math.PI/2;ring.visible=false;scene.add(ring);
 
   /* ---------- детали марины: небо, пальмы, утки, колонки, круги, кафе, тузик, лодки на рейде, люди ---------- */
-  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300,hor:sky,top:0x6fa7c4});
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:300,hor:sky,top:TD.top,sun:TD.sun,glow:TD.glow,gs:TD.gs,cloud:TD.cloud,cloudE:TD.cloudE});
   [[-24,15],[-12,15.5],[3,15.2],[17,15.6],[25,14.8],[-36,-12],[-38,14],[-41,4]].forEach(([x,z],i)=>{const p=makePalm(4.4+(i%3)*.9,.9);p.position.set(x,x<-30?.4:1,z);p.rotation.y=i*1.3;scene.add(p)});
   const dk=kit3();
   for(let x=-24;x<=24;x+=4.5)cleat3(dk,x+.6,1,9.15);
@@ -258,7 +258,7 @@ function start3D(){
     const k=1-Math.exp(-dt*6);cam.position.lerp(want,k);look.lerp(tgt,k);cam.lookAt(look);
     const fov=st.mode==='iso'?32:55;if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*k;cam.updateProjectionMatrix()}
     // тени следуют за героем
-    sun.position.set(hero.position.x-18,30,hero.position.z+14);sun.target.position.copy(hero.position);
+    sun.position.set(hero.position.x+SUN[0],SUN[1],hero.position.z+SUN[2]);sun.target.position.copy(hero.position);
     renderer.render(scene,cam);
     const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;
     for(const id in HS){const d=labels[id];const sh=st.labels||id===best;if(!sh){d.hidden=true;continue}

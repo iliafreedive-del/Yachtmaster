@@ -21,16 +21,16 @@ function startSail3D(boatId,kind){
     <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>${tack?'<div class="tlabel aim" id="slA2"></div>':''}`;
   host.appendChild(ui);hudVars(ui);
 
-  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:110,far:420}).getHex();
+  const scene=new THREE.Scene(),TD=tod3d(),sky=atmos3d(scene,renderer,{near:110,far:420}).getHex();
   const cam=new THREE.PerspectiveCamera(30,R.width/R.height,.5,900),hq=gfxQ()==='high';
-  scene.add(new THREE.HemisphereLight(0xfff3e0,0x2f5f6a,.55));
-  const sun=new THREE.DirectionalLight(0xffe9c8,.9);sun.castShadow=true;sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);
+  scene.add(new THREE.HemisphereLight(TD.hemi[0],TD.hemi[1],TD.hemi[2]+.05));
+  const sun=new THREE.DirectionalLight(TD.sunCol,TD.sunI+.05),SUN=TD.sun.map(v=>v*53);sun.castShadow=true;sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);
   {const c=sun.shadow.camera;c.left=-22;c.right=22;c.top=22;c.bottom=-22;c.near=1;c.far=120}sun.shadow.bias=-.0008;
   scene.add(sun,sun.target);
-  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:380,hor:sky,top:0x6fa7c4});
+  scene.environment=skyEnv(renderer);const skyD=skyDome(scene,{r:380,hor:sky,top:TD.top,sun:TD.sun,glow:TD.glow,gs:TD.gs,cloud:TD.cloud,cloudE:TD.cloudE});
 
   /* вода: волны и рябь бегут по ветру, сетка едет за яхтой; ветер виден по ряби, порывам и редким штрихам в воздухе */
-  const sea=makeOcean(scene,{R:340,sun:[-25,45,18],wind:{from:0,kn:12},foam:.55,sky}),wisps=makeWisps(scene,{op:.5});let seaSet=false;
+  const sea=makeOcean(scene,{R:340,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:{from:0,kn:12},foam:.55,sky}),wisps=makeWisps(scene,{op:.5});let seaSet=false;
   const wake=makeWake(scene,sea,{w0:.5,spread:3.4}),wakePts=[];
   /* буи-ориентиры, чтобы был виден ход */
   const BT=260,buoys=[];
@@ -217,7 +217,7 @@ function startSail3D(boatId,kind){
       v3.set(tgt.x+Math.sin(st.camYaw)*Math.cos(pit)*dist,ty+Math.sin(pit)*dist,tgt.z+Math.cos(st.camYaw)*Math.cos(pit)*dist);
       cam.position.lerp(v3,k);look.lerp(tgt,k)}
     first=false;cam.lookAt(look);
-    sun.position.set(bx-25,45,bz+18);sun.target.position.set(bx,0,bz);
+    sun.position.set(bx+SUN[0],SUN[1],bz+SUN[2]);sun.target.position.set(bx,0,bz);
     renderer.render(scene,cam);
     // HUD
     const Y=st.camYaw,up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
