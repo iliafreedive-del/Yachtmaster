@@ -14,7 +14,7 @@ function startFleet(){
     <div class="fcard" id="fc"></div><div id="flab" hidden></div><p class="f360" id="f360">⟲ 360° · потяните, чтобы повернуть</p><div class="fthumbs" id="fb"></div>`;
   host.appendChild(ui);
 
-  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:240}).getHex();
+  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:70,far:240,tod:'day'}).getHex();
   const cam=new THREE.PerspectiveCamera(36,R.width/R.height,.3,400);
   scene.add(new THREE.HemisphereLight(0xfff6e8,0x3d6f7c,.5));
   const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-14,30,12);sun.castShadow=true;sun.shadow.mapSize.set(gfxQ()==="high"?2048:1024,gfxQ()==="high"?2048:1024);

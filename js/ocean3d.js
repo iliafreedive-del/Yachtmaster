@@ -7,6 +7,14 @@ function gfxQ(){try{const q=localStorage.getItem('gals-gfx');if(q==='high'||q===
   return matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<820?'low':'high'}
 function setGfxQ(q){try{localStorage.setItem('gals-gfx',q)}catch(e){}}
 
+/* время суток: дымка, небо, солнце и свет. Выбирается в карточке «Условия» (gals-cond.tod); каталог лодок всегда днём.
+   sun — направление на солнце (x,y,z), hemi — [небо, земля, сила] полусферного света, glow и gs — цвет и размер диска солнца в небе */
+const TOD={
+  morning:{n:'утро',en:'morning',haze:0xe9e7de,top:0x9dbfcf,sun:[.6,.34,.5],sunCol:0xffe2bc,sunI:.7,hemi:[0xfff1de,0x66848c,.6],exp:1.0,fogK:.6,cloud:0xf7f2ea,cloudE:0x9aa3a8,glow:0xffe9c8,gs:.42,water:0xdfe6e3},
+  day:{n:'день',en:'day',haze:0xd6e3dd,top:0x6fa7c4,sun:[-.46,.78,.42],sunCol:0xfff0d8,sunI:.85,hemi:[0xfff6e8,0x4a7a86,.5],exp:1.15,fogK:1,cloud:0xffffff,cloudE:0x8a9aa4,glow:0xfff6dc,gs:.26,water:0xffffff},
+  evening:{n:'вечер',en:'evening',haze:0xe0ad7c,top:0x3b5a86,sun:[-.82,.26,.3],sunCol:0xffa860,sunI:1.1,hemi:[0xffc08a,0x2e4858,.42],exp:.92,fogK:.9,cloud:0xf0c9a6,cloudE:0x9a7a66,glow:0xffbf78,gs:.6,water:0xb9bcc2}};
+function tod3d(k){k=k||(typeof condGet==='function'?condGet().tod:'day');return TOD[k]||TOD.day}
+
 /* общие куски шейдеров: шум для пены и порывов */
 const GLSL_NOISE=`
 float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
@@ -14,10 +22,11 @@ float vnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
   return mix(mix(h21(i),h21(i+vec2(1.,0.)),f.x),mix(h21(i+vec2(0.,1.)),h21(i+vec2(1.,1.)),f.x),f.y);}`;
 
 /* волны от ветра: from — откуда дует, °; kn — узлы; calm — доля открытого моря (марина за волноломом ≈ .15).
-   Высоты учебные: 12 узлов в открытом море дают волну около полуметра. */
+   Высоты учебные: 12 узлов в открытом море дают волну около полуметра.
+   Восемь волн разной длины и направления, чтобы узор на воде не повторялся; на экономной графике берутся первые четыре. */
 function windWaves(from,kn,calm){
   calm=calm==null?1:calm;const to=(from+180)*D,s=clamp(kn/12,.25,1.8)*calm,ls=calm<.5?.45:1;
-  return [[17,.24,-12,.5],[10,.13,24,.55],[6,.07,-38,.5],[3.4,.035,52,.4]].map(([L,A,d,q])=>{
+  return [[23,.19,-9,.45],[15,.12,21,.5],[11,.085,-31,.55],[8.3,.06,14,.55],[6.1,.043,-47,.5],[4.7,.032,38,.45],[3.6,.022,-22,.4],[2.8,.016,57,.4]].map(([L,A,d,q])=>{
     const len=L*ls*(.8+.2*s),k=2*Math.PI/len,a=to+d*D;return{dx:Math.sin(a),dz:-Math.cos(a),k,a:A*s*(calm<.5?.6:1),w:Math.sqrt(9.81*k),q}})}
 
 /* сетка воды: квадрат 2R с плотными клетками в центре и крупными к краю */
@@ -26,23 +35,24 @@ function oceanGeo(R,n){const g=new THREE.PlaneGeometry(2,2,n,n);g.rotateX(-Math.
 
 /* o: R — полуразмер, y — уровень, deep/shal — цвет глубины и гребня, sky — цвет отражения неба (обычно цвет горизонта),
    sun — [x,y,z] направление на солнце, opacity — прозрачность при взгляде сверху (марина: видно дно), foam — пена на гребнях,
-   rip — сила ряби, wind — {from,kn}, calm — см. windWaves */
+   rip — сила ряби, wind — {from,kn}, calm — см. windWaves, tint — множитель цвета воды по времени суток (TOD.water) */
 function makeOcean(scene,o){
-  o=o||{};const hq=gfxQ()==='high',R=o.R||300,n=o.n||(hq?150:80);
+  o=o||{};const hq=gfxQ()==='high',R=o.R||300,n=o.n||(hq?150:80),nw=hq?8:4;
   const u=Object.assign(THREE.UniformsUtils.clone(THREE.UniformsLib.fog),{
-    uTime:{value:0},uWa:{value:[0,1,2,3].map(()=>new THREE.Vector4())},uWb:{value:[0,1,2,3].map(()=>new THREE.Vector2())},
+    uTime:{value:0},uWa:{value:Array.from({length:nw},()=>new THREE.Vector4())},uWb:{value:Array.from({length:nw},()=>new THREE.Vector2())},uEnv:{value:new THREE.Vector4()},
     uC:{value:new THREE.Vector2()},uFar:{value:R*.9},uAmp:{value:.3},
-    uDeep:{value:new THREE.Color(o.deep||0x154b57)},uShal:{value:new THREE.Color(o.shal||0x2f8a84)},uSky:{value:new THREE.Color(o.sky||0xcfe3e2)},
+    uDeep:{value:new THREE.Color(o.deep||0x154b57).multiply(new THREE.Color(o.tint||0xffffff))},uShal:{value:new THREE.Color(o.shal||0x2f8a84).multiply(new THREE.Color(o.tint||0xffffff))},uSky:{value:new THREE.Color(o.sky||0xcfe3e2)},
     uSunDir:{value:new THREE.Vector3(...(o.sun||[-.5,.6,.4])).normalize()},uSunCol:{value:new THREE.Color(o.sunCol||0xfff0d2)},uFoamCol:{value:new THREE.Color(0xf2f7f2)},
     uOpacity:{value:o.opacity==null?1:o.opacity},uFoam:{value:o.foam||0},uGust:{value:0},uRip:{value:o.rip==null?1:o.rip},uWd:{value:new THREE.Vector2(0,1)}});
-  const mat=new THREE.ShaderMaterial({uniforms:u,fog:true,transparent:(o.opacity??1)<1,defines:{RIP:hq?7:4},
-    vertexShader:`uniform float uTime,uFar;uniform vec4 uWa[4];uniform vec2 uWb[4];uniform vec2 uC;
+  const mat=new THREE.ShaderMaterial({uniforms:u,fog:true,transparent:(o.opacity??1)<1,defines:{RIP:hq?7:4,NW:nw},
+    vertexShader:`uniform float uTime,uFar;uniform vec4 uWa[NW];uniform vec2 uWb[NW];uniform vec2 uC;uniform vec4 uEnv;
       varying vec3 vW,vN;varying float vH;
       #include <fog_pars_vertex>
       void main(){
         vec4 wp=modelMatrix*vec4(position,1.);vec3 p=wp.xyz,d=vec3(0.),nn=vec3(0.,1.,0.);
-        float fade=1.-smoothstep(uFar*.5,uFar,length(p.xz-uC));
-        for(int i=0;i<4;i++){vec4 a=uWa[i];vec2 b=uWb[i];float th=a.z*dot(a.xy,p.xz)-b.x*uTime,c=cos(th),s=sin(th),A=a.w*fade;
+        // волны идут группами: огибающая из двух длинных синусов, та же формула в height() на процессоре
+        float fade=(1.-smoothstep(uFar*.5,uFar,length(p.xz-uC)))*(.82+.18*sin(dot(p.xz,uEnv.xy)-uTime*.21)*sin(dot(p.xz,uEnv.zw)+uTime*.16));
+        for(int i=0;i<NW;i++){vec4 a=uWa[i];vec2 b=uWb[i];float th=a.z*dot(a.xy,p.xz)-b.x*uTime,c=cos(th),s=sin(th),A=a.w*fade;
           d.x+=b.y*A*a.x*c;d.z+=b.y*A*a.y*c;d.y+=A*s;nn.x-=a.x*a.z*A*c;nn.z-=a.y*a.z*A*c;nn.y-=b.y*a.z*A*s;}
         p+=d;vH=d.y;vN=nn;vW=p;
         vec4 mvPosition=viewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mvPosition;
@@ -58,9 +68,10 @@ function makeOcean(scene,o){
         // порывы: пятна темнее и с более крупной рябью бегут по ветру
         float g=vnoise(p*.03-wd*uTime*.32)*.65+vnoise(p*.08-wd*uTime*.55)*.35,gust=smoothstep(.48,.78,g)*uGust;
         // мелкая рябь: короткие волны вокруг направления ветра, вдали гаснут, чтобы не рябило
-        vec2 gr=vec2(0.);
+        // фаза ряби плывёт по шуму, чтобы сверху не было видно правильной сетки
+        vec2 gr=vec2(0.);float ph=vnoise(p*.05+wd*uTime*.03)*6.3;
         for(int i=0;i<RIP;i++){float fi=float(i),a=(fi-float(RIP-1)*.5)*.42+sin(fi*12.9)*.25,k=1.2+fi*.9;vec2 d=wd*cos(a)+wp*sin(a);
-          gr+=d*cos(dot(d,p)*k-uTime*sqrt(9.81*k)+fi*1.7)*(.11/(1.+fi*.25));}
+          gr+=d*cos(dot(d,p)*k-uTime*sqrt(9.81*k)+fi*1.7+ph)*(.11/(1.+fi*.25));}
         vec3 N=normalize(vN-vec3(gr.x,0.,gr.y)*uRip*(.45+gust*1.3)/(1.+dist*.025));
         float nv=max(dot(N,V),0.),fr=.02+.8*pow(1.-nv,5.);
         float crest=clamp(.4+vH/max(uAmp,.01)*.45,0.,1.);
@@ -77,17 +88,20 @@ function makeOcean(scene,o){
         #include <fog_fragment>
       }`});
   const mesh=new THREE.Mesh(oceanGeo(R,n),mat);mesh.frustumCulled=false;mesh.position.y=o.y||0;mesh.renderOrder=-.5;scene.add(mesh);
-  let W=[];
+  let W=[],E=[0,0,0,0];
+  // огибающая групп волн: вдоль главной волны период около 95 м, поперёк около 150 м; в шейдере та же формула
+  const env=(x,z,t)=>.82+.18*Math.sin(E[0]*x+E[1]*z-t*.21)*Math.sin(E[2]*x+E[3]*z+t*.16);
   const oc={mesh,u,y:o.y||0,
-    setWaves(list){W=list.slice(0,4);while(W.length<4)W.push({dx:1,dz:0,k:1,a:0,w:0,q:0});let amp=0;
-      W.forEach((w,i)=>{u.uWa.value[i].set(w.dx,w.dz,w.k,w.a);u.uWb.value[i].set(w.w,Math.min(1,w.q/(w.k*Math.max(w.a,1e-4)*4)));amp+=w.a});u.uAmp.value=amp;return oc},
+    setWaves(list){W=list.slice(0,nw);while(W.length<nw)W.push({dx:1,dz:0,k:1,a:0,w:0,q:0});let amp=0;
+      W.forEach((w,i)=>{u.uWa.value[i].set(w.dx,w.dz,w.k,w.a);u.uWb.value[i].set(w.w,Math.min(1,w.q/(w.k*Math.max(w.a,1e-4)*nw)));amp+=w.a});u.uAmp.value=amp;
+      const d=W[0],k1=2*Math.PI/95,k2=2*Math.PI/150;E=[d.dx*k1,d.dz*k1,(-d.dz*.75+d.dx*.3)*k2,(d.dx*.75+d.dz*.3)*k2];u.uEnv.value.set(E[0],E[1],E[2],E[3]);return oc},
     /* ветер на воде: направление ряби и сила порывов */
     setWind(from,kn,calm){oc.gust(from,kn,calm);return oc.setWaves(windWaves(from,kn,calm))},
     /* порыв или заход ветра: меняются рябь и тёмные пятна, а волны остаются от среднего ветра, чтобы не прыгали */
     gust(from,kn,calm){const to=(from+180)*D;u.uWd.value.set(Math.sin(to),-Math.cos(to));u.uGust.value=clamp(kn/14,0,1.2)*(calm??1);return oc},
     /* сетка едет за камерой шагами, чтобы волны не «плыли» */
     update(t,cx,cz){u.uTime.value=t;const s=4;mesh.position.x=Math.round((cx||0)/s)*s;mesh.position.z=Math.round((cz||0)/s)*s;u.uC.value.set(mesh.position.x,mesh.position.z)},
-    height(x,z,t){let y=oc.y;for(const w of W)y+=w.a*Math.sin(w.k*(w.dx*x+w.dz*z)-w.w*t);return y},
+    height(x,z,t){let y=0;for(const w of W)y+=w.a*Math.sin(w.k*(w.dx*x+w.dz*z)-w.w*t);return oc.y+y*env(x,z,t)},
     /* яхта на волне: высота, дифферент и крен по четырём точкам корпуса с инерцией. h — курс, °; L, B — полудлина и полуширина, м */
     float(obj,x,z,h,L,B,t,dt,sink){
       const s=Math.sin(h*D),c=Math.cos(h*D),hb=oc.height(x+s*L,z-c*L,t),hs=oc.height(x-s*L,z+c*L,t),hp=oc.height(x-c*B,z-s*B,t),hr=oc.height(x+c*B,z+s*B,t);
@@ -199,10 +213,11 @@ function telltales(rig,state,t){
       p.array.set([o[0],o[1]-W,o[2],e[0],e[1]-W,e[2],e[0],e[1]+W,e[2],o[0],o[1]-W,o[2],e[0],e[1]+W,e[2],o[0],o[1]+W,o[2]],j*18);k++})});
   p.needsUpdate=true}
 
-/* мягкая атмосфера в духе Dredge: туман цвета дымки, тёплое солнце, холодная подсветка снизу, мягкий тон-маппинг */
+/* мягкая атмосфера в духе Dredge: туман цвета дымки, тёплое солнце, холодная подсветка снизу, мягкий тон-маппинг.
+   Дымка, дальность тумана и экспозиция — по времени суток (tod3d); o.tod задаёт его принудительно */
 function atmos3d(scene,renderer,o){
-  o=o||{};const haze=new THREE.Color(o.haze||0xd6e3dd);scene.background=haze.clone();scene.fog=new THREE.Fog(haze,o.near||80,o.far||300);
-  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=o.exposure||1.15;
+  o=o||{};const T=tod3d(o.tod),haze=new THREE.Color(o.haze||T.haze);scene.background=haze.clone();scene.fog=new THREE.Fog(haze,(o.near||80)*T.fogK,(o.far||300)*T.fogK);
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=o.exposure||T.exp;
   if(gfxQ()==='low'){renderer.setPixelRatio(Math.min(1.5,devicePixelRatio||1));renderer.shadowMap.type=THREE.PCFShadowMap}
   return haze}
 

@@ -66,16 +66,16 @@ function startMoor3D(mode){
   host.appendChild(ui);hudVars(ui);
 
   /* ---------- сцена ---------- */
-  const scene=new THREE.Scene(),sky=atmos3d(scene,renderer,{near:90,far:280}).getHex(),hq=gfxQ()==='high';
+  const scene=new THREE.Scene(),TD=tod3d(),sky=atmos3d(scene,renderer,{near:90,far:280}).getHex(),hq=gfxQ()==='high';
   const cam=new THREE.PerspectiveCamera(50,R.width/R.height,.3,600);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);
+  scene.add(new THREE.HemisphereLight(TD.hemi[0],TD.hemi[1],TD.hemi[2]));
+  const sun=new THREE.DirectionalLight(TD.sunCol,TD.sunI);sun.position.set(TD.sun[0],TD.sun[1],TD.sun[2]).multiplyScalar(74);sun.castShadow=true;sun.shadow.mapSize.set(hq?2048:1024,hq?2048:1024);
   {const c=sun.shadow.camera;c.left=-70;c.right=70;c.top=70;c.bottom=-70;c.near=1;c.far=200}sun.shadow.bias=-.0008;sun.target.position.set(0,0,25);scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
   // дно, вода
   mesh(new THREE.PlaneGeometry(400,300).rotateX(-Math.PI/2),M(0x2f8f88),0,-3,40);
   // вода марины: за волноломом почти штиль, мелкая рябь по ветру, сквозь воду видно дно
-  const sea=makeOcean(scene,{R:220,sun:[-30,55,40],wind:{from:90,kn:8},calm:.15,opacity:.8,foam:0,rip:.75,deep:0x1a5f69,shal:0x2b8a84,sky});
+  const sea=makeOcean(scene,{R:220,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:{from:90,kn:8},calm:.15,opacity:.8,foam:0,rip:.75,deep:0x1a5f69,shal:0x2b8a84,sky});
   // причал, кнехты, фонари, город, холмы
   mesh(new THREE.BoxGeometry(320,4,60),M(0xa89c82),0,-1,-30);
   mesh(new THREE.BoxGeometry(320,.3,.6),M(0x9a8d72),0,1.0,-.3);
@@ -143,7 +143,7 @@ function startMoor3D(mode){
   /* оживление набережной (только декор, без столкновений): небо, отражения, пальмы, колонки, круги, люди, тузик */
   let skyD=null,deco=null;
   if(typeof skyDome==='function'){
-    scene.environment=skyEnv(renderer);skyD=skyDome(scene,{r:300,hor:sky,top:0x6fa7c4});
+    scene.environment=skyEnv(renderer);skyD=skyDome(scene,{r:300,hor:sky,top:TD.top,sun:TD.sun,glow:TD.glow,gs:TD.gs,cloud:TD.cloud,cloudE:TD.cloudE});
     const k=kit3();
     for(let k2=-8;k2<=8;k2++){const x=slotX(k2);powerPost3(k,x+3.6,1,-1.4);if(k2%3===0)buoyStand3(k,x-3.6,1,-1.6)}
     k.build(scene);

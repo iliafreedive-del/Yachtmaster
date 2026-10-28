@@ -1,17 +1,23 @@
 /* Галс · общие куски 3D-сцен: небо с облаками, отражения, люди, пальмы, тузик, утки и тумбы на понтоне (Three.js r128) */
 
-/* небо: градиентный купол и облака; возвращает группу облаков, её можно двигать в цикле (clouds.rotation.y) */
+/* небо: градиентный купол, облака и диск солнца (o.sun — направление, o.glow, o.gs — цвет и размер ореола, o.cloud — цвет облаков);
+   возвращает купол и группу облаков, её можно двигать в цикле (clouds.rotation.y); диск солнца — ребёнок купола */
 function skyDome(scene,o){
   o=o||{};const R=o.r||420,top=new THREE.Color(o.top||0x5aa6d6),hor=new THREE.Color(o.hor||0xdff1f2);
   const g=new THREE.SphereGeometry(R,24,12),p=g.attributes.position,col=[];const c=new THREE.Color();
   for(let i=0;i<p.count;i++){const t=clamp(p.getY(i)/R,0,1)**.55;c.copy(hor).lerp(top,t);col.push(c.r,c.g,c.b)}
   g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
   const dome=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));dome.renderOrder=-1;scene.add(dome);
-  const clouds=new THREE.Group(),cm=new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x8a9aa4,fog:false});
+  const clouds=new THREE.Group(),cm=new THREE.MeshLambertMaterial({color:o.cloud||0xffffff,emissive:o.cloudE||0x8a9aa4,fog:false});
   for(let i=0;i<(o.n||14);i++){const cl=new THREE.Group(),a=i/(o.n||14)*Math.PI*2+Math.sin(i*7)*.3,r=R*(.55+.25*((i*37)%10)/10);
     for(let j=0;j<4+i%3;j++){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),cm);m.position.set(j*5-8+Math.sin(i+j)*2,Math.sin(i*3+j)*1.5,Math.cos(i+j*2)*3);m.scale.set(7+(j%2)*3,3+(j%3),5);cl.add(m)}
     cl.position.set(Math.sin(a)*r,R*(.13+.08*((i*13)%7)/7),-Math.cos(a)*r);cl.lookAt(0,cl.position.y,0);clouds.add(cl)}
-  scene.add(clouds);return {dome,clouds}
+  scene.add(clouds);
+  let sunS=null;if(o.sun){const cv=document.createElement('canvas');cv.width=cv.height=128;const g=cv.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);
+    gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.12,'rgba(255,255,255,.95)');gr.addColorStop(.3,'rgba(255,255,255,.35)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
+    sunS=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),color:o.glow||0xfff6dc,transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
+    sunS.position.set(o.sun[0],o.sun[1],o.sun[2]).normalize().multiplyScalar(R*.9);const s=R*(o.gs||.3);sunS.scale.set(s,s,1);sunS.renderOrder=-1;dome.add(sunS)}
+  return {dome,clouds,sun:sunS}
 }
 /* карта отражений из неба: хром, стекло и вода начинают блестеть */
 function skyEnv(renderer){

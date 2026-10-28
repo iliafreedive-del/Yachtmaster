@@ -60,9 +60,9 @@ function startHelm3D(mode){
   const scene=new THREE.Scene(),ocean=typeof makeOcean==='function';
   let sky=0xcfe9ef;
   if(ocean&&typeof atmos3d==='function')sky=atmos3d(scene,renderer,{near:120,far:420}).getHex();else{scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,120,420)}
-  const cam=new THREE.PerspectiveCamera(50,R.width/R.height,.3,900);
-  scene.add(new THREE.HemisphereLight(0xfff6e8,0x4a7a86,.5));
-  const sun=new THREE.DirectionalLight(0xfff0d8,.85);sun.position.set(-30,55,40);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+  const cam=new THREE.PerspectiveCamera(50,R.width/R.height,.3,900),TD=tod3d();
+  scene.add(new THREE.HemisphereLight(TD.hemi[0],TD.hemi[1],TD.hemi[2]));
+  const sun=new THREE.DirectionalLight(TD.sunCol,TD.sunI),SUN=TD.sun.map(v=>v*74);sun.position.set(SUN[0],SUN[1],SUN[2]);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
   {const c=sun.shadow.camera;c.left=-30;c.right=30;c.top=30;c.bottom=-30;c.near=1;c.far=200}sun.shadow.bias=-.0008;scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
   // практика — в условиях из карточки «Условия»; в повторных заходах «человек за бортом» оказывается в разных местах
@@ -70,10 +70,10 @@ function startHelm3D(mode){
   const wind=lesson?{from:20,kn:4}:gustWind({from:cond.dir==='rnd'?Math.floor(Math.random()*72)*5:45,kn:condKn('helm3d',cond)},cond.gust);
   const mobP=vary?[H5MOB,{x:28,z:-125},{x:-48,z:-30},{x:12,z:-170}][Math.floor(Math.random()*4)]:H5MOB;
   let sea=null,water=null,wg=null;
-  if(ocean)sea=makeOcean(scene,{R:320,sun:[-30,55,40],wind:wind.base||wind,calm:lesson?.3:.6,opacity:.9,sky});
+  if(ocean)sea=makeOcean(scene,{R:320,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:wind.base||wind,calm:lesson?.3:.6,opacity:.9,sky});
   else{wg=new THREE.PlaneGeometry(700,700,70,70);wg.rotateX(-Math.PI/2);
     water=new THREE.Mesh(wg,M(0x1f8197,{roughness:.3,envMapIntensity:.6}));water.receiveShadow=true;scene.add(water)}
-  if(typeof skyDome==='function'){scene.environment=skyEnv(renderer);skyDome(scene,{r:500})}
+  if(typeof skyDome==='function'){scene.environment=skyEnv(renderer);skyDome(scene,{r:500,hor:sky,top:TD.top,sun:TD.sun,glow:TD.glow,gs:TD.gs,cloud:TD.cloud,cloudE:TD.cloudE})}
   // берега бухты вдали: холмы на горизонте
   const hill=(sx,sy,sz,x,z,c)=>{mesh(new THREE.IcosahedronGeometry(1,1),M(c),x,-2,z).scale.set(sx,sy,sz)};
   hill(90,30,40,-60,-330,0x7ea55a);hill(70,40,36,70,-320,0x6d9550);hill(60,22,50,-300,-120,0x8fb066);hill(80,26,60,310,-80,0x6d9550);hill(70,18,40,260,200,0x7ea55a);
@@ -285,7 +285,7 @@ function startHelm3D(mode){
     ringM.opacity=.45+Math.sin(t*4)*.2;
     {const n=st.trail.length;for(let i=0;i<n;i++){tPos[i*3]=st.trail[i][0];tPos[i*3+1]=.15;tPos[i*3+2]=st.trail[i][1]}
       if(n){tPos[n*3]=st.x;tPos[n*3+1]=.15;tPos[n*3+2]=st.z}tg.attributes.position.needsUpdate=true;tg.setDrawRange(0,Math.min(TN,n+1))}
-    sun.position.set(st.x-30,55,st.z+40);sun.target.position.set(st.x,0,st.z);
+    sun.position.set(st.x+SUN[0],SUN[1],st.z+SUN[2]);sun.target.position.set(st.x,0,st.z);
     // камеры: у штурвала, за кормой, сверху. На заднем ходу смотрим к корме
     const aft=st.thrI<2||st.u<-.2,fov=st.view==='helm'?66:50;if(cam.fov!==fov){cam.fov=fov;cam.updateProjectionMatrix()}
     if(st.view==='helm'){
