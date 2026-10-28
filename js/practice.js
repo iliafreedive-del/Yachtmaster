@@ -14,7 +14,7 @@ let condSkip=false; // перезапуск той же практики (сме
 function condCard(kind,onStart){
   const c=condGet(),K=COND_KN[kind],sail=kind==='points'||kind==='tack';
   const boats=typeof FLEET!=='undefined'?FLEET.filter(f=>/moor/.test(kind)||BOATS[f.id].sail):[]; // как в boatPicker: моторная — только в марине
-  const title={points:'День 2 · курсы к ветру',tack:'День 3 · лавировка',moor3d:'День 4 · швартовка кормой',helm3d:'Рулёжка под мотором'}[kind];
+  const title={points:'День 2 · курсы к ветру',tack:'День 3 · лавировка и фордевинд',moor3d:'День 4 · швартовка кормой',helm3d:'Рулёжка под мотором'}[kind];
   const grp=(key,lbl,en2,opts)=>`<div class="cgrp"><p class="lbl">${lbl} <span class="en">· ${en2}</span></p><div class="chips" data-g="${key}">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${String(c[key])===String(v)}">${t}</button>`).join('')}</div></div>`;
   show('board');padMode(null);['instBox','boatBox','trimBox'].forEach(id=>$('#'+id).hidden=true);hint('');
   $('#board').innerHTML=`<div class="exam"><div class="card cond"><p class="qn">Условия практики · conditions</p><h3>${title}</h3><div class="cgrid">
