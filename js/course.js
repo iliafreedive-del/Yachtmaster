@@ -711,11 +711,12 @@ const PHON='Alfa Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo 
 const PNUM=['Zero','Wun','Too','Tree','Fow-er','Fife','Six','Seven','Ait','Nin-er'];
 const RU2L={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
 LABS.phon=el=>{
-  el.innerHTML=`<label class="lr"><span>Имя яхты или позывной</span><input type="text" id="phI" value="Galatea SV1234" maxlength="24" style="grid-column:1/-1;font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)"></label><div class="spell" id="phO"></div><p class="lo keys" id="phN"></p>`;
+  el.innerHTML=`<label class="lr"><span>Имя яхты или позывной</span><input type="text" id="phI" value="Galatea SV1234" maxlength="24" style="grid-column:1/-1;font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)"></label><div class="spell" id="phO"></div><p class="lo keys" id="phN"></p>${typeof voiceOk==='function'&&voiceOk()?'<div class="row"><button class="btn ghost sm" id="phS" type="button">🔊 Произнести</button></div>':''}`;
   const draw=()=>{const raw=$('#phI').value,lat=[...raw.toLowerCase()].map(c=>RU2L[c]??c).join('');
     $('#phO').innerHTML=[...lat].map(c=>/[a-z]/.test(c)?`<span><b>${c.toUpperCase()}</b>${PHON[c.charCodeAt(0)-97]}</span>`:/[0-9]/.test(c)?`<span><b>${c}</b>${PNUM[+c]}</span>`:c===' '?'<i></i>':'').join('');
     $('#phN').textContent=/[а-яё]/i.test(raw)?'Кириллицу в эфире передают латиницей — так, как имя записано в судовых документах.':'Читай слово целиком, ровно и без пауз между слогами.'};
   $('#phI').oninput=draw;draw();
+  if($('#phS'))$('#phS').onclick=()=>{const w=[...$('#phO').querySelectorAll('span')].map(x=>x.lastChild.textContent);if(w.length)voiceSay(w.join(', '))};
 };
 
 /* ---------- собрать сообщение по порядку ---------- */
@@ -725,7 +726,7 @@ function orderLab(el,items,okText){
   $('#olR').onclick=()=>orderLab(el,items,okText);
   el.querySelectorAll('#olC button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;
     if(i!==next){$('#olM').innerHTML=`<span class="warn">Не сейчас. Сначала идёт другое: подумай, что спасатель должен услышать раньше.</span>`;return}
-    b.remove();$('#olO').insertAdjacentHTML('beforeend',`<li><b>${items[i][0]}</b>${items[i][1]?`<br><span class="keys">${items[i][1]}</span>`:''}</li>`);next++;
+    b.remove();$('#olO').insertAdjacentHTML('beforeend',`<li><b>${items[i][0]}</b>${items[i][1]?`<br><span class="keys">${items[i][1]}</span>`:''}</li>`);next++;if(typeof voiceSay==='function')voiceSay(items[i][0]);
     $('#olM').innerHTML=next===items.length?`<span class="good">${okText}</span>`:'Верно. Дальше.'});
 }
 LABS.call=el=>orderLab(el,[['Marina Delfini, Marina Delfini','кого вызываем'],['THIS IS','говорит'],['sailing yacht Galatea, Galatea','кто вызывает'],['request a berth for tonight, twelve metres','суть, коротко'],['OVER','приём']],'Вызов собран. На 16 канале дальше только договариваются о рабочем канале.');
@@ -789,7 +790,8 @@ const RADIO={
 LABS.radio=el=>{
   el.innerHTML=`<label class="lr"><span>Ситуация</span></label><div class="chips" id="raK">${Object.entries(RADIO).map(([k,v])=>`<button data-k="${k}" aria-pressed="${k==='marina'}">${v[0]}</button>`).join('')}</div><div class="chat" id="raO"></div><div class="row"><button class="btn" id="raN">Следующая реплика</button><button class="btn ghost" id="raR">Сначала</button></div>`;
   let k='marina',n=1;
-  const draw=()=>{const L=RADIO[k][1];$('#raO').innerHTML=L.slice(0,n).map(([w,e,r])=>`<p class="${w}"><b>${w==='me'?'Мы':'Они'}</b> ${e}<br><span class="keys">${r}</span></p>`).join('');$('#raN').disabled=n>=L.length;$('#raO').scrollTop=1e4};
+  const sb=typeof sayBtn==='function'?sayBtn:()=>'';
+  const draw=()=>{const L=RADIO[k][1];$('#raO').innerHTML=L.slice(0,n).map(([w,e,r])=>`<p class="${w}"><b>${w==='me'?'Мы':'Они'}</b> ${e}${/^\(/.test(e)?'':sb(e,w)}<br><span class="keys">${r}</span></p>`).join('');$('#raN').disabled=n>=L.length;$('#raO').scrollTop=1e4};
   el.querySelectorAll('#raK button').forEach(b=>b.onclick=()=>{el.querySelectorAll('#raK button').forEach(x=>x.setAttribute('aria-pressed',x===b));k=b.dataset.k;n=1;draw()});
-  $('#raN').onclick=()=>{n++;draw()};$('#raR').onclick=()=>{n=1;draw()};draw();
+  $('#raN').onclick=()=>{n++;draw();const l=RADIO[k][1][n-1];if(l&&!/^\(/.test(l[1])&&typeof voiceSay==='function')voiceSay(l[1],l[0])};$('#raR').onclick=()=>{n=1;draw()};draw();
 };

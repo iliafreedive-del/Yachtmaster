@@ -40,6 +40,10 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .set-ok{margin:0;color:var(--stbd);font-size:13px}
 .set-confirm{background:var(--panel2);border:1px solid var(--buoy);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .set-confirm p{margin:0;font-size:13.5px}
+.set-chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px}
+/* 🔊 — произнести по-английски (js/voice.js) */
+.say{font:inherit;font-size:13px;line-height:1;background:none;border:0;padding:2px 4px;margin-left:2px;cursor:pointer;vertical-align:baseline;border-radius:6px}
+.say:hover,.say:focus-visible{background:var(--panel2)}
 /* отчёт для инструктора: светлый лист поверх игры, печать — только он */
 .report{position:fixed;inset:0;z-index:60;overflow:auto;background:var(--deep);padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px))}
 body.reporting{overflow:hidden}

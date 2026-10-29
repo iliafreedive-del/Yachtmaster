@@ -164,7 +164,7 @@ function start3D(){
   function startDrill(){if(T3!==st)return;st.phase='pre';
     showDialog(`<h3>Приёмка закончена</h3><p>Теперь проверка. Шкипер будет отдавать команды, а ты беги к нужному месту и нажимай «Действие». На каждую команду 20 секунд, всего шесть.</p><p class="ex">Совет: в изометрии удобнее видеть всю яхту сразу.</p><div class="row"><button class="btn" id="dgo">Готов!</button></div>`);
     $('#dgo').onclick=()=>{hideDialog();st.phase='drill';st.drill={list:DRILL.slice().sort(()=>Math.random()-.5).slice(0,6),i:0,ok:0,t:20,late:0,wrong:0};drillStep();$('#stage').focus()}}
-  function drillStep(){const d=st.drill,c=d.list[d.i];d.t=20;sayT(`${c.s}<span class="en line">«${c.en}»</span>`);hint('');sideTasks()}
+  function drillStep(){const d=st.drill,c=d.list[d.i];d.t=20;sayT(`${c.s}<span class="en line">«${c.en}»</span>`);if(typeof voiceSay==='function')voiceSay(c.en,'them');hint('');sideTasks()}
   function drillNext(ok){const d=st.drill;if(ok)d.ok++;d.i++;
     if(d.i>=d.list.length){st.phase='end';$('#tt').hidden=true;const pass=d.ok>=4;if(pass)markDone('day1');
       endCard(pass?'День 1 пройден':'Экипаж пока путается',`Команд выполнено: ${d.ok} из 6. ${pass?'Ты знаешь яхту и быстро двигаешься по палубе. Завтра выходим в море и разбираемся с ветром.':'Включи «Подписи», походи по палубе и попробуй снова.'}`,pass,
