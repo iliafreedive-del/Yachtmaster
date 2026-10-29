@@ -2,19 +2,19 @@
    Выбор запоминается в браузере (gals-cond). Сцены читают его через condGet() и ведут ветер через gustWind(); время суток — tod3d() в ocean3d.js. */
 const COND_DEF={wind:'mid',dir:'fix',gust:false,tod:'day',hints:'all'};
 /* сила ветра по упражнениям, узлы: low / mid / high. mid — прежние значения дней */
-const COND_KN={points:[7,12,17],tack:[7,12,17],moor3d:[4,8,13],helm3d:[6,10,15],anchor3d:[6,10,15]};
-const COND_DIR={points:'с севера',tack:'с севера',moor3d:'вдоль причала, с востока',helm3d:'с северо-востока',anchor3d:'с берега, с севера'};
+const COND_KN={points:[7,12,17],tack:[7,12,17],moor3d:[4,8,13],helm3d:[6,10,15],anchor3d:[6,10,15],mob:[7,12,17]};
+const COND_DIR={points:'с севера',tack:'с севера',moor3d:'вдоль причала, с востока',helm3d:'с северо-востока',anchor3d:'с берега, с севера',mob:'с севера'};
 function condGet(){try{return Object.assign({},COND_DEF,JSON.parse(localStorage.getItem('gals-cond')||'{}'))}catch(e){return Object.assign({},COND_DEF)}}
 function condSet(c){try{localStorage.setItem('gals-cond',JSON.stringify(c))}catch(e){}}
 const condKn=(kind,c)=>COND_KN[kind][{low:0,mid:1,high:2}[c.wind]??1];
 /* упражнения, перед которыми спрашиваем условия; мастер-классы идут в своих тихих условиях */
-const condNeed=p=>p==='points'||(p==='tack'&&tackMode==='practice')||(p==='moor3d'&&moorMode==='practice')||(p==='helm3d'&&helmMode==='practice')||(p==='anchor3d'&&anchorMode==='practice');
+const condNeed=p=>p==='points'||(p==='tack'&&tackMode==='practice')||(p==='moor3d'&&moorMode==='practice')||(p==='helm3d'&&helmMode==='practice')||(p==='anchor3d'&&anchorMode==='practice')||(p==='mob'&&mobMode==='practice');
 let condSkip=false; // перезапуск той же практики (смена лодки, графики, «Сначала») — без карточки
 
 function condCard(kind,onStart){
-  const c=condGet(),K=COND_KN[kind],sail=kind==='points'||kind==='tack';
+  const c=condGet(),K=COND_KN[kind],sail=kind==='points'||kind==='tack'||kind==='mob';
   const boats=typeof FLEET!=='undefined'?FLEET.filter(f=>/moor|anchor/.test(kind)||BOATS[f.id].sail):[]; // как в boatPicker: моторная — только в марине и на якоре
-  const title={points:'День 2 · курсы к ветру',tack:'День 3 · лавировка и фордевинд',moor3d:'День 4 · швартовка кормой',helm3d:'Рулёжка под мотором',anchor3d:'Якорная стоянка'}[kind];
+  const title={points:'День 2 · курсы к ветру',tack:'День 3 · лавировка и фордевинд',moor3d:'День 4 · швартовка кормой',helm3d:'Рулёжка под мотором',anchor3d:'Якорная стоянка',mob:'Человек за бортом под парусом'}[kind];
   const grp=(key,lbl,en2,opts)=>`<div class="cgrp"><p class="lbl">${lbl} <span class="en">· ${en2}</span></p><div class="chips" data-g="${key}">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${String(c[key])===String(v)}">${t}</button>`).join('')}</div></div>`;
   show('board');padMode(null);['instBox','boatBox','trimBox'].forEach(id=>$('#'+id).hidden=true);hint('');
   $('#board').innerHTML=`<div class="exam"><div class="card cond"><p class="qn">Условия практики · conditions</p><h3>${title}</h3><div class="cgrid">

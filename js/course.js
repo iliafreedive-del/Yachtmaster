@@ -636,10 +636,10 @@ const TACKSEQ={
     [.65,'Потравить гика-шкот, перекинуть стаксель','ease the main, switch the jib','Грот травят на новый галс, стаксель-шкот перекладывают на другой борт.'],
     [.9,'Лечь на новый курс','settle on the new course','Бакштаг на другом галсе, паруса стоят.']]}};
 LABS.tackseq=el=>{
-  el.innerHTML=`${tog('tsK',[['tack','Оверштаг · tack'],['gybe','Фордевинд · gybe']],'tack')}<svg viewBox="-150 -150 300 300" id="tsS"></svg>${rng('tsP','Ход манёвра',0,100,1,0,'%')}<div class="row"><button class="btn ghost" id="tsPlay">▶ Показать</button></div><ol class="lo" id="tsO"></ol>`;
+  el.innerHTML=`${tog('tsK',[['tack','Оверштаг · tack'],['gybe','Фордевинд · gybe']],'tack')}<svg viewBox="-150 -150 300 300" id="tsS"></svg>${rng('tsP','Ход манёвра',0,100,.1,0,'%')}<div class="row"><button class="btn ghost" id="tsPlay">▶ Показать</button></div><ol class="lo" id="tsO"></ol>`;
   let kind='tack',play=false;
   segOn(el,'tsK',v=>{kind=v;$('#tsP').value=0;draw()});
-  $('#tsPlay').onclick=()=>{play=!play;if(play&&+$('#tsP').value>=100)$('#tsP').value=0;$('#tsPlay').textContent=play?'❚❚ Пауза':'▶ Показать'};
+  $('#tsPlay').onclick=()=>{play=!play;if(play&&+$('#tsP').value>=100)$('#tsP').value=0;pf=+$('#tsP').value;$('#tsPlay').textContent=play?'❚❚ Пауза':'▶ Показать'};
   const draw=()=>{
     const K=TACKSEQ[kind],p=+$('#tsP').value/100;$('#tsPV').textContent=Math.round(p*100)+'%';
     const e=clamp((p-.25)/.6,0,1),s=e*e*(3-2*e);
@@ -655,7 +655,66 @@ LABS.tackseq=el=>{
     const cur2=K.steps.reduce((c,x,i)=>p>=x[0]?i:c,0);
     $('#tsO').innerHTML=K.steps.map((x,i)=>`<li class="${i===cur2?'good':i<cur2?'keys':''}"><b>${x[1]}</b> ${en(x[2])}${i===cur2?`<br>${rich(x[3])}`:''}</li>`).join('')};
   $('#tsP').oninput=()=>{play=false;$('#tsPlay').textContent='▶ Показать';draw()};draw();
-  let last=0;const stop=anim(t=>{if(!play){last=t;return}const v=Math.min(100,+$('#tsP').value+(t-last)*9);last=t;$('#tsP').value=v;draw();if(v>=100){play=false;$('#tsPlay').textContent='▶ Показать'}});
+  // ход копим в своей переменной: ползунок с шагом округлил бы прибавку за кадр до нуля
+  let last=0,pf=0;const stop=anim(t=>{if(!play){last=t;pf=+$('#tsP').value;return}pf=Math.min(100,pf+(t-last)*9);last=t;$('#tsP').value=pf;draw();if(pf>=100){play=false;$('#tsPlay').textContent='▶ Показать'}});
+  return stop;
+};
+
+/* ---------- человек за бортом: возврат «восьмёркой» (вид сверху; шаги — MOBSAIL.seq в js/content/mobsail.js) ---------- */
+LABS.mob8=el=>{
+  el.innerHTML=`<svg viewBox="-125 -100 250 192" id="m8S"></svg>${rng('m8P','Ход манёвра',0,100,.1,0,'%')}<div class="row"><button class="btn ghost" id="m8Play">▶ Показать</button></div><ol class="lo" id="m8O"></ol>`;
+  // ветер с севера. Человек M падает с левой (подветренной) раковины; яхта уходит курсом 270 галфвиндом на 5 корпусов, поворачивает оверштаг
+  // через ветер на бакштаг 145, приводится на полный бейдевинд 60 и встаёт: человек у правого, теперь подветренного, борта.
+  // Конец пути линеен по длинам бакштага и подхода — их находим из системы 2×2, чтобы путь кончился у человека
+  const L=26,k=L/86,M=[80,-5],W=7,R1=19,R3=18,HB=145,HA=60;
+  const walk=(lc,le)=>{const p=[],seg=[];let x=-L/2,y=-2,h=270;const put=()=>p.push([x,y,h]);put();
+    [['L',5*L],['A',HB-270+360,R1],['L',lc],['A',HA-HB,R3],['L',le]].forEach(s=>{seg.push(p.length-1);
+      const n=Math.max(1,Math.ceil(s[0]==='L'?s[1]:Math.abs(s[1])*D*s[2]));
+      for(let i=0;i<n;i++){if(s[0]==='L'){x+=Math.sin(h*D)*s[1]/n;y-=Math.cos(h*D)*s[1]/n}
+        else{const dh=s[1]/n,l=Math.abs(dh)*D*s[2];h+=dh/2;x+=Math.sin(h*D)*l;y-=Math.cos(h*D)*l;h+=dh/2}put()}});
+    seg.push(p.length-1);return{p,seg}};
+  const end=(lc,le)=>{const q=walk(lc,le).p;return q[q.length-1]};
+  const e0=end(0,0),e1=end(1,0),e2=end(0,1),ax=e1[0]-e0[0],ay=e1[1]-e0[1],bx=e2[0]-e0[0],by=e2[1]-e0[1];
+  const tx=-W*Math.cos(HA*D)-e0[0],ty=-W*Math.sin(HA*D)-e0[1],det=ax*by-ay*bx;
+  const {p:P,seg:SG}=walk((tx*by-ty*bx)/det,(ax*ty-ay*tx)/det),C=[0];
+  for(let i=1;i<P.length;i++)C.push(C[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+  const S=C[C.length-1],thr=MOBSAIL.seq.map(([a,f])=>C[SG[a]]+f*(C[SG[a+1]]-C[SG[a]]));
+  // ползунок → пройденный путь: последние 20% хода яхта тормозит
+  const far=p=>(p<=.8?p:.8+(p-.8)-1.75*(p-.8)**2)/.93*S;
+  const at=d=>{let i=0;while(i<C.length-2&&C[i+1]<d)i++;const f=C[i+1]>C[i]?clamp((d-C[i])/(C[i+1]-C[i]),0,1):0,a=P[i],b=P[i+1];return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f]};
+  const xy=q=>(M[0]+q[0]).toFixed(1)+' '+(M[1]+q[1]).toFixed(1),line=(a,b)=>P.slice(a,b+1).map(xy).join(' L');
+  // яхта сверху: грот на гике и стаксель уходят под ветер, пузо паруса — по ветру; flap — паруса полощут
+  const boat=(q,sheet,flap)=>{const h=q[2],tw=norm(-h),lee=tw>=0?-1:1,fx=Math.sin(h*D),fy=Math.cos(h*D),my=-10*k,jy=-42*k;
+    const sail=(y0,a,len,w)=>{const ex=Math.sin(a)*len,ey=y0+Math.cos(a)*len;let nx=Math.cos(a),ny=-Math.sin(a);if(nx*fx+ny*fy<0){nx=-nx;ny=-ny}const b=len*(flap?.04:.13);
+      return`<path${flap?' class="flap"':''} d="M0 ${y0.toFixed(1)} Q ${(ex/2+nx*b).toFixed(1)} ${((y0+ey)/2+ny*b).toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" stroke="#f4f1e6" stroke-width="${w}" fill="none" stroke-linecap="round"/>`};
+    const bA=lee*sheet*D;
+    return`<g transform="translate(${xy(q).replace(' ',',')}) rotate(${h.toFixed(1)})">${hullTop(k)}
+      <line x1="0" y1="${my.toFixed(1)}" x2="${(Math.sin(bA)*.46*L).toFixed(1)}" y2="${(my+Math.cos(bA)*.46*L).toFixed(1)}" stroke="#8b8574" stroke-width="1.8" stroke-linecap="round"/>
+      ${sail(my,bA,.46*L,1.5)}${sail(jy,lee*Math.min(sheet*.8,70)*D,.36*L,1.3)}</g>`};
+  const lx=-Math.sin(HA*D)*4.5*L,ly=Math.cos(HA*D)*4.5*L; // линия подхода: от человека под ветер, 60° к ветру, 4,5 корпуса — как в 3D
+  let play=false;
+  $('#m8Play').onclick=()=>{play=!play;if(play&&+$('#m8P').value>=100)$('#m8P').value=0;pf=+$('#m8P').value;$('#m8Play').textContent=play?'❚❚ Пауза':'▶ Показать'};
+  const draw=()=>{
+    const pv=+$('#m8P').value/100,d=far(pv),q=at(d);$('#m8PV').textContent=Math.round(pv*100)+'%';
+    const cur2=thr.reduce((c,x,j)=>d>=x-.01?j:c,0),halt=cur2===thr.length-1,i=C.findIndex(c=>c>=d)<0?C.length-1:C.findIndex(c=>c>=d);
+    const abs=Math.abs(norm(-q[2])),sheet=halt?62:clamp((abs-35)*.55+8,5,85),flap=halt||abs<35;
+    const sx=M[0]+q[0],sy=M[1]+q[1];
+    $('#m8S').innerHTML=`${[-105,-55,55,105].map(x=>arw(x,-98,x,-74,'#9fd3e6',2)).join('')}<text x="0" y="-83" text-anchor="middle" class="f-s" style="fill:#9fd3e6">ВЕТЕР · WIND</text>
+      <line x1="${M[0]}" y1="${M[1]}" x2="${(M[0]+lx).toFixed(1)}" y2="${(M[1]+ly).toFixed(1)}" stroke="#f2c23a" stroke-width="2.2" stroke-dasharray="6 4"/>
+      <text x="${(M[0]+lx-4).toFixed(1)}" y="${(M[1]+ly+12).toFixed(1)}" text-anchor="middle" class="f-s" style="fill:#f2c23a">линия подхода · approach line</text>
+      <path d="M${line(0,P.length-1)}" stroke="#93aebb" stroke-width="1.4" fill="none" stroke-dasharray="3 4" opacity=".55"/>
+      ${i>0?`<path d="M${line(0,i-1)} L${xy(q)}" stroke="#f2a33a" stroke-width="2.2" fill="none" stroke-linecap="round"/>`:''}
+      ${[0,1,2,3,4,5].map(j=>`<line x1="${M[0]-L/2-j*L}" y1="${M[1]-5}" x2="${M[0]-L/2-j*L}" y2="${M[1]+1}" stroke="#93aebb" stroke-width="1"/>`).join('')}
+      <text x="${M[0]-5.5*L}" y="${M[1]+12}" text-anchor="middle" class="f-s">5 корпусов</text>
+      ${d>.01*S?`<circle cx="${M[0]+6}" cy="${M[1]+5}" r="4.4" fill="none" stroke="#f4f1e6" stroke-width="2.4"/><circle cx="${M[0]+6}" cy="${M[1]+5}" r="4.4" fill="none" stroke="#e2564d" stroke-width="2.4" stroke-dasharray="3.45 3.45"/>`:''}
+      ${!halt?`<line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${M[0]}" y2="${M[1]}" stroke="#ffd0a8" stroke-width="1.1" stroke-dasharray="2 3"/>`:''}
+      <circle cx="${M[0]}" cy="${M[1]}" r="3.4" fill="#f2c9a0" stroke="#5b3a29" stroke-width="1.2"/>
+      <text x="${M[0]}" y="${M[1]-13}" text-anchor="middle" class="f-s" style="fill:#ffd0a8">человек · MOB</text>
+      ${boat(q,sheet,flap)}
+      <text x="0" y="86" text-anchor="middle" class="f-t">${MOBSAIL.seq[cur2][2]}</text>`;
+    $('#m8O').innerHTML=MOBSAIL.seq.map((x,j)=>`<li class="${j===cur2?'good':j<cur2?'keys':''}"><b>${x[2]}</b> ${en(x[3])}${j===cur2?`<br>${rich(x[4])}`:''}</li>`).join('')};
+  $('#m8P').oninput=()=>{play=false;$('#m8Play').textContent='▶ Показать';draw()};draw();
+  let last=0,pf=0;const stop=anim(t=>{if(!play){last=t;pf=+$('#m8P').value;return}pf=Math.min(100,pf+(t-last)*8);last=t;$('#m8P').value=pf;draw();if(pf>=100){play=false;$('#m8Play').textContent='▶ Показать'}});
   return stop;
 };
 

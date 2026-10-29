@@ -7,7 +7,7 @@
 /* =========================== КУРС =========================== */
 const COURSE=[
  {id:'bb',n:'Теория Bareboat Skipper',en:'Bareboat Skipper theory',lessons:[]},
- {id:'drv',n:'Практика: ветер, рулёжка, якорь',en:'Hands-on: wind, helming, anchoring',lessons:[]},
+ {id:'drv',n:'Практика на воде',en:'Hands-on: wind, helming, anchoring, MOB',lessons:[]},
  {id:'vhf',n:'Радиосвязь VHF',en:'VHF / SRC radio',lessons:[]}
 ];
 const addLesson=(mod,o)=>COURSE.find(m=>m.id===mod).lessons.push(o);
