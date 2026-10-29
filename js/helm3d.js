@@ -154,7 +154,7 @@ function startHelm3D(mode){
     if(s.id==='walk'&&E.walk<.5)msg('У этой лодки [[заброс винта]] слабый: корма почти не уходит. Попробуй потом однокорпусную парусную яхту — выбери её во вкладке «Флот».','warn');
     (s.hl||[]).forEach(q=>{const e=host.querySelector(q);if(e)e.classList.add('hl')});
     $('#h5coach').hidden=false;$('#h5coach').classList.remove('min');
-    $('#h5coach').innerHTML=`<p class="qn">Мастер-класс · шаг ${st.si+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="h5next">Дальше</button></div>':''}`;
+    $('#h5coach').innerHTML=`${coachQn(st.si,L.length,s)}<p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="h5next">Дальше</button></div>':''}`;
     if(s.info)$('#h5next').onclick=()=>{st.si++;enterStep()};
     renderSteps();
   }
@@ -302,7 +302,7 @@ function startHelm3D(mode){
       cam.position.lerp(v3,k);look.lerp(want,k);cam.lookAt(look);}
     renderer.render(scene,cam);
     // подписи, HUD, панель
-    const tg2=target(),lT=$('#h5lT');if(tg2){lT.innerHTML=`${tg2[2]}<span class="en">${tg2[3]}</span>`;place(lT,tg2[0],2.6,tg2[1])}else lT.hidden=true;
+    const tg2=target(),lT=$('#h5lT');if(tg2){lT.innerHTML=`${tg2[2]}<span class="en">${tg2[3]}</span>`;place(lT,tg2[0],2.6,tg2[1])}else lT.hidden=true;declutter([lT]);
     if(st.msgT>0){st.msgT-=dt;const m=$('#h5msg');m.style.opacity=Math.min(1,st.msgT);if(st.msgT<=0)m.hidden=true}
     $('#h5rud').style.left=(50+st.rud*46)+'%';$('#h5wg').setAttribute('transform',`rotate(${st.rud*270})`);
     $('#h5knob').style.top=((4-st.thrI)*20+2)+'px';$('#h5thrN').innerHTML=`${M4N[st.thrI][0]}${en(M4N[st.thrI][1])}`;

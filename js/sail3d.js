@@ -104,12 +104,12 @@ function startSail3D(boatId,kind){
   const place=(el,x,y,z)=>{v3.set(x,y,z).project(cam);if(v3.z>1||Math.abs(v3.x)>1.1||Math.abs(v3.y)>1.1){el.hidden=true;return}
     el.hidden=false;el.style.left=((v3.x+1)/2*renderer.domElement.clientWidth)+'px';el.style.top=((1-v3.y)/2*renderer.domElement.clientHeight)+'px'};
 
-  // метка, которая за краем экрана прижимается к краю со стрелкой
+  // метка, которая за краем экрана прижимается к краю со стрелкой; стрелка с древком, а не треугольник: повёрнутый ▲ читается как ◀
   const placeEdge=(el,x,y,z,lbl,en2)=>{v3.set(x,y,z).project(cam);const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;let X=v3.x,Y=v3.y;
     // сверху экрана HUD ветра и карточка задания, поэтому верхний край ниже
     if(v3.z>1){X=-X;Y=-Y}const top=cam.aspect<1?.12:.58,off=v3.z>1||Math.abs(X)>.92||Y>top+.02||Y<-.8,m=Math.max(Math.abs(X)/.9,Y>0?Y/top:-Y/.78,1);if(off){X/=m;Y/=m}
     el.hidden=false;el.style.left=((X+1)/2*W)+'px';el.style.top=((1-Y)/2*H)+'px';
-    el.innerHTML=(off?`<b style="display:inline-block;transform:rotate(${Math.atan2(-Y,X)/D+90}deg)">▲</b> `:'')+`${lbl||'Знак'} · ${Math.round(Math.hypot(x-me.position.x,z-me.position.z))} м${en(en2||'windward mark')}`};
+    el.innerHTML=(off?`<svg class="edgeA" viewBox="-5 -6 10 12" width="10" height="12" style="transform:rotate(${Math.atan2(-Y,X)/D+90}deg)"><path d="M0-6L5.5 0H2V6H-2V0H-5.5Z" fill="currentColor"/></svg> `:'')+`${lbl||'Знак'} · ${Math.round(Math.hypot(x-me.position.x,z-me.position.z))} м${en(en2||'windward mark')}`};
   // карточка задания: что сделать прямо сейчас, с галочками по шагам
   const li=(id,ok,txt)=>{const e=$('#'+id);e.className=ok?'ok':'';e.querySelector('i').textContent=ok?'✓':id.slice(2);e.querySelector('span').innerHTML=txt};
   const taskCard=(step,s,dt)=>{
@@ -228,6 +228,7 @@ function startSail3D(boatId,kind){
     const nb=w.from*D;place($('#slN'),bx+Math.sin(nb)*14.5,.4,bz-Math.cos(nb)*14.5);
     if(tack){placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3,'Знак','windward mark');if(sim.buoy2)placeEdge($('#slA2'),sim.buoy2.x*K3,3,sim.buoy2.y*K3,'Нижний знак','leeward mark')}
     else if(step&&sim.running&&!sim.min&&!sim.coach){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
+    declutter([$('#slA'),$('#slA2'),$('#slN')]);
   };
   return true;
 }

@@ -40,7 +40,7 @@ function coachEnter(){
   (s.hl||[]).forEach(q=>{const e=$('#stage').querySelector(q);if(e)e.classList.add('hl')});
   const t=s.t.replace(/\{dir\}/g,`<b>${scDir(true)}</b>`).replace(/\{away\}/g,`<b>${scDir(false)}</b>`).replace(/\{v\}/g,scVt().toFixed(1)).replace(/\{gy\}/g,GYBE_OK);
   const box=$('#scCoach');if(!box)return;box.hidden=false;box.classList.remove('min');
-  box.innerHTML=`<p class="qn">Мастер-класс · шаг ${c.si+1} из ${c.L.length} · ${s.en}</p><p>${rich(t)}</p><p class="live" id="scLive"></p>
+  box.innerHTML=`${coachQn(c.si,c.L.length,s)}<p>${rich(t)}</p><p class="live" id="scLive"></p>
     ${s.info||c.kind==='points'?`<div class="row">${s.info?'<button class="btn" id="scNext">Дальше</button>':''}${c.kind==='points'?'<button class="btn ghost" id="scSkip">Пропустить</button>':''}</div>`:''}`;
   if(s.info)$('#scNext').onclick=()=>coachNext();
   if(c.kind==='points')$('#scSkip').onclick=()=>coachFinish();

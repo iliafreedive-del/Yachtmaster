@@ -63,5 +63,35 @@ function camViews(btn,scene,views,def,on){
   btn.textContent='Камера: '+views[ids.indexOf(cur)][1];
   return{get:()=>cur,set,
     key(e){if(e.code==='KeyC'){btn.click();return true}const n=/^(Digit|Numpad)([1-9])$/.exec(e.code);if(n&&+n[2]<=ids.length){set(ids[n[2]-1]);return true}return false}}}
+/* заголовок карточки мастер-класса: номер шага, название по-русски и по-английски. На телефоне русское название видно,
+   когда карточка свёрнута, — тогда заголовок и есть подсказка, что делать */
+const coachQn=(i,n,s)=>`<p class="qn">Мастер-класс · шаг ${i+1} из ${n}<span class="sn"> · ${s.n}</span> · ${s.en}</p>`;
 /* карточку мастер-класса и задания можно свернуть до заголовка, чтобы не закрывала вид */
 document.addEventListener('click',e=>{const h=e.target.closest&&e.target.closest('.coach .qn, .task3 .tt');if(h)h.parentElement.classList.toggle('min')});
+/* подписи в 3D-сцене не налезают друг на друга и не прячутся под карточки, пульт и кнопки: каждую следующую (по порядку важности)
+   сдвигаем на ближайшее свободное место — вниз, вверх или вбок от помехи. max — на сколько пикселей можно сдвинуть;
+   если ближе места нет, подпись прячется до следующего кадра (так в Дне 1, где подписей много). Звать каждый кадр после расстановки */
+const DC_OBST='.coach,.task3,.hud3.wind,.tools,.hg,.crew3,.pad .g';
+function declutter(labels,max){
+  labels=labels.filter(el=>el&&!el.hidden);if(!labels.length)return;
+  const host=labels[0].offsetParent;if(!host)return;
+  labels.forEach(el=>{el.style.marginLeft='';el.style.marginTop='';el.style.visibility=''});
+  const B=host.getBoundingClientRect(),box=[],lim=max||1e9;
+  (host.closest('.stage')||host).querySelectorAll(DC_OBST).forEach(e=>{const r=e.getBoundingClientRect();if(r.width&&r.height)box.push(r)});
+  labels.map(el=>[el,el.getBoundingClientRect()]).forEach(([el,r])=>{if(!r.width)return;
+    const free=([dx,dy])=>Math.abs(dx)+Math.abs(dy)<=lim&&r.left+dx>=B.left&&r.right+dx<=B.right&&r.top+dy>=B.top&&r.bottom+dy<=B.bottom&&
+      !box.some(o=>r.left+dx<o.right&&r.right+dx>o.left&&r.top+dy<o.bottom&&r.bottom+dy>o.top);
+    let d=[0,0];
+    if(!free(d)){const c=[[B.left-r.left,0],[B.right-r.right,0],[0,B.top-r.top],[0,B.bottom-r.bottom]];
+      box.forEach(o=>c.push([0,o.bottom-r.top+3],[0,o.top-r.bottom-3],[o.right-r.left+3,0],[o.left-r.right-3,0]));
+      // куда сдвинули в прошлом кадре, туда и дальше: подпись не прыгает с одной стороны помехи на другую
+      const p=el._dc||[0,0],cost=v=>Math.abs(v[0])+Math.abs(v[1])-(Math.sign(v[0])===Math.sign(p[0])&&Math.sign(v[1])===Math.sign(p[1])?24:0);
+      const f=c.filter(free).sort((a,b)=>cost(a)-cost(b))[0];
+      if(f)d=f;else if(max){el.style.visibility='hidden';el._dc=d;return}}
+    el._dc=d;if(d[0])el.style.marginLeft=d[0]+'px';if(d[1])el.style.marginTop=d[1]+'px';
+    box.push({left:r.left+d[0],right:r.right+d[0],top:r.top+d[1],bottom:r.bottom+d[1]})})}
+/* телефон: в шаге мастер-класса, где надо действовать, карточка сворачивается до заголовка, как только берёшься за пульт или камеру,
+   чтобы было видно яхту. Новый шаг снова раскрывает карточку; заголовок раскрывает её в любой момент */
+document.addEventListener('pointerdown',e=>{if(!(innerWidth<=700||innerHeight<=560)||!e.target.closest)return;
+  const st=e.target.closest('.stage');if(!st||!e.target.closest('.helm,.pad,.crew3,.three canvas'))return;
+  st.querySelectorAll('.coach:not([hidden]):not(.min)').forEach(c=>{if(!c.querySelector('[id$="next" i]'))c.classList.add('min')})},true);
