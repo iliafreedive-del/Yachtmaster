@@ -3,19 +3,19 @@
    в точке EN_POS круизной яхты makeCruiser (там же, где моторный отсек в «Разрезе»). Режимы: системы с потоком по шлангам, «Разобрать»,
    «Как работает» (поршни, клапаны, такты), «В яхте» (яхта разрезана вдоль, трап снимается), вал или колонка saildrive,
    пульт с запуском и тревогами, мастер-классы ремонта по шагам. Подписи, карточка и камера — как в anatomy3d.js, оттуда же anV */
-let E3=null;
-const EN_WL=-.19,EN_POS=[0,-.52,2.5],EN_SH=12*D,EN_CYL=[-.18,0,.18],EN_CY=.18,EN_R=.045,EN_L=.15;
+let E3=null,EN_AFTER=null;// EN_AFTER — что открыть, когда вкладка соберётся заново (после выбора мотора)
+const EN_WL=-.19,EN_POS=[0,-.52,2.5],EN_SH=12*D,EN_CY=.18,EN_R=.045,EN_L=.15;
 /* подписи по важности: когда места мало, остаются первые */
 const EN_PRIO=['block','seacock','strainer','rawpump','impeller','hx','elbow','exhose','prefilter','fuelfilter','liftpump','injpump','injectors','dipstick','oilcap','oilfilter',
   'belt','alternator','starter','battery','batswitch','panel','throttle','gearbox','sdleg','shaft','gland','sdseal','prop','header','expbottle','circpump','thermostat',
-  'airfilter','exmanifold','waterlock','antisiphon','rawhoses','fuellines','tank','fuelvalve','bleedscrew','glowplugs','head','rocker','sump','flywheel','pulley','mounts',
+  'airfilter','exmanifold','turbo','aftercooler','rail','waterlock','antisiphon','rawhoses','fuellines','tank','fuelvalve','bleedscrew','glowplugs','head','rocker','sump','flywheel','pulley','mounts',
   'bilge','coupling','bracket','anode','crank','piston','valves'];
 /* куда расходятся детали в режиме «Разобрать» */
 const EN_EXP={rocker:[0,.34,0],oilcap:[0,.44,0],head:[0,.18,0],valves:[0,.18,0],injectors:[-.06,.32,0],glowplugs:[-.2,.16,0],sump:[0,-.2,0],
   pulley:[0,0,-.3],belt:[0,0,-.44],alternator:[.12,.06,-.44],circpump:[0,.06,-.3],thermostat:[.05,.26,-.16],rawpump:[-.12,0,-.34],impeller:[-.12,0,-.52],
   hx:[.3,.12,0],header:[.3,.3,0],exmanifold:[.2,0,0],elbow:[.32,.05,.12],airfilter:[-.25,.16,.05],injpump:[-.26,0,0],fuelfilter:[-.3,.05,.05],bleedscrew:[-.3,.12,.05],
   liftpump:[-.32,-.05,0],oilfilter:[-.3,-.08,0],dipstick:[-.26,.08,-.05],starter:[-.3,-.05,.12],flywheel:[0,0,.2],gearbox:[0,0,.38],sdleg:[0,-.05,.38],sdseal:[0,-.22,.38],
-  coupling:[0,0,.56],shaft:[0,0,.56],gland:[0,0,.56],bracket:[0,0,.56],prop:[0,0,.56],anode:[0,0,.56],mounts:[0,-.1,0]};
+  coupling:[0,0,.56],shaft:[0,0,.56],gland:[0,0,.56],bracket:[0,0,.56],prop:[0,0,.56],anode:[0,0,.56],mounts:[0,-.1,0],turbo:[.2,.16,.12],aftercooler:[-.2,.24,0],rail:[-.12,.26,0]};
 const EN_EXP_SD={prop:[0,-.05,.42],anode:[0,-.05,.42]};
 /* где внешние детали стоят в яхте: сдвиг от места на стенде (координаты двигателя). Места условные, как в «Разрезе», и все у правого борта:
    левая половина яхты в этом режиме срезана. Бак — у транца, аккумулятор — под полом кормовой каюты, выключатель массы — у трапа,
@@ -32,6 +32,58 @@ const enProf=z=>{const s=enSh(z),b=enYB(z),ch=clamp((z+1)/5,0,1),p=[[1,s+.07],[1
   for(let i=1;i<=8;i++){const a=i/8*Math.PI/2;p.push([(.94-.1*ch)*Math.cos(a)**.6,-.01-(-.01-b)*Math.sin(a)])}return p.map(([f,y])=>[f,Math.max(y,b)])};
 const enHalfAt=(z,y)=>{const pts=enProf(z),w=enHH(z);for(let i=1;i<pts.length;i++){const[a,ya]=pts[i-1],[b,yb]=pts[i];if((ya-y)*(yb-y)<=0&&ya!==yb)return w*(a+(b-a)*(y-ya)/(yb-ya))}return 0};
 
+/* ---------- каталог моторов (js/content/engines.js): какой мотор выбран, оценка расхода, строки паспорта ---------- */
+const motorById=id=>MOTORS.find(m=>m.id===id);
+const motorsOf=boat=>MOTORS.filter(m=>m.boats.some(b=>b[0]===boat));
+/* мотор лодки флота: выбранный в карточке «Флота», иначе стандартный (у старых лодок — заводской) */
+function motorOf(boat){let id;try{id=JSON.parse(localStorage.getItem('gals-motor')||'{}')[boat]}catch(e){}
+  const L=motorsOf(boat),tag=t=>L.find(m=>m.boats.some(b=>b[0]===boat&&b[1]===t));return L.find(m=>m.id===id)||tag('std')||tag('old')||L[0]||motorById('3jh40')}
+function motorSetBoat(boat,id){try{const o=JSON.parse(localStorage.getItem('gals-motor')||'{}');o[boat]=id;localStorage.setItem('gals-motor',JSON.stringify(o))}catch(e){}}
+/* мотор во вкладке «Двигатель»: выбранный там, иначе мотор лодки, которая выбрана для практики */
+function motorCur(){let id;try{id=localStorage.getItem('gals-eng-motor')}catch(e){}return motorById(id)||motorOf(typeof boatType==='function'?boatType():'cruiser')}
+/* мотор только моторной яхты: у него нет колонки и вида «В яхте» (там парусная яхта) */
+const motorMY=m=>m.boats.every(b=>b[0]==='motor');
+/* расход — оценка: в паспортах он дан кривыми. На полной мощности дизель тратит около 0,3 л топлива на 1 кВт за час (с турбиной — около 0,27);
+   на ¾ оборотов винт берёт около 40 % мощности (мощность винта растёт как куб оборотов), а удельный расход там чуть выше */
+function motorFuel(m){const k=/turbo/.test(m.asp||'')?.27:.3;return[m.kw*k,m.kw*.42*k*1.1]}
+const nfm=(v,d)=>String(+(+v).toFixed(d)).replace('.',','),lph=v=>nfm(v,v<10?1:0);
+const motorCylTxt=m=>m.v?`V${m.cyl}: два ряда по ${m.cyl/2}`:`${m.cyl} в ряд`;
+const motorRows=m=>{const f=motorFuel(m);return[['Цилиндры','cylinders',motorCylTxt(m)],['Рабочий объём','displacement',nfm(m.l,2)+' л'],['Диаметр × ход','bore × stroke',m.bs.join(' × ')+' мм'],
+  ['Мощность','rated output',`${nfm(m.kw,1)} кВт · ${nfm(m.hp,1)} л. с.${m.rpm?` при ${m.rpm} об/мин`:''}${m.pwr?`; ${m.pwr}`:''}`],
+  m.asp&&['Наддув','aspiration',{na:'атмосферный, без турбины',turbo:'турбина и охладитель воздуха',turbo2:'две турбины и охладитель воздуха'}[m.asp]],
+  m.inj&&['Впрыск','fuel injection',{cr:'common rail, электронное управление',idi:'вихрекамерный, механический ТНВД'}[m.inj]],
+  m.cr&&['Степень сжатия','compression ratio',nfm(m.cr,1)+' : 1'],m.idle&&['Холостые','idle',m.idle+' об/мин'],
+  ['Сухой вес','dry weight',`${m.kg[0]} кг — ${m.kg[1]}`],['Вес на 1 л. с.','weight per hp',nfm(m.kg[0]/m.hp,1)+' кг'],m.dims&&['Габариты','dimensions',m.dims],
+  m.alt&&['Генератор','alternator',m.alt],m.cool&&['Охлаждение','cooling',m.cool],['Привод','drive',m.gear],
+  ['Расход — оценка','fuel use, estimate',`≈ ${lph(f[0])} л/ч на полном газу · ≈ ${lph(f[1])} л/ч на ¾ оборотов`]].filter(Boolean)};
+/* где мотор стоит во флоте: «Sun Odyssey 410 — стандарт» */
+const motorWhere=m=>m.boats.filter(b=>b[0]).map(b=>{const f=FLEET.find(x=>x.id===b[0]);return f?`${f.s} — ${MOTOR_TAG[b[1]]}`:''}).filter(Boolean).join(', ')||'для сравнения, во флоте тренажёра его нет';
+/* привод по умолчанию: у катамарана — колонки, у остальных — вал; без лодки — как у первой лодки мотора */
+const motorDrive=(m,boat)=>boat?(boat==='cat'?'sd':'shaft'):/колонк|saildrive/.test((m.boats[0]||[])[2]||'')?'sd':'shaft';
+/* 3D под мотор. Шаг цилиндров тот же, что у прежней трёхцилиндровой модели (.18), задний торец блока на месте — там маховик и редуктор,
+   поэтому блок удлиняется или укорачивается вперёд: dZ — сдвиг переднего торца, dF — шкивов, помп и генератора (EN_FRONT; у V8 они дальше от блока).
+   EN_SC — общий размер «самого двигателя» относительно 3JH40 (по габаритам и объёму, на глаз); внешние детали EN_EXT — бак, кингстон, вал, винт —
+   стоят на местах корпуса и не масштабируются. У цилиндра: z, ряд b, шейка j, угол колена ph, сдвиг такта ps (вспышка, когда колено на оси ряда и θ+ps=2π).
+   Ряд: phi — наклон оси цилиндров от вертикали (+ к правому борту), ex — с какой стороны ряда выпуск (+1 — по x ряда) */
+const EN_SC={'2gm20f':.8,md2020:.78,'3ym30ae':.88,'3jh40':1,'4jh45':1,'4jh57':1,'d2-50':1.03,'d4-300':1.22,'8lv320':1.15};
+const EN_EXT=new Set(['bilge','tank','fuelvalve','prefilter','battery','batswitch','panel','throttle','seacock','strainer','waterlock','antisiphon','exhose','shaft','gland','bracket','prop','anode','sdleg','sdseal','rawhoses','fuellines']);
+const EN_FRONT=new Set(['pulley','circpump','thermostat','rawpump','impeller','alternator','belt','header','expbottle','injpump','dipstick','oilcap']);
+/* у V8 ряды цилиндров занимают места рядного мотора: эти детали отодвинуты (моторные координаты, до масштаба); у рядного с турбиной колено — за турбиной */
+const EN_V8={hx:[.195,-.03,0],header:[.195,-.03,0],expbottle:[.15,-.03,0],injpump:[.2,.11,0],fuelfilter:[-.23,0,0],bleedscrew:[-.23,0,0],liftpump:[-.05,-.05,0],
+  oilfilter:[-.04,0,0],dipstick:[-.2,-.05,0],elbow:[.05,0,.12]};
+const EN_TB={elbow:[0,0,.1]};
+function enLayout(m){const V=!!m.v,n=V?m.cyl/2:m.cyl,p=.18,P=Math.PI,zl=.27-p/2,q=P/4;
+  // колена и вспышки: 2 цилиндра — колена через 180°; 3 — через 120°, порядок 1-3-2; 4 — плоский вал, 1-3-4-2; V8 — крестовый вал, вспышка каждые 90°
+  const PH={2:[0,P],3:[0,4*P/3,2*P/3],4:[0,P,P,0]}[n],TF={2:[0,P],3:[2*P,2*P/3,10*P/3],4:[0,3*P,P,2*P]}[n];
+  const bk=V?[{phi:-q,ex:-1},{phi:q,ex:1}]:[{phi:0,ex:1}],cyl=[];
+  if(!V)for(let i=0;i<n;i++)cyl.push({z:zl-(n-1-i)*p,b:0,j:i,ph:PH[i],ps:2*P-TF[i]});
+  // V8: на одной шейке два шатуна, поэтому ряды чуть сдвинуты вдоль вала
+  else{const ph=[0,2,6,4],tf=[[15,13,1,11],[9,7,3,5]];[0,1].forEach(b=>ph.forEach((a,j)=>cyl.push({z:zl-(3-j)*p+(b?.025:-.02),b,j,ph:a*q,ps:(8-tf[b][j])*q})))}
+  const zF=Math.min(...cyl.map(c=>c.z))-p/2-.03,tb=/turbo/.test(m.asp||'');
+  // порядок вспышек рядного мотора: по моменту рабочего хода, начиная с первого цилиндра
+  let fo='';if(!V){const o=cyl.map((c,i)=>[(2*P-c.ps+4*P)%(4*P),i+1]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]),k=o.indexOf(1);fo=o.slice(k).concat(o.slice(0,k)).join('-')}
+  return{V,n,bk,cyl,zF,dZ:zF+.3,dF:zF+.3-(V?.06:0),tb,cr:m.inj==='cr',fo}}
+
 function stopEng3D(){if(!E3)return;E3.on=false;cancelAnimationFrame(E3.raf);E3.ro&&E3.ro.disconnect();E3.renderer.dispose();try{E3.renderer.forceContextLoss()}catch(e){}
   $('#three').innerHTML='';$('#stage').classList.remove('tall');E3=null}
 
@@ -41,6 +93,8 @@ function startEngine(){
   const host=$('#three');host.innerHTML='';
   const renderer=window.THREE&&makeRenderer(host);if(!renderer){$('#stage').classList.remove('tall');no3D();return false}
   const R=host.getBoundingClientRect();
+  /* мотор: число и ряды цилиндров, длина блока, общий размер; у мотора моторной яхты нет колонки и вида «В яхте» (там парусная яхта) */
+  const M=motorCur(),SC=EN_SC[M.id]||1,LAY=enLayout(M),MY=motorMY(M),SDOK=!MY&&/колонк/.test(M.gear),zF=LAY.zF,zR=.26,zc=(zF+zR)/2,Lb=zR-zF,dZ=LAY.dZ,dF=LAY.dF;
   host.insertAdjacentHTML('beforeend',`<svg class="an-lines" id="enSvg"></svg><div class="an-labs" id="enLabs"></div>
     <div class="an-bar"><div class="an-q"><input id="enQ" type="search" autocomplete="off" placeholder="Найти: крыльчатка, impeller…" aria-label="Поиск детали двигателя"><div class="an-res" id="enRes" hidden></div></div>
       <button id="enFixB" aria-pressed="false">Ремонт</button><button id="enPultB" aria-pressed="false">Пульт</button>
@@ -67,7 +121,7 @@ function startEngine(){
     const p={id,info:ENG[id],g:new THREE.Group(),mats:[],anc:{}};p.g.userData.part=id;E.add(p.g);return parts[id]=p};
   const K=(id,fn,g)=>{const k=kit3();fn(k);k.build(g||part(id).g)};
   const sub=(id,x,y,z,g)=>{const s=new THREE.Group();s.position.set(x,y,z);(g||part(id).g).add(s);return s};
-  const proxy=(id,r,x,y,z)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,8,6),proxyM);m.position.set(x,y,z);m.userData.proxy=true;part(id).g.add(m);return m};
+  const proxy=(id,r,x,y,z,g)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,8,6),proxyM);m.position.set(x,y,z);m.userData.proxy=true;(g||part(id).g).add(m);return m};
   const own=(id,geo,mat,x,y,z,g)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);(g||part(id).g).add(m);return m};
   /* цилиндр вдоль оси: k, радиус, длина, цвет, x,y,z, ось 'x'|'y'|'z' */
   const cyl=(k,r,h,c,x,y,z,ax,seg)=>k.add(new THREE.CylinderGeometry(r,r,h,seg||18),c,x,y,z,ax==='z'?Math.PI/2:0,0,ax==='x'?Math.PI/2:0);
@@ -75,18 +129,26 @@ function startEngine(){
   const glassM=()=>M3(0xd6eef5,{transparent:true,opacity:.3,roughness:.08,metalness:0,side:THREE.DoubleSide,depthWrite:false,flatShading:false});
 
   /* ---------- сам двигатель ---------- */
-  K('block',k=>{k.box(.36,.3,.56,EG,0,.27,-.02);[-1,1].forEach(s=>{EN_CYL.forEach(z=>k.box(.02,.22,.12,EG2,s*.19,.29,z));k.box(.03,.04,.6,EG2,s*.18,.14,-.02)});
-    k.box(.3,.32,.03,EG2,0,.3,-.315)});
-  K('head',k=>{k.box(.32,.12,.52,EG,0,.48,-.02).box(.33,.015,.53,EG2,0,.425,-.02)});
-  K('rocker',k=>{k.add(prismR([[-.24,.54],[.2,.54],[.2,.615],[-.24,.615]],.24,0,.025),H+0x4f5b63,0,0,0).box(.18,.008,.3,0x9aa3a6,0,.618,-.02)});
-  K('oilcap',k=>k.add(new THREE.CylinderGeometry(.028,.031,.035,16),H+YEL,0,.632,-.14));proxy('oilcap',.04,0,.64,-.14);
-  K('sump',k=>{k.box(.3,.08,.5,0x56626a,0,.08,-.03).box(.24,.06,.44,0x56626a,0,.03,-.03)});
+  /* ряд цилиндров — своя группа: начало на оси коленвала, y вдоль цилиндров, x — к выпуску при ex=1.
+     У рядного мотора ряд один, без наклона: его координаты — моторные со сдвигом на EN_CY. У V8 два ряда под ±45° */
+  const BK=LAY.bk.map((b,i)=>Object.assign({i,cyl:LAY.cyl.filter(c=>c.b===i)},b));
+  const bank=(id,b)=>{const s=sub(id,0,EN_CY,0);s.rotation.z=-BK[b].phi;return s};
+  const b2e=(b,x,y,z)=>{const f=BK[b].phi,c=Math.cos(f),s=Math.sin(f);return[x*c+y*s,EN_CY-x*s+y*c,z]};
+  const zmid=b=>{const z=BK[b].cyl.map(c=>c.z);return(Math.min(...z)+Math.max(...z))/2},HW=LAY.V?.11:.16;// HW — половина ширины головки
+  K('block',k=>{if(LAY.V){k.box(.44,.16,Lb,EG,0,.19,zc).box(.5,.3,.03,EG2,0,.29,zF-.015);[-1,1].forEach(s=>k.box(.03,.04,Lb+.04,EG2,s*.22,.12,zc));return}
+    k.box(.36,.3,Lb,EG,0,.27,zc);[-1,1].forEach(s=>{LAY.cyl.forEach(c=>k.box(.02,.22,.12,EG2,s*.19,.29,c.z));k.box(.03,.04,Lb+.04,EG2,s*.18,.14,zc)});
+    k.box(.3,.32,.03,EG2,0,.3,zF-.015)});
+  BK.forEach(B=>{if(LAY.V)K('block',k=>{k.box(.2,.2,Lb,EG,0,.14,zc);B.cyl.forEach(c=>k.box(.02,.16,.12,EG2,B.ex*.105,.14,c.z))},bank('block',B.i));
+    K('head',k=>k.box(HW*2,.12,Lb-.04,EG,0,.3,zc).box(HW*2+.01,.015,Lb-.03,EG2,0,.245,zc),bank('head',B.i));
+    K('rocker',k=>k.add(prismR([[zF+.06,.36],[zR-.06,.36],[zR-.06,.435],[zF+.06,.435]],HW*1.5,0,.025),H+0x4f5b63,0,0,0).box(HW*1.12,.008,Lb-.26,0x9aa3a6,0,.438,zc),bank('rocker',B.i))});
+  {const g=bank('oilcap',0);K('oilcap',k=>k.add(new THREE.CylinderGeometry(.028,.031,.035,16),H+YEL,0,.452,-.14),g);proxy('oilcap',.04,0,.46,-.14,g)}
+  K('sump',k=>{const w=LAY.V?.38:.3;k.box(w,.08,Lb-.06,0x56626a,0,.08,zc-.01).box(w-.06,.06,Lb-.12,0x56626a,0,.03,zc-.01)});
   K('flywheel',k=>cyl(k,.2,.1,H+EG2,0,.2,.31,'z',28));
   dyn.pul=sub('pulley',0,EN_CY,-.352);K('pulley',k=>{cyl(k,.07,.034,H+0x2b2f31,0,0,0,'z',24);[0,1,2].forEach(i=>{const a=i*2.094;k.box(.014,.014,.04,0x9aa3a6,Math.cos(a)*.04,Math.sin(a)*.04,-.004)})},dyn.pul);
   K('circpump',k=>{k.box(.12,.09,.05,EG2,0,.47,-.345)});dyn.cpul=sub('circpump',0,.47,-.385);
   K('circpump',k=>{cyl(k,.05,.024,H+0x9aa3a6,0,0,0,'z',22);[0,1,2,3].forEach(i=>{const a=i*1.571;k.box(.01,.01,.03,0x2b2f31,Math.cos(a)*.028,Math.sin(a)*.028,-.006)})},dyn.cpul);
   K('thermostat',k=>{cyl(k,.03,.05,H+EG2,.07,.57,-.26,'y');cyl(k,.017,.07,H+RUB,.07,.585,-.305,'z')});proxy('thermostat',.04,.07,.58,-.27);
-  K('mounts',k=>{[-1,1].forEach(s=>{k.box(.08,.1,1.15,0xc4bfb2,s*.24,-.05,.04);[-.22,.36].forEach(z=>{k.box(.09,.01,.08,ST,s*.24,.005,z);cyl(k,.035,.05,H+RUB,s*.24,.035,z,'y');
+  K('mounts',k=>{[-1,1].forEach(s=>{k.box(.08,.1,1.15,0xc4bfb2,s*.24,-.05,.04);[-.22+dF,.36].forEach(z=>{k.box(.09,.01,.08,ST,s*.24,.005,z);cyl(k,.035,.05,H+RUB,s*.24,.035,z,'y');
     k.box(.03,.02,.06,0x9aa3a6,s*.24,.065,z).rod([s*.24,.07,z],[s*.18,.17,z],.012,0x9aa3a6)})})});
   K('bilge',k=>{k.box(.42,.012,.8,0xbfc6c9,0,-.035,.02);[-1,1].forEach(s=>k.box(.012,.03,.8,0xbfc6c9,s*.21,-.025,.02))});
   dyn.bw=own('bilge',new THREE.BoxGeometry(.9,.01,1.5),M3(0x3d8fb5,{transparent:true,opacity:.55,roughness:.15,flatShading:false}),0,-.06,.05);dyn.bw.visible=false;
@@ -105,12 +167,36 @@ function startEngine(){
   K('fuelfilter',k=>{k.box(.08,.035,.08,DK,-.22,.39,.15);cyl(k,.036,.1,H+0xe8e4d8,-.22,.32,.15,'y');k.box(.02,.05,.02,0x9aa3a6,-.19,.38,.15)});
   dyn.bleed=sub('bleedscrew',-.22,.414,.15);K('bleedscrew',k=>{cyl(k,.009,.016,H+BRZ2,0,0,0,'y',6);cyl(k,.004,.012,H+BRZ2,0,-.012,0,'y',6)},dyn.bleed);proxy('bleedscrew',.035,-.22,.42,.15);
   K('injpump',k=>{k.box(.09,.12,.15,DK,-.2,.27,-.1).box(.05,.012,.016,0x9aa3a6,-.22,.338,-.15).box(.012,.03,.012,RED,-.245,.33,-.06);cyl(k,.03,.05,H+DK,-.2,.24,-.2,'z')});
-  K('injectors',k=>EN_CYL.forEach(z=>{k.add(new THREE.CylinderGeometry(.011,.011,.07,10),H+0x9aa3a6,-.07,.575,z,0,0,-.35);cyl(k,.016,.014,H+0x6b7479,-.08,.605,z,'y',6)}));proxy('injectors',.05,-.07,.58,0);
+  /* форсунки — в головке каждого ряда; injX — где форсунка по x ряда */
+  const injX=B=>LAY.V?-B.ex*.05:-.07;
+  BK.forEach(B=>{const g=bank('injectors',B.i),x=injX(B);K('injectors',k=>B.cyl.forEach(c=>{k.add(new THREE.CylinderGeometry(.011,.011,.07,10),H+0x9aa3a6,x,.395,c.z,0,0,-.35*B.ex);
+    cyl(k,.016,.014,H+0x6b7479,x-.01*B.ex,.425,c.z,'y',6)}),g);if(!B.i)proxy('injectors',.05,x,.4,zmid(0),g)});
+  /* топливная рампа common rail — вдоль головки, у V8 по одной на ряд, со стороны развала; railX — её место по x ряда */
+  const railX=B=>-B.ex*(LAY.V?.15:.2);
+  if(LAY.cr)BK.forEach(B=>{const g=bank('rail',B.i),x=railX(B),z=B.cyl.map(c=>c.z),z0=Math.min(...z)-.07,z1=Math.max(...z)+.07;
+    K('rail',k=>{k.rod([x,.36,z0],[x,.36,z1],.014,ST,12);cyl(k,.012,.05,H+DK,x,.36,z0-.025,'z',10);cyl(k,.008,.03,H+0x2b2f31,x,.385,z0+.01,'y',8);
+      B.cyl.forEach(c=>cyl(k,.019,.026,H+0x9aa3a6,x,.36,c.z,'z',10))},g);if(!B.i)proxy('rail',.04,x,.36,(z0+z1)/2,g)});
 
   /* ---------- воздух и выхлоп ---------- */
-  K('airfilter',k=>{k.box(.05,.06,.36,EG2,-.185,.49,-.02);cyl(k,.066,.06,H+0x2b2f31,-.235,.5,.16,'x',24);[-.02,0,.02].forEach(d=>cyl(k,.068,.004,H+0x555a5c,-.235+d,.5,.16,'x',24))});
-  K('exmanifold',k=>{k.box(.06,.08,.42,0x4a4440,.19,.44,-.02);EN_CYL.forEach(z=>k.box(.03,.06,.07,0x4a4440,.165,.46,z))});
   const tube=(pts,r,col,seg,o)=>new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p=>V(p[0],p[1],p[2])),false,'centripetal'),seg||24,r,10,false),M3(col,Object.assign({flatShading:false,roughness:.5},o||{})));
+  /* глушитель впуска: на входе во впускной коллектор, у мотора с турбиной — на входе её компрессора */
+  const silencer=(x,y,z,ax)=>K('airfilter',k=>{cyl(k,.066,.06,H+0x2b2f31,x,y,z,ax,24);[-.02,0,.02].forEach(d=>cyl(k,.068,.004,H+0x555a5c,x+(ax==='x'?d:0),y,z+(ax==='z'?d:0),ax,24))});
+  // впускной коллектор: у рядного — вдоль левого борта головки, у V8 — в развале между рядами
+  K('airfilter',k=>LAY.V?k.box(.12,.06,Lb-.14,EG2,0,.44,zc):k.box(.05,.06,Lb-.2,EG2,-.185,.49,zc));
+  if(!LAY.tb)silencer(-.235,.5,.16,'x');
+  BK.forEach(B=>K('exmanifold',k=>{const x=B.ex*(LAY.V?.15:.19);k.box(.06,.08,Lb-.14,0x4a4440,x,.26,zc);B.cyl.forEach(c=>k.box(.03,.06,.07,0x4a4440,x-B.ex*.025,.28,c.z))},bank('exmanifold',B.i)));
+  /* турбина: горячая улитка от выхлопа и холодная — компрессор, на одном валу вдоль мотора; у V8 их две, за рядами цилиндров */
+  const TB=LAY.tb?(LAY.V?[[-.12,.53,.3],[.12,.53,.3]]:[[.22,.53,.29]]):[],TBC=0x4a4440,ALU=0xc9d0d4;
+  TB.forEach(([x,y,z])=>{K('turbo',k=>{cyl(k,.052,.045,H+TBC,x,y,z-.04,'z',22);cyl(k,.026,.04,H+0x6b7479,x,y,z,'z',14);cyl(k,.056,.045,H+ALU,x,y,z+.04,'z',22);
+    k.box(.04,.05,.04,TBC,x,y-.055,z-.04).box(.03,.05,.03,ALU,x,y+.06,z+.04)});silencer(x,y,z+.11,'z')});
+  if(LAY.tb){const o={roughness:.7};
+    // от коллектора к турбине; у V8 — от каждого ряда к своей турбине и общая труба от турбин к колену
+    if(LAY.V){[0,1].forEach(b=>{const s=b?1:-1;part('exmanifold').g.add(tube([b2e(b,BK[b].ex*.15,.26,.17),[s*.3,.37,.22],[s*.22,.5,.25],[s*.13,.53,.255]],.026,TBC,16,o))});
+      part('turbo').g.add(tube([[-.12,.48,.26],[-.06,.43,.3],[.06,.43,.31],[.17,.44,.305],[.25,.45,.3]],.028,TBC,20,o));part('turbo').g.add(tube([[.12,.48,.26],[.13,.445,.295]],.026,TBC,6,o))}
+    else part('exmanifold').g.add(tube([[.19,.47,.16],[.2,.5,.21],[.21,.52,.245]],.026,TBC,8,o));
+    // охладитель воздуха: у рядного — рядом с впускным коллектором, у V8 — над развалом
+    K('aftercooler',k=>{const[x,y,w,h,l,z]=LAY.V?[0,.5,.16,.08,Lb-.2,zc-.02]:[-.27,.5,.08,.1,Lb-.25,zc];k.box(w,h,l,0x8c969c,x,y,z);
+      [-1,0,1].forEach(i=>k.box(w+.004,.006,l-.03,0x6b7479,x,y+i*h*.3,z));if(!LAY.V)k.box(.05,.04,.06,0x8c969c,-.22,.5,zc)})}
   part('elbow').g.add(tube([[.2,.45,.18],[.22,.46,.26],[.25,.44,.32],[.27,.38,.36],[.28,.3,.38]],.032,0xc9d1d6,20,{metalness:.6,roughness:.3}));
   K('elbow',k=>cyl(k,.014,.04,H+BRZ,.25,.48,.3,'y'));
   K('waterlock',k=>{cyl(k,.1,.2,H+0x2b2f31,.32,.11,.62,'y',24);cyl(k,.03,.04,H+0x2b2f31,.31,.22,.56,'y');cyl(k,.03,.04,H+0x2b2f31,.35,.22,.68,'y');k.box(.03,.02,.03,0x9aa3a6,.32,.0,.72)});
@@ -131,7 +217,8 @@ function startEngine(){
   {const hub=own('impeller',new THREE.CylinderGeometry(.016,.016,.022,14),M3(0x22272a),0,0,0,dyn.imp);hub.rotation.x=Math.PI/2;
     for(let i=0;i<9;i++){const a=i/9*Math.PI*2,v=own('impeller',new THREE.BoxGeometry(.038,.006,.02),M3(0x22272a),Math.cos(a)*.034,Math.sin(a)*.034,0,dyn.imp);v.rotation.z=a+.45;dyn.vanes.push(v)}}
   proxy('impeller',.04,-.17,.22,-.375);
-  K('hx',k=>{cyl(k,.055,.42,H+0x6b787f,.235,.5,-.04,'z',24);cyl(k,.059,.03,H+BRZ,.235,.5,-.265,'z',24);cyl(k,.059,.03,H+BRZ,.235,.5,.185,'z',24);[-.15,.08].forEach(z=>k.box(.08,.02,.03,0x9aa3a6,.215,.45,z))});
+  K('hx',k=>{const z0=zF+.05;cyl(k,.055,.17-z0,H+0x6b787f,.235,.5,(z0+.17)/2,'z',24);cyl(k,.059,.03,H+BRZ,.235,.5,zF+.035,'z',24);cyl(k,.059,.03,H+BRZ,.235,.5,.185,'z',24);
+    [zF+.15,.08].forEach(z=>k.box(.08,.02,.03,0x9aa3a6,.215,.45,z))});
   K('header',k=>{cyl(k,.022,.04,H+0x6b787f,.235,.565,-.2,'y');cyl(k,.032,.018,H+0xd9dee0,.235,.594,-.2,'y',20)});proxy('header',.04,.235,.59,-.2);
   K('expbottle',k=>{cyl(k,.016,.02,H+0x2b2f31,.4,.685,-.42,'y');k.box(.004,.004,.03,RED,.35,.64,-.42).box(.004,.004,.03,RED,.35,.58,-.42)});
   own('expbottle',new THREE.CylinderGeometry(.05,.05,.14,20),M3(0xf4f2ea,{transparent:true,opacity:.55,roughness:.3,flatShading:false,depthWrite:false}),.4,.6,-.42);
@@ -151,7 +238,9 @@ function startEngine(){
   dyn.alt=sub('alternator',.13,.33,-.31);K('alternator',k=>{cyl(k,.068,.12,H+0xc9d0d4,.04,.09,0,'z',24);cyl(k,.06,.012,H+0x9aa3a6,.04,.09,-.066,'z',24);k.box(.03,.09,.03,0x9aa3a6,0,.03,0)},dyn.alt);
   dyn.apul=sub('alternator',.04,.09,-.08,dyn.alt);K('alternator',k=>{cyl(k,.032,.024,H+0x2b2f31,0,0,0,'z',20);k.box(.008,.008,.03,0x9aa3a6,.016,0,-.004)},dyn.apul);
   K('alternator',k=>k.box(.014,.1,.014,ST,.225,.46,-.33,0,0,.55));
-  K('glowplugs',k=>{EN_CYL.forEach(z=>cyl(k,.007,.04,H+BRZ2,-.175,.47,z,'x',8));k.rod([-.195,.47,-.22],[-.195,.47,.22],.003,0x9aa3a6,5)});proxy('glowplugs',.04,-.18,.47,0);
+  const glowX=B=>-B.ex*(HW+.015);
+  BK.forEach(B=>{const g=bank('glowplugs',B.i),x=glowX(B),z=B.cyl.map(c=>c.z);K('glowplugs',k=>{B.cyl.forEach(c=>cyl(k,.007,.04,H+BRZ2,x,.29,c.z,'x',8));
+    k.rod([x-B.ex*.02,.29,Math.min(...z)-.04],[x-B.ex*.02,.29,Math.max(...z)+.04],.003,0x9aa3a6,5)},g);if(!B.i)proxy('glowplugs',.04,x-B.ex*.005,.29,zmid(0),g)});
   /* панель: лампы светятся сами — их материалы не в общей подсветке */
   dyn.panel=sub('panel',-.62,.8,-.3);dyn.lamps={};
   K('panel',k=>{k.box(.025,.22,.3,0x15191b,0,0,0).box(.008,.2,.28,0x2b2f31,-.014,0,0);cyl(k,.05,.006,'screen',-.02,.03,.07,'x',24)},dyn.panel);
@@ -185,47 +274,70 @@ function startEngine(){
   {const t=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(0,.05,0),V(.04,-.1,.1),V(-.02,-.3,.2),V(.05,-.5,.35)]),16,.008,6),M3(0x3cbf7e,{flatShading:false}));dyn.rope.add(t)}
 
   /* ---------- внутри: коленвал, поршни, клапаны, распредвал (видны в «Как работает») ---------- */
-  const PH=[0,4*Math.PI/3,2*Math.PI/3],PSI=[0,4*Math.PI/3,8*Math.PI/3];// колена через 120°, вспышки через 240°
-  dyn.crank=sub('crank',0,EN_CY,0);K('crank',k=>{k.rod([0,0,-.34],[0,0,.3],.02,ST,12);EN_CYL.forEach((z,i)=>{const a=PH[i],x=EN_R*Math.sin(a),y=EN_R*Math.cos(a);
-    [-.03,.03].forEach(d=>k.box(.05,.09,.016,0x9aa3a6,x/2,y/2,z+d,0,0,-a));cyl(k,.016,.06,H+0xd9dee0,x,y,z,'z',12);k.box(.07,.04,.016,0x6b7479,-x*.8,-y*.8,z+.045,0,0,-a)})},dyn.crank);
-  dyn.pist=[];dyn.rods=[];dyn.gas=[];dyn.spray=[];dyn.vin=[];dyn.vex=[];
-  EN_CYL.forEach((z,i)=>{const pg=sub('piston',0,0,z);K('piston',k=>{cyl(k,.043,.06,H+0xd9dee0,0,0,0,'y',22);[.018,.006].forEach(y=>cyl(k,.0435,.004,H+0x6b7479,0,y,0,'y',22))},pg);dyn.pist.push(pg);
-    const rg=sub('piston',0,0,z);K('piston',k=>k.box(.022,EN_L,.016,0x9aa3a6,0,0,0),rg);dyn.rods.push(rg);
-    const gm=new THREE.Mesh(new THREE.CylinderGeometry(.042,.042,1,20),new THREE.MeshBasicMaterial({color:0x9fd3ff,transparent:true,opacity:.45,depthWrite:false}));gm.position.z=z;HG.add(gm);dyn.gas.push(gm);
-    const sp=new THREE.Mesh(new THREE.ConeGeometry(.022,.05,10,1,true),new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.85,depthWrite:false}));sp.position.set(-.012,.395,z);HG.add(sp);dyn.spray.push(sp);
-    [[-.02,dyn.vin,0x8fb8d6],[.02,dyn.vex,0xb07a5a]].forEach(([x,arr,c])=>{const vg=sub('valves',x,.422,z);K('valves',k=>{cyl(k,.016,.005,H+c,0,0,0,'y',16);cyl(k,.004,.07,H+0x9aa3a6,0,.036,0,'y',6)},vg);arr.push(vg)})});
-  dyn.cam=sub('valves',-.085,.33,0);K('valves',k=>{k.rod([0,0,-.3],[0,0,.26],.011,ST,10);EN_CYL.forEach(z=>[-.02,.02].forEach(d=>k.box(.026,.034,.014,0x9aa3a6,0,.006,z+d)))},dyn.cam);
-  dyn.liners=new THREE.Group();HG.add(dyn.liners);EN_CYL.forEach(z=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(.047,.047,.3,22,1,true),new THREE.MeshBasicMaterial({color:0xc9d6dd,transparent:true,opacity:.12,side:THREE.DoubleSide,depthWrite:false}));m.position.set(0,.29,z);dyn.liners.add(m)});
+  /* коленвал: на шейке — один шатун, у V8 — два, из разных рядов */
+  dyn.crank=sub('crank',0,EN_CY,0);
+  {const pins={};LAY.cyl.forEach(c=>(pins[c.j]=pins[c.j]||[]).push(c));
+    K('crank',k=>{k.rod([0,0,zF-.04],[0,0,zR+.04],.02,ST,12);Object.values(pins).forEach(cs=>{const a=cs[0].ph,x=EN_R*Math.sin(a),y=EN_R*Math.cos(a),z=cs.map(c=>c.z),z0=Math.min(...z)-.03,z1=Math.max(...z)+.03;
+      [z0,z1].forEach(w=>k.box(.05,.09,.016,0x9aa3a6,x/2,y/2,w,0,0,-a));cyl(k,.016,z1-z0,H+0xd9dee0,x,y,(z0+z1)/2,'z',12);k.box(.07,.04,.016,0x6b7479,-x*.8,-y*.8,z1+.015,0,0,-a)})},dyn.crank)}
+  /* поршни, шатуны и клапаны — в группах рядов; гильзы, газ и факел впрыска — не детали, у них своя группа IG с тем же масштабом, что у мотора */
+  const IG=new THREE.Group();E.add(IG);
+  const IB=BK.map(B=>{const g=new THREE.Group();g.position.set(0,EN_CY,0);g.rotation.z=-B.phi;IG.add(g);return g}),PB=BK.map(B=>bank('piston',B.i)),VB=BK.map(B=>bank('valves',B.i));
+  dyn.pist=[];dyn.rods=[];dyn.gas=[];dyn.spray=[];dyn.vin=[];dyn.vex=[];dyn.liners=[];
+  LAY.cyl.forEach(c=>{const B=BK[c.b],pg=sub('piston',0,0,c.z,PB[c.b]);K('piston',k=>{cyl(k,.043,.06,H+0xd9dee0,0,0,0,'y',22);[.018,.006].forEach(y=>cyl(k,.0435,.004,H+0x6b7479,0,y,0,'y',22))},pg);dyn.pist.push(pg);
+    const rg=sub('piston',0,0,c.z,PB[c.b]);K('piston',k=>k.box(.022,EN_L,.016,0x9aa3a6,0,0,0),rg);dyn.rods.push(rg);
+    const gm=new THREE.Mesh(new THREE.CylinderGeometry(.042,.042,1,20),new THREE.MeshBasicMaterial({color:0x9fd3ff,transparent:true,opacity:.45,depthWrite:false}));gm.position.z=c.z;IB[c.b].add(gm);dyn.gas.push(gm);
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(.022,.05,10,1,true),new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.85,depthWrite:false}));sp.position.set(-.012*B.ex,.215,c.z);IB[c.b].add(sp);dyn.spray.push(sp);
+    [[-.02,dyn.vin,0x8fb8d6],[.02,dyn.vex,0xb07a5a]].forEach(([x,arr,col])=>{const vg=sub('valves',x*B.ex,.242,c.z,VB[c.b]);K('valves',k=>{cyl(k,.016,.005,H+col,0,0,0,'y',16);cyl(k,.004,.07,H+0x9aa3a6,0,.036,0,'y',6)},vg);arr.push(vg)});
+    const lm=new THREE.Mesh(new THREE.CylinderGeometry(.047,.047,.3,22,1,true),new THREE.MeshBasicMaterial({color:0xc9d6dd,transparent:true,opacity:.12,side:THREE.DoubleSide,depthWrite:false}));lm.position.set(0,.11,c.z);IB[c.b].add(lm);dyn.liners.push(lm)});
+  dyn.cams=BK.map(B=>{const g=sub('valves',LAY.V?-B.ex*.06:-.085,.15,0,VB[B.i]);K('valves',k=>{k.rod([0,0,zF],[0,0,zR],.011,ST,10);B.cyl.forEach(c=>[-.02,.02].forEach(d=>k.box(.026,.034,.014,0x9aa3a6,0,.006,c.z+d)))},g);return g});
 
-  /* ---------- шланги, трубки, провода: точки в координатах двигателя; 4-й элемент — деталь, вместе с которой точка сдвигается ---------- */
+  /* ---------- шланги, трубки, провода: точки в координатах двигателя; 4-й элемент — деталь, вместе с которой точка сдвигается и масштабируется,
+     5-й 'F' — точка у переднего торца блока (едет на dZ); точка без детали едет за соседними привязанными ---------- */
   const RW=[[[-.34,-.03,-.36,'seacock'],[-.37,.04,-.39],[-.56,.08,-.42],[-.53,.13,-.42,'strainer']],
     [[-.37,.21,-.42,'strainer'],[-.3,.27,-.41],[-.235,.245,-.37,'rawpump']],
-    [[-.11,.245,-.37,'rawpump'],[-.06,.1,-.43],[.12,.055,-.43],[.28,.2,-.37],[.28,.42,-.31],[.235,.5,-.29,'hx']],
+    [[-.11,.245,-.37,'rawpump'],[-.06,.1,-.43],[.12,.055,-.43],[.28,.2,-.37],[.28,.42,-.31],[.235,.5,-.29,'hx','F']],
     [[.235,.5,.21,'hx'],[.29,.57,.26],[.33,.86,.14,'antisiphon'],[.35,.93,.1,'antisiphon']],
     [[.37,.93,.1,'antisiphon'],[.39,.86,.14,'antisiphon'],[.34,.56,.31],[.25,.5,.3,'elbow']]];
-  const EX=[[[.28,.3,.38,'elbow'],[.3,.26,.47],[.31,.235,.56]],[[.35,.235,.68],[.38,.5,.85],[.4,.8,1.05,'goose'],[.41,.73,1.22],[.42,.5,1.38,'out']]];
+  const EX=[[[.28,.3,.38,'elbow'],[.3,.26,.47],[.31,.235,.56,'waterlock']],[[.35,.235,.68,'waterlock'],[.38,.5,.85],[.4,.8,1.05,'goose'],[.41,.73,1.22],[.42,.5,1.38,'out']]];
+  const B0=BK[0],zl0=B0.cyl[B0.cyl.length-1].z;
   const FU=[[[-.62,.06,.36,'fuelvalve'],[-.6,.07,.3],[-.57,.2,.26],[-.54,.4,.25,'prefilter']],
     [[-.425,.4,.25,'prefilter'],[-.33,.34,.18],[-.23,.22,.1,'liftpump']],
     [[-.21,.235,.1,'liftpump'],[-.255,.3,.13],[-.262,.39,.15,'fuelfilter']],
     [[-.178,.39,.15,'fuelfilter'],[-.17,.37,.02],[-.2,.335,-.04,'injpump']],
-    [[-.08,.612,-.18,'injectors'],[-.08,.616,.18,'injectors'],[-.25,.63,.4],[-.62,.34,.52,'tank']]];
-  const IP=EN_CYL.map((z,i)=>[[-.21+i*.015,.335,-.13+i*.025,'injpump'],[-.19,.44,-.12+i*.05],[-.12,.55,z*.85],[-.085,.57,z,'injectors']]);
+    [[...b2e(0,injX(B0)-.01*B0.ex,.432,B0.cyl[0].z),'injectors'],[...b2e(0,injX(B0)-.01*B0.ex,.436,zl0),'injectors'],[-.25,.63,.4],[-.62,.34,.52,'tank']]];
+  /* трубки высокого давления: у механического ТНВД — к каждой форсунке, у common rail — от насоса к рампе и от рампы к форсункам */
+  const injTop=(B,c)=>[...b2e(B.i,injX(B)-.015*B.ex,.39,c.z),'injectors'];
+  const IP=LAY.cr?BK.flatMap(B=>{const x=railX(B),z0=Math.min(...B.cyl.map(c=>c.z))-.07;
+      return[[[-.2,.335,-.12,'injpump'],[-.21,.44,-.16],[...b2e(B.i,x,.36,z0+.02),'rail']],...B.cyl.map(c=>[[...b2e(B.i,x,.36,c.z),'rail'],[...b2e(B.i,(x+injX(B))/2,.43,c.z),'injectors'],injTop(B,c)])]})
+    :LAY.cyl.map((c,i)=>[[-.21+i*.015,.335,-.13+i*.025,'injpump'],[-.19,.44,-.12+i*.05],[-.12,.55,c.z*.85],injTop(BK[c.b],c)]);
   const CAB=[[[.44,.255,-.66,'battery'],[.43,.4,-.64],[.49,.45,-.725,'batswitch']],[[.51,.45,-.71,'batswitch'],[.3,.36,-.5],[-.05,.03,-.32],[-.2,.08,.2],[-.21,.225,.33,'starter']],
-    [[.2,.43,-.27,'alternator'],[.35,.35,-.45],[.445,.255,-.65,'battery']],[[.66,.255,-.66,'battery'],[.62,.12,-.5],[.2,.12,-.29]],
-    [[-.6,.75,-.3,'panel'],[-.4,.6,-.2],[-.21,.49,0],[-.195,.47,.18,'glowplugs']]];
+    [[.2,.43,-.27,'alternator'],[.35,.35,-.45],[.445,.255,-.65,'battery']],[[.66,.255,-.66,'battery'],[.62,.12,-.5],[.2,.12,-.29,'block','F']],
+    [[-.6,.75,-.3,'panel'],[-.4,.6,-.2],[-.21,.49,0],[...b2e(0,glowX(B0)-.02*B0.ex,.29,zl0),'glowplugs']]];
   const THR=[[[.53,.7,-.6,'throttle'],[.4,.55,-.35],[.25,.38,.25],[.12,.3,.45,'gbx']],[[.53,.72,-.62,'throttle'],[.2,.68,-.5],[-.1,.5,-.3],[-.22,.345,-.14,'injpump']]];
   const XB=[[.4,.69,-.42,'expbottle'],[.33,.71,-.32],[.25,.61,-.2,'header']];
+  // от компрессора турбины к охладителю воздуха: у рядного — над крышкой клапанов на другой борт, у V8 — в развал
+  const TP=!LAY.tb?[]:LAY.V?[-1,1].map(s=>[[s*.12,.59,.33,'turbo'],[s*.08,.62,.24,'block'],[s*.04,.545,.135,'aftercooler']])
+    :[[[.22,.59,.33,'turbo'],[.12,.665,.3,'block'],[-.12,.665,.24,'block'],[-.27,.56,.13,'aftercooler']]];
   const HOSES=[...RW.map(p=>({o:'rawhoses',p,r:.016,c:0x23292c})),...EX.map(p=>({o:'exhose',p,r:.032,c:0x1b1f21})),...FU.map(p=>({o:'fuellines',p,r:.008,c:0x2c3236})),
-    ...IP.map(p=>({o:'injectors',p,r:.0035,c:0xc9d1d6,m:1})),{o:'battery',p:CAB[0],r:.007,c:RED},{o:'battery',p:CAB[1],r:.007,c:RED},{o:'alternator',p:CAB[2],r:.005,c:RED},
+    ...IP.map(p=>({o:LAY.cr?'rail':'injectors',p,r:.0035,c:0xc9d1d6,m:1,s:1})),...TP.map(p=>({o:'turbo',p,r:.022,c:0xc9d0d4,m:1,s:1})),
+    {o:'battery',p:CAB[0],r:.007,c:RED},{o:'battery',p:CAB[1],r:.007,c:RED},{o:'alternator',p:CAB[2],r:.005,c:RED},
     {o:'battery',p:CAB[3],r:.007,c:0x15181a},{o:'panel',p:CAB[4],r:.008,c:0x2b2f31},{o:'throttle',p:THR[0],r:.005,c:0x15181a},{o:'throttle',p:THR[1],r:.005,c:0x15181a},{o:'expbottle',p:XB,r:.006,c:0xf4f2ea}];
   /* потоки по системам: ломаные через шланги и через детали; частицы бегут по ним, когда систему выбрали или мотор работает */
   const IN={str:[[-.5,.13,-.42,'strainer'],[-.44,.15,-.42,'strainer'],[-.44,.21,-.42,'strainer'],[-.37,.21,-.42,'strainer']],pmp:[[-.235,.245,-.37,'rawpump'],[-.17,.27,-.38,'rawpump'],[-.11,.245,-.37,'rawpump']],
-    hx:[[.235,.5,-.29,'hx'],[.235,.5,.21,'hx']],elb:[[.25,.5,.3,'elbow'],[.27,.39,.36,'elbow'],[.28,.3,.38,'elbow']],wl:[[.31,.235,.56],[.32,.08,.62],[.35,.235,.68]]};
-  const FLOWS={raw:[[...RW[0],...IN.str,...RW[1],...IN.pmp,...RW[2],...IN.hx,...RW[3],...RW[4],...IN.elb,...EX[0],...IN.wl,...EX[1]]],
-    air:[[[-.3,.5,.16,'airfilter'],[-.235,.5,.16,'airfilter'],[-.185,.49,.1,'airfilter'],[-.185,.49,-.2,'airfilter']],[[.19,.44,-.2,'exmanifold'],[.19,.44,.18,'exmanifold'],...IN.elb,...EX[0],...IN.wl,...EX[1]]],
+    hx:[[.235,.5,-.29,'hx','F'],[.235,.5,.21,'hx']],elb:[[.25,.5,.3,'elbow'],[.27,.39,.36,'elbow'],[.28,.3,.38,'elbow']],wl:[[.31,.235,.56,'waterlock'],[.32,.08,.62,'waterlock'],[.35,.235,.68,'waterlock']]};
+  const EXT=[...IN.elb,...EX[0],...IN.wl,...EX[1]];// от колена до выхода на транце
+  // воздух: впуск и выхлоп; с турбиной — через её компрессор и охладитель, выхлоп — через её улитку
+  const AIR=!LAY.tb?[[[-.3,.5,.16,'airfilter'],[-.235,.5,.16,'airfilter'],[-.185,.49,.1,'airfilter'],[-.185,.49,zF+.1,'airfilter']],[[.19,.44,zF+.1,'exmanifold'],[.19,.44,.18,'exmanifold'],...EXT]]
+    :!LAY.V?[[[.22,.53,.47,'airfilter'],[.22,.53,.33,'turbo'],...TP[0],[-.27,.5,zc,'aftercooler'],[-.22,.5,zc,'aftercooler'],[-.185,.49,zc,'airfilter'],[-.185,.49,zF+.12,'airfilter']],
+        [[.19,.44,zF+.1,'exmanifold'],[.19,.45,.16,'exmanifold'],[.21,.52,.245,'exmanifold'],[.22,.53,.25,'turbo'],[.22,.48,.25,'turbo'],[.2,.45,.18,'elbow'],...EXT]]
+    :[...[0,1].map(b=>{const s=b?1:-1;return[[s*.12,.53,.47,'airfilter'],[s*.12,.53,.33,'turbo'],...TP[b],[0,.5,zF+.2,'aftercooler'],[0,.44,zF+.15,'airfilter']]}),
+      ...[0,1].map(b=>{const s=b?1:-1,B=BK[b];return[[...b2e(b,B.ex*.15,.26,zF+.1),'exmanifold'],[...b2e(b,B.ex*.15,.26,.17),'exmanifold'],[s*.3,.37,.22,'exmanifold'],[s*.22,.5,.25,'exmanifold'],
+        [s*.12,.53,.26,'turbo'],[s*.12,.48,.26,'turbo'],...(b?[[.13,.445,.295,'turbo'],[.17,.44,.305,'turbo']]:[[-.06,.43,.3,'turbo'],[.06,.43,.31,'turbo'],[.17,.44,.305,'turbo'],[.25,.45,.3,'turbo'],...EXT])]})];
+  const FLOWS={raw:[[...RW[0],...IN.str,...RW[1],...IN.pmp,...RW[2],...IN.hx,...RW[3],...RW[4],...EXT]],air:AIR,
     fuel:[[[-.75,.08,.5,'tank'],[-.62,.06,.4,'fuelvalve'],...FU[0],[-.48,.4,.25,'prefilter'],...FU[1],...FU[2],[-.22,.39,.15,'fuelfilter'],...FU[3]],...IP,FU[4]],
-    cool:[[[0,.47,-.36,'circpump'],[0,.34,-.28],[0,.3,.18],[0,.5,.2],[0,.5,-.22],[.07,.57,-.26,'thermostat'],[.2,.58,-.27],[.235,.5,-.25,'hx'],[.235,.5,.15,'hx'],[.15,.4,.22],[.08,.38,-.3],[0,.47,-.36,'circpump']],XB.slice().reverse()],
-    oil:[[[0,.05,0,'sump'],[-.12,.08,0],[-.21,.13,.02,'oilfilter'],[-.1,.2,0],[0,.18,-.2],[0,.18,.2],[0,.45,.1],[0,.5,-.1],[0,.3,-.25],[0,.05,-.1,'sump']]],
+    cool:[[[0,.47,-.36,'circpump'],[0,.34,-.28,'block','F'],[0,.3,.18,'block'],[0,.5,.2,'block'],[0,.5,-.22,'block','F'],[.07,.57,-.26,'thermostat'],[.2,.58,-.27,'thermostat'],
+      [.235,.5,-.25,'hx','F'],[.235,.5,.15,'hx'],[.15,.4,.22,'block'],[.08,.38,-.3,'block','F'],[0,.47,-.36,'circpump']],XB.slice().reverse()],
+    oil:[[[0,.05,0,'sump'],[-.12,.08,0,'sump'],[-.21,.13,.02,'oilfilter'],[-.1,.2,0,'block'],[0,.18,-.2,'block'],[0,.18,.2,'block'],[0,.45,.1,'block'],[0,.5,-.1,'block'],[0,.3,-.25,'block','F'],[0,.05,-.1,'sump']]],
     elec:[CAB[0],CAB[1],CAB[2],CAB[4]]};
   const FLOW_C={raw:0x4aa3df,air:0xb49be0,fuel:0xf2c23a,cool:0x6fd0b5,oil:0xe08a3c,elec:0xffe066};
 
@@ -240,7 +352,7 @@ function startEngine(){
     ctx.add(new THREE.Mesh(anTube(wl,.008,6),new THREE.MeshBasicMaterial({color:0x4aa3df})))}
   const yct={boat:null};
   function yachtBuild(){if(yct.boat)return;
-    const boat=makeBoat('cruiser',{band:0x1f4f7a});
+    const boat=makeBoat('cruiser',{band:0x1f4f7a,noProp:true});// вал и винт здесь свои, под выбранный привод
     boat.traverse(o=>{if(o.material){const cl=m=>{const c=m.clone();c.clippingPlanes=[clipX];c.side=THREE.DoubleSide;return c};o.material=Array.isArray(o.material)?o.material.map(cl):cl(o.material)}if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});
     scene.add(boat);yct.boat=boat;
     const fl=new THREE.Mesh(new THREE.BoxGeometry(1.9,.03,4.1),M3(0xb08a5a,{clippingPlanes:[clipX],side:THREE.DoubleSide}));fl.position.set(0,-.365,-.35);fl.receiveShadow=true;scene.add(fl);yct.floor=fl;
@@ -270,7 +382,8 @@ function startEngine(){
 
   /* ---------- состояние ---------- */
   const S_DEF={run:0,key:0,bat:1,sea:1,fv:1,gear:0,cover:0,imp:0,bad:0,lid:0,basket:0,dirty:0,bowl:0,bleed:0,pump:0,air:0,belt:'ok',rope:0,dip:0,hot:0,smoke:'',bilgeW:0};
-  let drive='shaft';try{if(localStorage.getItem('gals-eng-drive')==='sd')drive='sd'}catch(e){}
+  // привод: выбранный во вкладке, иначе как у лодки (у катамарана — колонки); у мотора без колонки — только вал
+  let drive='shaft';try{drive=localStorage.getItem('gals-eng-drive')||motorDrive(M,localStorage.getItem('gals-eng-motor')?null:typeof boatType==='function'?boatType():null)}catch(e){}if(!SDOK)drive='shaft';
   const st={on:true,renderer,raf:0,sel:null,hov:null,sys:null,labels:true,drive,ex:0,exT:0,inside:false,yacht:false,trap:0,trapT:0,speed:.25,theta:0,
     s:Object.assign({},S_DEF),fix:null,seen:{},t:0,rpm:0,lever:0,crankT:0,cranked:0,dryT:0,fuelT:0,stopT:0,glowT:0,warned:0,msg:'',dirty:true,
     cam:{yaw:-2.35,pitch:.36,dist:3.2,tgt:V(0,-.2,2.55)},fly:null,an:{cover:0,imp:0,lid:0,basket:0,dip:0,sea:1,fv:1,bsw:1,alt:0,lev:0,bleed:0}};E3=st;
@@ -281,13 +394,17 @@ function startEngine(){
     if(!o.userData.lamp)p.mats.push(o.material);o.castShadow=true;o.receiveShadow=true})}
 
   /* ---------- шланги: пересобираются, когда детали сдвинулись ---------- */
-  const off=id=>id==='goose'||id==='out'?anch[id]:id==='gbx'?parts[st.drive==='sd'?'sdleg':'gearbox'].g.position:parts[id]?parts[id].g.position:null;
-  const res=p=>{const v=V(p[0],p[1],p[2]),o=p[3]&&off(p[3]);return o?v.add(o):v};
+  /* точка шланга на экране: у привязанной — масштаб и сдвиг её детали; свободная едет за соседними привязанными, по номеру точки */
+  const res=p=>{const v=V(p[0],p[1],p[2]),id=p[3];if(!id)return v;if(id==='goose'||id==='out')return v.add(anch[id]);
+    const g=id==='gbx'?parts[st.drive==='sd'?'sdleg':'gearbox'].g:parts[id]&&parts[id].g;if(!g)return v;if(p[4]==='F')v.z+=dZ;return v.multiplyScalar(g.scale.x).add(g.position)};
+  function resLine(L){const P=L.map(res),D=L.map((p,i)=>p[3]?P[i].clone().sub(V(p[0],p[1],p[2])):null);
+    return P.map((v,i)=>{if(D[i])return v;let a=i-1,b=i+1;while(a>=0&&!D[a])a--;while(b<L.length&&!D[b])b++;
+      const da=a>=0?D[a]:null,db=b<L.length?D[b]:null;return v.add(da&&db?da.clone().lerp(db,(i-a)/(b-a)):(da||db||V(0,0,0)))})}
   HOSES.forEach(h=>{const p=part(h.o),mat=M3(h.c,{flatShading:false,roughness:h.m?.3:.75,metalness:h.m?.6:0});mat.userData={own:1,op:1,tr:false,em:0,ei:1,dw:true};
     h.mesh=new THREE.Mesh(new THREE.BufferGeometry(),mat);h.mesh.userData.part=h.o;h.mesh.castShadow=true;HG.add(h.mesh);p.mats.push(mat);
     if(h.r<.02){h.px=new THREE.Mesh(new THREE.BufferGeometry(),proxyM);h.px.userData.proxy=true;h.px.userData.part=h.o;HG.add(h.px)}});
-  function rebuildHoses(){HOSES.forEach(h=>{const pts=h.p.map(res),c=new THREE.CatmullRomCurve3(pts,false,'centripetal'),n=Math.max(12,pts.length*8);
-      h.mesh.geometry.dispose();h.mesh.geometry=new THREE.TubeGeometry(c,n,h.r,8,false);if(h.px){h.px.geometry.dispose();h.px.geometry=new THREE.TubeGeometry(c,n,Math.max(.03,h.r*4),5,false)}
+  function rebuildHoses(){HOSES.forEach(h=>{const pts=h.P=resLine(h.p),c=new THREE.CatmullRomCurve3(pts,false,'centripetal'),n=Math.max(12,pts.length*8);
+      h.mesh.geometry.dispose();h.mesh.geometry=new THREE.TubeGeometry(c,n,h.r*(h.s?SC:1),8,false);if(h.px){h.px.geometry.dispose();h.px.geometry=new THREE.TubeGeometry(c,n,Math.max(.03,h.r*4),5,false)}
       const o=parts[h.o];h.mesh.visible=o.g.visible;if(h.px)h.px.visible=o.g.visible});
     flowBuild();beltBuild()}
   /* ремень: огибает три шкива; генератор качается на шарнире — натянут, ослаб или снят */
@@ -310,7 +427,7 @@ function startEngine(){
   /* ---------- потоки: частицы вдоль ломаных ---------- */
   const flowG=new THREE.Group();E.add(flowG);const FL={},m4=new THREE.Matrix4(),dot=new THREE.SphereGeometry(.0095,6,4);
   function flowBuild(){flowG.children.slice().forEach(o=>{flowG.remove(o);o.dispose&&o.dispose()});
-    for(const sys in FLOWS){FL[sys]=FLOWS[sys].map(line=>{const P=line.map(res),cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+P[i].distanceTo(P[i-1]));
+    for(const sys in FLOWS){FL[sys]=FLOWS[sys].map(line=>{const P=resLine(line),cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+P[i].distanceTo(P[i-1]));
       const len=cum[cum.length-1],n=Math.min(160,Math.max(6,Math.round(len/.045))),im=new THREE.InstancedMesh(dot,new THREE.MeshBasicMaterial({color:FLOW_C[sys]}),n);
       im.frustumCulled=false;im.visible=false;flowG.add(im);return{P,cum,len,n,im}})}}
   const fp=V(0,0,0);
@@ -335,16 +452,24 @@ function startEngine(){
       pPos[i*3]+=v.x*dt;pPos[i*3+1]+=v.y*dt;pPos[i*3+2]+=v.z*dt}pGeo.attributes.position.needsUpdate=true}
 
   /* ---------- расстановка: режим, привод, «Разобрать» ---------- */
-  const present=id=>{const i=ENG[id];return!(i.only&&i.only!==st.drive)&&!(i.inner&&!st.inside)};
+  /* has — деталь есть у этого мотора и привода; present — и видна в этом режиме */
+  const has=id=>{const i=ENG[id];return!!i&&!(i.only&&i.only!==st.drive)&&!(i.need==='cr'&&!LAY.cr)&&!(i.need==='turbo'&&!LAY.tb)};
+  const present=id=>has(id)&&!(ENG[id].inner&&!st.inside);
+  /* сдвиг детали под мотор, до масштаба: передние — на dF, у V8 и у рядного с турбиной — свои места; поддон под большим мотором ниже */
+  const BO={};for(const id in parts){const v=V(0,0,EN_FRONT.has(id)?dF:0),o=LAY.V?EN_V8[id]:LAY.tb&&EN_TB[id];if(o)v.add(V(...o));if(id==='bilge'&&SC>1)v.y-=(SC-1)*.25;BO[id]=v}
+  /* сам двигатель масштабируется вокруг фланца редуктора S0 (там начинается вал), внешние детали стоят на своих местах */
+  const coreO=S0.clone().multiplyScalar(1-SC),coreV=a=>V(...a).multiplyScalar(SC).add(coreO);
   function place(){const ex=st.exT,Y=st.yacht;
-    for(const id in parts){const p=parts[id],e=st.drive==='sd'&&EN_EXP_SD[id]||EN_EXP[id],h=Y&&EN_YACHT[id];p.g.position.set(0,0,0);
+    for(const id in parts){const p=parts[id],e=st.drive==='sd'&&EN_EXP_SD[id]||EN_EXP[id],h=Y&&EN_YACHT[id],core=!EN_EXT.has(id);
+      p.g.scale.setScalar(core?SC:1);p.g.position.copy(BO[id]);if(core)p.g.position.multiplyScalar(SC).add(coreO);
       if(h)p.g.position.add(V(...h));if(e)p.g.position.addScaledVector(V(...e),ex);p.g.visible=present(id)}
+    IG.scale.setScalar(SC);IG.position.copy(coreO);
     anch.goose.set(...(Y?EN_YACHT.goose:[0,0,0]));anch.out.set(...(Y?EN_YACHT.out:[0,0,0]));
     dyn.propS.o.visible=dyn.anS.visible=st.drive==='shaft';dyn.propD.o.visible=dyn.anD.visible=st.drive==='sd';
     dyn.panel.rotation.y=Y?0:-.5;dyn.bswG.rotation.y=Y?Math.PI/2:0;
     HG.children.forEach(o=>{if(o.userData.part&&parts[o.userData.part])o.visible=parts[o.userData.part].g.visible});
-    dyn.liners.visible=st.inside;dyn.gas.forEach(m=>m.visible=st.inside);dyn.spray.forEach(m=>m.visible=false);
-    ctx.visible=!Y&&ex<.05;
+    dyn.liners.forEach(m=>m.visible=st.inside);dyn.gas.forEach(m=>m.visible=st.inside);dyn.spray.forEach(m=>m.visible=false);
+    ctx.visible=!Y&&!MY&&ex<.05;
     if(yct.boat){yct.boat.visible=yct.floor.visible=yct.trap.visible=yct.water.visible=yct.deep.visible=yct.furn.visible=yct.cut.visible=Y}
     scene.background.setHex(Y?SKY:BG);scene.fog=Y?new THREE.Fog(SKY,70,230):null;if(sky)sky.dome.visible=sky.clouds.visible=Y;
     {const c=sun.shadow.camera,r=Y?9:2.4,tg=Y?V(0,.5,2.5):V(0,-.15,2.5);sun.target.position.copy(tg);sun.position.copy(tg).add(V(-3.5,9,-2.5));
@@ -371,13 +496,14 @@ function startEngine(){
   /* ---------- «Как работает»: поршни, шатуны, клапаны, такты ---------- */
   const STROKE=[['Впуск','intake'],['Сжатие','compression'],['Рабочий ход','power'],['Выпуск','exhaust']];let strokeNow=-1;
   const gasC=new THREE.Color(),cA=new THREE.Color(0x9fd3ff),cB=new THREE.Color(0xff9a3c),cF=new THREE.Color(0xffd23c),cX=new THREE.Color(0x8c8c8c);
-  function innerTick(dt){st.theta+=dt*Math.PI*2*st.speed;const th=st.theta;dyn.crank.rotation.z=-th;dyn.cam.rotation.z=-th/2;
-    EN_CYL.forEach((z,i)=>{const a=th+PH[i],c=((th+PSI[i])%(4*Math.PI)+4*Math.PI)%(4*Math.PI),xs=EN_R*Math.sin(a),yc=EN_CY+EN_R*Math.cos(a),yp=EN_CY+EN_R*Math.cos(a)+Math.sqrt(EN_L*EN_L-(EN_R*Math.sin(a))**2);
-      dyn.pist[i].position.y=yp+.015;const r=dyn.rods[i];r.position.set(xs/2,(yc+yp)/2,z);r.rotation.z=Math.atan2(xs,yp-yc);
-      const top=yp+.045,g=dyn.gas[i];g.scale.y=Math.max(.001,.42-top);g.position.set(0,(top+.42)/2,z);
-      const P=Math.PI,k=c/P|0,u=(c%P)/P;gasC.copy(k===0?cA:k===1?cA.clone().lerp(cB,u):k===2?cF.clone().lerp(cX,u*.8):cX);g.material.color.copy(gasC);g.material.opacity=k===2&&u<.25?.75:.45;
+  /* угол колена считается от оси ряда: у V8 ряды наклонены, поэтому верхняя мёртвая точка у каждого ряда своя */
+  function innerTick(dt){st.theta+=dt*Math.PI*2*st.speed;const th=st.theta,P=Math.PI;dyn.crank.rotation.z=-th;dyn.cams.forEach(g=>g.rotation.z=-th/2);
+    LAY.cyl.forEach((cy,i)=>{const a=th+cy.ph-BK[cy.b].phi,c=((th+cy.ps)%(4*P)+4*P)%(4*P),xs=EN_R*Math.sin(a),yc=EN_R*Math.cos(a),yp=yc+Math.sqrt(EN_L*EN_L-xs*xs);
+      dyn.pist[i].position.y=yp+.015;const r=dyn.rods[i];r.position.set(xs/2,(yc+yp)/2,cy.z);r.rotation.z=Math.atan2(xs,yp-yc);
+      const top=yp+.045,g=dyn.gas[i];g.scale.y=Math.max(.001,.24-top);g.position.set(0,(top+.24)/2,cy.z);
+      const k=c/P|0,u=(c%P)/P;gasC.copy(k===0?cA:k===1?cA.clone().lerp(cB,u):k===2?cF.clone().lerp(cX,u*.8):cX);g.material.color.copy(gasC);g.material.opacity=k===2&&u<.25?.75:.45;
       dyn.spray[i].visible=st.inside&&(c>1.93*P&&c<2.12*P);
-      dyn.vin[i].position.y=.422-(k===0?Math.sin(u*P)*.014:0);dyn.vex[i].position.y=.422-(k===3?Math.sin(u*P)*.014:0);
+      dyn.vin[i].position.y=.242-(k===0?Math.sin(u*P)*.014:0);dyn.vex[i].position.y=.242-(k===3?Math.sin(u*P)*.014:0);
       if(i===0&&k!==strokeNow){strokeNow=k;renderSide()}
       const L=labEl['c'+i];if(L){const h=`Цил. ${i+1} · ${STROKE[k][0].toLowerCase()}<span class="en">${STROKE[k][1]}</span>`;if(L._h!==h){L._h=h;L.innerHTML=h;L._w=0}}})}
 
@@ -398,17 +524,25 @@ function startEngine(){
   const labs=$('#enLabs'),svg=$('#enSvg'),labEl={};
   Object.keys(parts).forEach(id=>{const p=parts[id];if(!p.info)return;const L=ENG_LAYERS.find(l=>l.id===p.info.l),el=document.createElement('button');el.className='an-tl';el.dataset.id=id;
     el.style.setProperty('--lc',L.c);el.innerHTML=`${p.info.n}<span class="en">${p.info.en}</span>`;el.onclick=e=>{e.stopPropagation();onPick(id,true)};labs.appendChild(el);labEl[id]=el});
-  EN_CYL.forEach((z,i)=>{const el=document.createElement('div');el.className='an-tl en-cyl';labs.appendChild(el);labEl['c'+i]=el});
+  // такты подписаны у цилиндров первого ряда: у V8 второй ряд с этой стороны не виден
+  const CL=LAY.cyl.map((c,i)=>c.b?null:'c'+i).filter(Boolean),cylA=i=>{const c=LAY.cyl[i];return coreV(LAY.V?b2e(c.b,BK[c.b].ex*.12,.1,c.z):[-.16,.03,c.z])};
+  CL.forEach(k=>{const el=document.createElement('div');el.className='an-tl en-cyl';labs.appendChild(el);labEl[k]=el});
   {const el=document.createElement('div');el.className='an-tl en-wl';el.innerHTML='Уровень воды за бортом<span class="en">waterline</span>';labs.appendChild(el);labEl.wl=el}
-  const ANCH={belt:[.09,.12,-.39],seacock:[-.36,-.06,-.36],impeller:[-.17,.22,-.38],bleedscrew:[-.22,.42,.15],oilcap:[0,.65,-.14],header:[.235,.605,-.2],thermostat:[.07,.6,-.27],
-    injectors:[-.07,.61,0],glowplugs:[-.18,.47,0],crank:[0,EN_CY,.27],flywheel:[0,.2,.37],pulley:[0,.12,-.37],strainer:[-.44,.2,-.42],dipstick:[-.19,.58,-.2],rocker:[0,.62,.1],
-    block:[-.18,.3,.05],head:[.16,.5,.12],sump:[0,.05,.1],bilge:[.15,-.03,.3],mounts:[.24,.04,.36]};
-  const HOSE_A={rawhoses:()=>res(RW[2][3]),fuellines:()=>res(FU[1][1]),exhose:()=>res(EX[1][2])};
+  /* точки подписей лежат в группе детали (у рядов — в группе ряда) и едут вместе с ней: «Разобрать», масштаб, места под V8 */
+  const ancAt=(id,a,g)=>{if(!parts[id])return;const o=new THREE.Object3D();o.position.set(...a);(g||parts[id].g).add(o);parts[id].ao=o};
+  Object.entries({belt:[.09,.12,-.39],seacock:[-.36,-.06,-.36],impeller:[-.17,.22,-.38],bleedscrew:[-.22,.42,.15],header:[.235,.605,-.2],thermostat:[.07,.6,-.27],
+    crank:[0,EN_CY,.27],flywheel:[0,.2,.37],pulley:[0,.12,-.37],strainer:[-.44,.2,-.42],dipstick:[-.19,.58,-.2],block:LAY.V?[-.25,.25,.05]:[-.18,.3,.05],
+    sump:[0,.05,.1],bilge:[.15,-.03,.3],mounts:[.24,.04,.36]}).forEach(([id,a])=>ancAt(id,a));
+  {const B=BK[0],Bh=BK[BK.length-1],z0=zmid(0);ancAt('oilcap',[0,.47,-.14],bank('oilcap',0));ancAt('injectors',[injX(B),.43,z0],bank('injectors',0));
+    ancAt('glowplugs',[glowX(B),.29,z0],bank('glowplugs',0));ancAt('rocker',[0,.44,.1],bank('rocker',0));ancAt('head',[HW*Bh.ex,.32,.12],bank('head',Bh.i));
+    ancAt('exmanifold',[Bh.ex*(LAY.V?.15:.19),.3,.05],bank('exmanifold',Bh.i));ancAt('valves',[0,.28,LAY.cyl[0].z],bank('valves',0));if(LAY.cr)ancAt('rail',[railX(B),.37,z0],bank('rail',0))}
+  const hP=(L,i)=>{const h=HOSES.find(h=>h.p===L);return(h&&h.P||resLine(L))[i].clone()};
+  const HOSE_A={rawhoses:()=>hP(RW[2],3),fuellines:()=>hP(FU[1],1),exhose:()=>hP(EX[1],2)};
   const box3=new THREE.Box3(),bv=V(0,0,0);
   function anchorOf(id){const p=parts[id];if(!p||!p.g.visible)return null;
-    if(id==='piston')return V(0,dyn.pist[0].position.y+.03,EN_CYL[0]);if(id==='valves')return V(0,.46,EN_CYL[0]);
+    if(id==='piston')return E.worldToLocal(dyn.pist[0].localToWorld(V(0,.03,0)));
     if(HOSE_A[id])return HOSE_A[id]();
-    if(ANCH[id])return V(...ANCH[id]).add(p.g.position);
+    if(p.ao)return E.worldToLocal(p.ao.getWorldPosition(V(0,0,0)));
     if(!p.ancK){box3.makeEmpty();p.g.traverse(o=>{if(o.isMesh&&o.visible&&!o.userData.proxy&&o.geometry){o.geometry.computeBoundingBox();const b=o.geometry.boundingBox.clone();
         o.updateWorldMatrix(true,false);b.applyMatrix4(o.matrixWorld);box3.union(b)}});p.ancK=box3.isEmpty()?V(0,0,0):E.worldToLocal(box3.getCenter(V(0,0,0)))}
     return p.ancK.clone()}
@@ -427,13 +561,13 @@ function startEngine(){
     const rank=id=>(id===st.sel||id===tg?4:0)+(rel.includes(id)?2:0);
     const order=list.map((id,i)=>[id,i]).sort((a,b)=>rank(b[0])-rank(a[0])||a[1]-b[1]).map(x=>x[0]);
     if(st.sel&&!order.includes(st.sel)&&present(st.sel))order.unshift(st.sel);
-    if(st.inside)order.push('c0','c1','c2');else if(!st.yacht&&!st.fix&&!st.sys&&st.exT<.05)order.push('wl');
+    if(st.inside)order.push(...CL);else if(!st.yacht&&!MY&&!st.fix&&!st.sys&&st.exT<.05)order.push('wl');
     if(occI++%6===0){const ms=solidMeshes();order.forEach(id=>{if(/^c\d|wl/.test(id)){occ[id]=0;return}const p=anchorOf(id);if(!p){occ[id]=1;return}v3.copy(p);E.localToWorld(v3);const d=v3.distanceTo(cam.position);
       ray.set(cam.position,v3.clone().sub(cam.position).normalize());ray.far=d-.02;const h=ray.intersectObjects(ms,false)[0];occ[id]=h&&partOf(h.object)!==id?1:0})}
     let n=0,lines='';const shown={};
     order.forEach(id=>{const el=labEl[id],isSel=id===st.sel||id===tg;if(!el)return;
       if(!st.labels&&!isSel&&!/^c\d/.test(id)||n>=max&&!isSel||occ[id]&&!isSel)return;
-      const p=/^c\d/.test(id)?V(-.16,.03,EN_CYL[+id[1]]):id==='wl'?V(-enHalfAt(2.1,EN_WL)+.02,EN_WL-EN_POS[1],2.1-EN_POS[2]):anchorOf(id);if(!p)return;
+      const p=/^c\d/.test(id)?cylA(+id.slice(1)):id==='wl'?V(-enHalfAt(2.1,EN_WL)+.02,EN_WL-EN_POS[1],2.1-EN_POS[2]):anchorOf(id);if(!p)return;
       v3.copy(p);E.localToWorld(v3).project(cam);if(v3.z>1)return;const x=(v3.x+1)/2*W,y=(1-v3.y)/2*Hh;if(x<4||x>W-4||y<4||y>Hh-4)return;
       if(!el._w){const hd=el.hidden;el.hidden=false;el._w=el.offsetWidth;el._h=el.offsetHeight;el.hidden=hd}const w=el._w||90,h=el._h||30,g=10;
       const cand=/^c\d/.test(id)?[[x-w/2,y+g],[x+g,y+g],[x-w-g,y+g],[x-w/2,y+g+h+4]]:[[x-w/2,y-h-g],[x+g,y-h/2],[x-w-g,y-h/2],[x-w/2,y+g],[x+g,y-h-g],[x-w-g,y-h-g],[x+g,y+g],[x-w-g,y+g]];
@@ -448,21 +582,22 @@ function startEngine(){
   function wire(root){root.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>onPick(b.dataset.go,true));
     root.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>fixStart(b.dataset.fix));
     root.querySelectorAll('[data-yacht]').forEach(b=>b.onclick=()=>{const id=st.sel;setYacht(true);if(id)select(id,true)});
-    root.querySelectorAll('.an-x').forEach(b=>b.onclick=()=>{if(root===pultBox)togglePult(false);else if(st.fix)fixStop();else{select(null);card.hidden=true}})}
+    root.querySelectorAll('.an-x').forEach(b=>b.onclick=()=>{if(root===pultBox)togglePult(false);else if(st.fix)fixStop();else{st.list=false;select(null);card.hidden=true;$('#enFixB').setAttribute('aria-pressed','false');renderModes()}})}
   function renderCard(){const id=st.sel;if(!id){if(!st.fix&&!st.list)card.hidden=true;return}
     st.list=false;const a=ENG[id],L=layerOf(a.l);togglePult(false,true);
     const fail=(a.fail||[]).map(([w,t,f],i)=>`<details${i?'':' open'}><summary>${rich(w)}</summary><p>${rich(t)}</p>${f?`<p><button class="btn ghost sm en-fx" data-fix="${f}">Мастер-класс: ${ENG_FIX[f].n} →</button></p>`:''}</details>`).join('');
-    const rel=(a.rel||[]).filter(r=>ENG[r]&&!(ENG[r].only&&ENG[r].only!==st.drive));
+    const rel=(a.rel||[]).filter(has),no=!has(id)&&(a.only==='sd'&&!SDOK||a.need);
     card.innerHTML=`<div class="an-head"><p class="an-ly" style="--lc:${L.c}">${L.n} <span class="en">· ${L.en}</span></p><button class="an-x" aria-label="Закрыть карточку">✕</button></div>
-      <h3>${a.n}<span class="en">${a.en}</span></h3><p>${rich(a.d)}</p>
+      <h3>${a.n}<span class="en">${a.en}</span></h3><p>${rich(a.d)}${LAY.cr&&a.crd?' '+rich(a.crd):''}</p>
+      ${no?`<p class="an-note">На модели ${M.n} этой детали нет: ${a.need==='cr'?'у мотора механический ТНВД, без common rail':a.need?'мотор без турбины':'у этого мотора в тренажёре показан только вал'}. Другой мотор — кнопка «Мотор ${M.n}».</p>`:''}
       ${a.look?`<h4>Как выглядит и где искать</h4><p>${rich(a.look)}</p>`:''}${a.chk?`<h4>Что проверять</h4><p>${rich(a.chk)}</p>`:''}
       ${fail?`<h4>Что ломается и что делать</h4><div class="an-how">${fail}</div>`:''}
       ${a.warn?`<p class="an-warn"><b>Осторожно.</b> ${rich(a.warn)}</p>`:''}${a.spare?`<p class="en-spare"><b>В ремкомплекте.</b> ${rich(a.spare)}</p>`:''}
       ${rel.length?`<h4>Связано</h4><div class="chips an-rel">${rel.map(r=>`<button data-go="${r}">${ENG[r].n}</button>`).join('')}</div>`:''}
-      ${!st.yacht&&!a.inner?'<button class="btn ghost an-les" data-yacht>Где это в яхте →</button>':''}`;
+      ${!st.yacht&&!a.inner&&!MY&&!no?'<button class="btn ghost an-les" data-yacht>Где это в яхте →</button>':''}`;
     card.hidden=false;card.scrollTop=0;wire(card)}
   function select(id,fly){if(id&&!ENG[id])id=null;
-    if(id){const a=ENG[id];if(a.only&&a.only!==st.drive)setDrive(a.only,true);if(a.inner&&!st.inside)setInside(true,true);if(!a.inner&&st.inside&&!['injectors','flywheel','pulley'].includes(id))setInside(false,true);
+    if(id){const a=ENG[id];if(a.only&&a.only!==st.drive&&(a.only==='shaft'||SDOK))setDrive(a.only,true);if(a.inner&&!st.inside)setInside(true,true);if(!a.inner&&st.inside&&!['injectors','flywheel','pulley'].includes(id))setInside(false,true);
       if(st.sys&&ENG[id].l!==st.sys&&!chainOf(st.sys).includes(id)){st.sys=null;renderSys()}}
     st.sel=id;paint();renderCard();renderSide();if(id&&fly)flyTo(id);
     if(id)say(`<b>${ENG[id].n}</b> ${en('· '+ENG[id].en)}. ${ENG[id].d}`);else say(intro())}
@@ -480,13 +615,15 @@ function startEngine(){
   host.addEventListener('pointerup',()=>{dsR=null});dragScroll(modes);dragScroll(sysRow);
   function topSync(){const e=$('#enRows');if(!e)return;host.style.setProperty('--antop',(e.offsetTop+e.offsetHeight+8)+'px')}
   function renderModes(){const sp={.25:'медленно',1:'быстрее',4:'быстро'}[st.speed];
-    modes.innerHTML=`<button data-m="ex" aria-pressed="${st.ex>0}">Разобрать<span class="en">explode</span></button>
+    modes.innerHTML=`<button data-m="mot" class="en-mot" aria-pressed="${st.list==='mot'&&!card.hidden}">Мотор ${M.n}<span class="en">engine · ${nfm(M.hp,0)} hp</span></button>
+      <button data-m="ex" aria-pressed="${st.ex>0}">Разобрать<span class="en">explode</span></button>
       <button data-m="in" aria-pressed="${st.inside}">Как работает<span class="en">inside</span></button>
-      <button data-m="y" aria-pressed="${st.yacht}">В яхте<span class="en">in the boat</span></button>
-      <button data-m="dr" aria-pressed="false">Привод: ${st.drive==='sd'?'колонка':'вал'}<span class="en">${st.drive==='sd'?'saildrive':'shaft'}</span></button>
+      ${MY?'':`<button data-m="y" aria-pressed="${st.yacht}">В яхте<span class="en">in the boat</span></button>`}
+      ${SDOK?`<button data-m="dr" aria-pressed="false">Привод: ${st.drive==='sd'?'колонка':'вал'}<span class="en">${st.drive==='sd'?'saildrive':'shaft'}</span></button>`:''}
       ${st.yacht?`<button data-m="tr" aria-pressed="${!!st.trap}">${st.trap?'Поставить трап':'Снять трап'}<span class="en">steps</span></button>`:''}
       ${st.inside?`<button data-m="sp" aria-pressed="false">Скорость: ${sp}<span class="en">speed</span></button>`:''}`;
     modes.querySelectorAll('button').forEach(b=>b.onclick=()=>{const m=b.dataset.m;
+      if(m==='mot'){if(st.list==='mot'&&!card.hidden){card.hidden=true;st.list=false;renderModes();say(intro())}else motCard()}
       if(m==='ex')setExplode(!st.ex);if(m==='in')setInside(!st.inside);if(m==='y')setYacht(!st.yacht);if(m==='dr')setDrive(st.drive==='sd'?'shaft':'sd');
       if(m==='tr'){st.trap=st.trap?0:1;renderModes();if(st.trap)setView('front')}if(m==='sp'){st.speed=st.speed===.25?1:st.speed===1?4:.25;renderModes()}});topSync()}
   function renderSys(){sysRow.innerHTML=`<button data-l="*" aria-pressed="${!st.sys}">Все</button>`+ENG_LAYERS.map(l=>`<button data-l="${l.id}" aria-pressed="${st.sys===l.id}" style="--lc:${l.c}"><i></i>${l.n}</button>`).join('');
@@ -498,20 +635,23 @@ function startEngine(){
       frameIds(ids,v[0],v[1]);say(`<b>${L.n}</b> ${en('· '+L.en)}. ${L.d}`);hint('Частицы показывают, куда идёт поток. Нажми на деталь — откроется карточка.')}
     else{if(!st.sel)setView('iso');say(intro());hint('')}}
   /* «Разобрать», «Как работает» и «В яхте» — по одному: включаешь один, остальные выключаются */
-  function setExplode(on){if(on){seen('ex');if(st.inside)setInside(false,true);if(st.yacht)setYacht(false,true)}st.ex=on?1:0;renderModes();if(on)st.fly={tgt:E.localToWorld(V(0,.3,.25)),dist:3.6,k:0}}
+  function setExplode(on){if(on){seen('ex');if(st.inside)setInside(false,true);if(st.yacht)setYacht(false,true)}st.ex=on?1:0;renderModes();if(on)st.fly={tgt:E.localToWorld(coreV([0,.3,.25])),dist:3.6*SC,k:0}}
   function setInside(on,quiet){if(on&&st.yacht)setYacht(false,true);st.inside=on;if(on&&!quiet)seen('in');if(on){st.ex=0;st.sys=null;renderSys();if(st.sel&&!ENG[st.sel].inner)st.sel=null}
-    place();paint();renderModes();renderSide();if(!quiet&&on){st.fly={tgt:E.localToWorld(V(0,.32,0)),dist:1.25,k:0,yaw:-1.72,pitch:.18};card.hidden=true;st.sel=null}
-    if(on)say('Четыре такта дизеля. <b>Впуск</b>: поршень идёт вниз, открыт впускной клапан, в цилиндр входит воздух. <b>Сжатие</b>: клапаны закрыты, поршень сжимает воздух, и тот раскаляется. <b>Рабочий ход</b>: форсунка впрыскивает топливо, оно вспыхивает от горячего воздуха и толкает поршень вниз. <b>Выпуск</b>: открыт выпускной клапан, поршень выталкивает газы в коллектор. За четыре такта коленвал делает два оборота; три цилиндра работают по очереди.');
+    place();paint();renderModes();renderSide();if(!quiet&&on){st.fly={tgt:E.localToWorld(coreV([0,.32,zc+.02])),dist:1.25*SC*Math.max(1,Lb/.56)**.7*(LAY.V?1.15:1),k:0,yaw:-1.72,pitch:LAY.V?.32:.18};card.hidden=true;st.sel=null}
+    if(on)say('Четыре такта дизеля. <b>Впуск</b>: поршень идёт вниз, открыт впускной клапан, в цилиндр входит воздух. <b>Сжатие</b>: клапаны закрыты, поршень сжимает воздух, и тот раскаляется. <b>Рабочий ход</b>: форсунка впрыскивает топливо, оно вспыхивает от горячего воздуха и толкает поршень вниз. <b>Выпуск</b>: открыт выпускной клапан, поршень выталкивает газы в коллектор. За четыре такта коленвал делает два оборота. '+
+      (LAY.V?'Восемь цилиндров работают по очереди: вспышка — каждую четверть оборота вала. Такты подписаны у ближнего ряда.':`${CYW[LAY.n]} работают по очереди, порядок вспышек ${LAY.fo}.`));
     else if(!quiet)say(intro())}
-  function setYacht(on,quiet){if(on){yachtBuild();seen('y');st.ex=st.exT=0;if(st.inside){st.inside=false;if(st.sel&&ENG[st.sel].inner)st.sel=null;say(intro())}}
+  function setYacht(on,quiet){if(on&&MY)return;if(on){yachtBuild();seen('y');st.ex=st.exT=0;if(st.inside){st.inside=false;if(st.sel&&ENG[st.sel].inner)st.sel=null;say(intro())}}
     st.yacht=on;place();paint();renderModes();renderSide();if(!vm.hidden)renderVm();if(!quiet)setView('iso');
-    if(on)hint('Яхта разрезана вдоль: левого борта нет, видно, где мотор. Он стоит под трапом входа в салон — кнопка «Снять трап» откроет его переднюю сторону. Места бака, аккумуляторов и панели показаны условно.');else hint('')}
-  function setDrive(d,quiet){st.drive=d;try{localStorage.setItem('gals-eng-drive',d)}catch(e){}
+    if(on)hint('Яхта разрезана вдоль: левого борта нет, видно, где мотор. Он стоит под трапом входа в салон — кнопка «Снять трап» откроет его переднюю сторону. Места бака, аккумуляторов и панели показаны условно.'+
+      (M.boats.some(b=>b[0]==='cruiser')?'':` Это круизная яхта флота, Sun Odyssey 410: ${M.boats.some(b=>b[0]==='cat')?'на катамаране моторы стоят в корпусах, по одному в каждом':'на других лодках мотор стоит по-своему'}.`));else hint('')}
+  function setDrive(d,quiet){if(d==='sd'&&!SDOK)return;st.drive=d;try{localStorage.setItem('gals-eng-drive',d)}catch(e){}
     if(st.sel&&!present(st.sel))st.sel=null;place();paint();renderModes();renderCard();renderSide();
     if(!quiet)say(d==='sd'?'Привод — [[saildrive|колонка saildrive]]: коробка и винт в одной ноге, она выходит вниз через днище. Отверстие в корпусе держит резиновая мембрана — её осматривают каждый день.':'Привод — гребной вал: коробка за мотором, вал выходит через корпус в [[сальник|сальнике]], у винта его держит кронштейн.')}
 
   /* ---------- боковая панель ---------- */
-  const intro=()=>'Это дизель парусной яхты 40 футов — собирательная модель: три цилиндра, около 40 л. с. На яхте он стоит под трапом входа в салон. Нажми на деталь: что это, как выглядит, что ломается и что делать. Сверху системы: «Забортная вода» покажет путь воды от кингстона до выхлопа. «Ремонт» — мастер-классы по шагам.';
+  const CYW={2:'Два цилиндра',3:'Три цилиндра',4:'Четыре цилиндра'};
+  const intro=()=>`Это ${M.mk} ${M.n}: ${LAY.V?'V8, восемь цилиндров в два ряда':CYW[LAY.n].toLowerCase()+' в ряд'}, ${nfm(M.hp,0)} л. с. (${motorWhere(M)}). Модель упрощена: детали стоят как у типичного судового дизеля — у своей яхты сверяйся с инструкцией мотора. Нажми на деталь: что это, как выглядит, что ломается и что делать. Сверху системы: «Забортная вода» покажет путь воды от кингстона до выхлопа. «Мотор ${M.n}» — паспорт и другие моторы, «Ремонт» — мастер-классы по шагам.`;
   function renderSide(){const steps=$('#steps');
     if(st.fix){const F=ENG_FIX[st.fix.id];$('#taskLbl').textContent='Мастер-класс · '+F.n;
       steps.innerHTML=F.steps.map((s,i)=>`<li class="${i<st.fix.i?'done':i===st.fix.i?'now':''}"><i>${i<st.fix.i?'✓':i+1}</i><span>${first(s.t)}</span></li>`).join('');return}
@@ -521,9 +661,10 @@ function startEngine(){
     $('#taskLbl').textContent='С чего начать · start here';
     steps.innerHTML=TOUR.map(([k,t,e],i)=>`<li class="${st.seen[k]?'done':''}"><i>${st.seen[k]?'✓':i+1}</i><button class="en-go" data-i="${i}">${t}${en(e)}</button></li>`).join('');
     steps.querySelectorAll('.en-go').forEach(b=>b.onclick=()=>TOUR[+b.dataset.i][3]())}
-  const TOUR=[['raw','«Забортная вода»: путь воды от кингстона до выхлопа','raw water',()=>setSys('raw')],['ex','«Разобрать»: из чего состоит мотор','explode',()=>setExplode(true)],
+  const hpR=MOTORS.map(m=>m.hp),TOUR=[['mot',`«Мотор»: паспорт и сравнение моторов — от ${nfm(Math.min(...hpR),0)} до ${nfm(Math.max(...hpR),0)} л. с.`,'engine data',()=>motCard()],
+    ['raw','«Забортная вода»: путь воды от кингстона до выхлопа','raw water',()=>setSys('raw')],['ex','«Разобрать»: из чего состоит мотор','explode',()=>setExplode(true)],
     ['in','«Как работает»: поршни, клапаны и четыре такта','how it works',()=>setInside(true)],['y','«В яхте»: где стоит мотор и куда идут шланги','in the boat',()=>setYacht(true)],
-    ['pult','«Пульт»: запусти мотор и закрой кингстон — что будет?','engine controls',()=>togglePult(true)],['fix','«Ремонт»: 12 мастер-классов по шагам','repairs',()=>fixList()]];
+    ['pult','«Пульт»: запусти мотор и закрой кингстон — что будет?','engine controls',()=>togglePult(true)],['fix',`«Ремонт»: ${Object.keys(ENG_FIX).length} мастер-классов по шагам`,'repairs',()=>fixList()]].filter(t=>!(MY&&t[0]==='y'));
   const seen=k=>{if(!st.seen[k]){st.seen[k]=1;if(!st.fix&&!st.inside&&!st.sys)renderSide()}};
   /* первая фраза шага — для списка шагов сбоку */
   const first=t=>{t=t.replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g,(m,k,v)=>v||k).replace(/<[^>]+>/g,'');const m=t.match(/^.+?[.!?:](?=\s|$)/);t=m?m[0]:t;
@@ -532,7 +673,7 @@ function startEngine(){
   /* ---------- поиск: детали и ремонты ---------- */
   const q=$('#enQ'),resBox=$('#enRes'),norm2=s=>s.toLowerCase().replace(/ё/g,'е');
   function search(){const s=norm2(q.value.trim());if(!s){resBox.hidden=true;return}
-    const hit=Object.keys(ENG).map(id=>{const a=ENG[id],t=norm2(a.n+' '+a.en),b=norm2(a.d+' '+(a.look||''));return{id,sc:t.startsWith(s)?3:t.includes(s)?2:b.includes(s)?1:0}})
+    const hit=Object.keys(ENG).filter(id=>!ENG[id].need||has(id)).map(id=>{const a=ENG[id],t=norm2(a.n+' '+a.en),b=norm2(a.d+' '+(a.look||''));return{id,sc:t.startsWith(s)?3:t.includes(s)?2:b.includes(s)?1:0}})
       .concat(Object.keys(ENG_FIX).map(id=>{const f=ENG_FIX[id],t=norm2(f.n+' '+f.en),b=norm2(f.sym);return{id,fix:1,sc:t.startsWith(s)?3:t.includes(s)?2:b.includes(s)?1:0}}))
       .filter(x=>x.sc).sort((a,b)=>b.sc-a.sc).slice(0,9);
     resBox.innerHTML=hit.length?hit.map(h=>h.fix?`<button data-fx="${h.id}"><i style="--lc:#f2a33a"></i>Ремонт: ${ENG_FIX[h.id].n}<span class="en">${ENG_FIX[h.id].en}</span></button>`
@@ -542,6 +683,31 @@ function startEngine(){
     resBox.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{done();fixStart(b.dataset.fx)})}
   q.oninput=search;q.onfocus=search;q.onkeydown=e=>{if(e.key==='Enter'){const b=resBox.querySelector('button');if(b)b.click()}if(e.key==='Escape'){resBox.hidden=true;q.blur()}};
   host.addEventListener('pointerdown',e=>{if(!e.target.closest('.an-q'))resBox.hidden=true});
+
+  /* ---------- мотор: паспорт, сравнение, выбор другого ---------- */
+  function motList(){return FLEET.map(f=>[f.s,f.en,f.id]).concat([['Для сравнения','not in the fleet','']]).map(([n,e,bid])=>{
+      const L=MOTORS.filter(m=>bid?m.boats.some(b=>b[0]===bid):m.boats.every(b=>!b[0]));if(!L.length)return'';
+      return`<h4>${n} <span class="en">${e}</span></h4><div class="chips en-mots">${L.map(m=>{const t=bid&&m.boats.find(b=>b[0]===bid);
+        return`<button data-mot="${m.id}" aria-pressed="${m.id===M.id}">${m.mk} ${m.n}<span class="en">${nfm(m.hp,0)} л. с.${t?' · '+MOTOR_TAG[t[1]]:''}</span></button>`}).join('')}</div>`}).join('')}
+  function motCard(cmp){if(st.fix)fixStop(true);if(st.sel){st.sel=null;paint();renderSide()}togglePult(false,true);st.list='mot';seen('mot');$('#enFixB').setAttribute('aria-pressed','false');
+    const body=cmp?`<h3>Сравнение моторов<span class="en">engine comparison</span></h3>
+      <div class="en-cmp"><table><thead><tr><th>Мотор</th><th>Цил.</th><th>Объём<br>л</th><th>Мощн.<br>л. с.</th><th>Вес<br>кг</th><th>кг на<br>1 л. с.</th><th>Расход*<br>л/ч</th></tr></thead><tbody>${MOTORS.map(m=>
+        `<tr data-mot="${m.id}"${m.id===M.id?' class="on"':''}><td><b>${m.n}</b><span>${m.mk}</span></td><td>${m.v?'V'+m.cyl:m.cyl}</td><td>${nfm(m.l,2)}</td><td>${nfm(m.hp,0)}</td><td>${m.kg[0]}</td><td>${nfm(m.kg[0]/m.hp,1)}</td><td>${lph(motorFuel(m)[0])}</td></tr>`).join('')}</tbody></table></div>
+      <p class="an-note">* На полном газу — оценка по мощности: около 0,3 л топлива на 1 кВт в час, у мотора с турбиной — около 0,27. Вес — сухой; к чему он относится, сказано в паспорте мотора. Нажми на строку, чтобы открыть мотор.</p>
+      <p><button class="btn ghost sm" data-cmp="0">← Паспорт ${M.n}</button></p>`
+      :`<h3>${M.mk} ${M.n}<span class="en">${M.en}</span></h3><p>${rich(M.t)}</p>
+      <div class="fspec en-pass">${motorRows(M).map(([r,e,v])=>`<div><span>${r} · ${e}</span><b>${v}</b></div>`).join('')}</div>
+      <h4>На каких лодках</h4><ul class="en-boats">${M.boats.map(b=>{const f=b[0]&&FLEET.find(x=>x.id===b[0]);return`<li>${f?`<b>${f.s}</b> · ${MOTOR_TAG[b[1]]}: `:''}${rich(b[2])}</li>`}).join('')}</ul>
+      <p class="an-note">Цифры — из технических листов ${M.mk} и объявлений о продаже яхт; у разных лет выпуска и комплектаций они отличаются. Модель на экране меняет число цилиндров и размер, но это не чертёж завода.</p>
+      <p><button class="btn ghost sm" data-cmp="1">Сравнить все моторы →</button></p>`;
+    card.innerHTML=`<div class="an-head"><p class="an-ly">Мотор · <span class="en">engine data</span></p><button class="an-x" aria-label="Закрыть">✕</button></div>${body}
+      <h4>Другой мотор · <span class="en">choose engine</span></h4><p class="an-note">Модель перестроится под выбранный мотор.</p>${motList()}`;
+    card.hidden=false;card.scrollTop=0;wire(card);
+    card.querySelectorAll('[data-mot]').forEach(b=>b.onclick=()=>motorPick(b.dataset.mot));card.querySelectorAll('[data-cmp]').forEach(b=>b.onclick=()=>motCard(b.dataset.cmp==='1'));
+    renderModes();say(`<b>${M.mk} ${M.n}</b> ${en('· '+M.en)}. ${M.t}`)}
+  /* другой мотор: модель собирается заново, паспорт открывается снова */
+  function motorPick(id){const m=motorById(id);if(!m)return;if(id===M.id){motCard();return}
+    try{localStorage.setItem('gals-eng-motor',id);localStorage.setItem('gals-eng-drive',motorDrive(m))}catch(e){}EN_AFTER='mot';openChapter('engine')}
 
   /* ---------- ремонт: список и мастер-классы по шагам ---------- */
   function fixList(){if(st.fix)fixStop(true);st.sel=null;paint();togglePult(false,true);st.list=true;
@@ -575,7 +741,7 @@ function startEngine(){
     card.querySelectorAll('[data-fgo]').forEach(b=>b.onclick=()=>fixGo(Math.max(-1,+b.dataset.fgo)));
     card.querySelectorAll('[data-flist]').forEach(b=>b.onclick=()=>fixList());
     card.querySelectorAll('[data-go-t]').forEach(b=>b.onclick=()=>flyTo(b.dataset.goT,st.yacht?2.4:1.45))}
-  $('#enFixB').onclick=()=>{if(st.list&&!card.hidden||st.fix){if(st.fix)fixStop(true);card.hidden=true;st.list=false;$('#enFixB').setAttribute('aria-pressed','false');say(intro())}else fixList()};
+  $('#enFixB').onclick=()=>{if(st.list===true&&!card.hidden||st.fix){if(st.fix)fixStop(true);card.hidden=true;st.list=false;$('#enFixB').setAttribute('aria-pressed','false');say(intro())}else fixList()};
 
   /* ---------- пульт: запуск, остановка, кингстон, масса ---------- */
   function rawOK(){const s=st.s;return s.sea&&!s.imp&&!s.bad&&!s.cover&&!s.lid&&!s.basket}
@@ -604,7 +770,9 @@ function startEngine(){
     if(p==='fv'){s.fv=s.fv?0:1;st.fuelT=0;msg(s.fv?'Топливный кран открыт.':'Топливный кран закрыт.'+(s.run?' Мотор доработает топливо из фильтров и заглохнет.':''))}
     if(p==='reset'){st.s=Object.assign({},S_DEF);st.lever=0;st.crankT=0;st.stopT=0;st.dryT=0;st.dryW=0;st.warned=0;st.msg='';place()}
     renderPult()}
-  function sim(dt){const s=st.s;if(st.fix){st.rpm+=((s.run?850:0)-st.rpm)*Math.min(1,dt*3);return}
+  /* холостые и полные обороты — из паспорта мотора */
+  const IDLE=M.idle||850,RMAX=+String(M.rpm||3000).split('–').pop();
+  function sim(dt){const s=st.s;if(st.fix){st.rpm+=((s.run?IDLE:0)-st.rpm)*Math.min(1,dt*3);return}
     const g=st.lever>.15?1:st.lever<-.15?-1:0;s.gear=g;st.glowT=Math.max(0,st.glowT-dt);
     if(st.crankT>0){st.crankT-=dt;st.cranked+=dt;if(st.cranked>1.1&&s.fv&&!s.air){s.run=1;st.crankT=0;st.warned=0;msg('Мотор завёлся. Проверь: лампы погасли, из выхлопа идёт вода.')}
       else if(st.crankT<=0)msg(s.fv?'Стартер крутит, а мотор не схватывает: в топливе воздух — нужна прокачка.':'Стартер крутит, а мотор не схватывает: закрыт топливный кран.')}
@@ -616,7 +784,7 @@ function startEngine(){
       if(s.belt==='off'||s.belt==='new')s.hot=Math.min(1,s.hot+dt*.03);
       if(s.hot>=.8&&!st.warned){st.warned=1;msg('Пищит зуммер, горит лампа температуры: перегрев! Сбавь газ, нейтраль, заглуши и ищи причину: кингстон, фильтр, крыльчатка.')}}
     else s.hot=Math.max(0,s.hot-dt*.01);
-    const tgt=s.run&&st.stopT<=0?850+Math.max(0,Math.abs(st.lever)-.15)/.85*2100:st.crankT>0?230:0;st.rpm+=(tgt-st.rpm)*Math.min(1,dt*3)}
+    const tgt=s.run&&st.stopT<=0?IDLE+Math.max(0,Math.abs(st.lever)-.15)/.85*(RMAX*.98-IDLE):st.crankT>0?230:0;st.rpm+=(tgt-st.rpm)*Math.min(1,dt*3)}
   function pultTick(){if(pultBox.hidden)return;const s=st.s,on={oil:s.key&&s.bat&&!s.run,chg:s.key&&s.bat&&(!s.run||s.belt!=='ok'),tmp:s.key&&s.bat&&s.hot>=.8,glow:st.glowT>0};
     pultBox.querySelectorAll('[data-lamp]').forEach(e=>e.classList.toggle('on',!!on[e.dataset.lamp]));
     const r=$('#enRpm');if(r)r.textContent=Math.round(st.rpm/10)*10;const h=$('#enHot');if(h)h.textContent=s.hot>=.8?'перегрев':s.hot>.45?'тёплый':s.run?'норма':'холодный';
@@ -661,9 +829,9 @@ function startEngine(){
     ['top','Сверху','top',-.01,1.4],['aft','Винт и вал','drive',.75,-.02],['under','Снизу','below',-.9,-.55]];
   const vm=$('#enVm'),vb=$('#enViewB');
   /* в яхте левой половины нет: «3/4» показывает всю яхту сбоку, «Спереди» — трап и мотор из салона */
-  function setView(k){const v=VIEWS.find(x=>x[0]===k)||VIEWS[0],Y=st.yacht,c=E.localToWorld(V(0,.32,.05));let tgt=c,dist=Y?7.5:3.2,yaw=v[3],pitch=v[4];
+  function setView(k){const v=VIEWS.find(x=>x[0]===k)||VIEWS[0],Y=st.yacht,kS=Y?1:Math.max(1,SC),c=E.localToWorld(V(0,.32,.05));let tgt=c,dist=Y?7.5:3.2*kS,yaw=v[3],pitch=v[4];
     if(k==='iso'&&Y){tgt=V(0,.45,1.6);dist=12.5;yaw=-1.42;pitch=.16}
-    if(k==='front'){tgt=E.localToWorld(V(0,.3,-.3));dist=Y?3.4:2.4;if(Y){yaw=-2.45;pitch=.3}}if(k==='port'||k==='stbd')dist=Y?6:2.8;if(k==='top')dist=Y?11:3.4;
+    if(k==='front'){tgt=E.localToWorld(Y?V(0,.3,-.3):coreV([0,.3,zF]));dist=Y?3.4:2.4*kS;if(Y){yaw=-2.45;pitch=.3}}if(k==='port'||k==='stbd')dist=Y?6:2.8*kS;if(k==='top')dist=Y?11:3.4*kS;
     if(k==='aft'||k==='under'){const pr=(st.drive==='sd'?dyn.propD:dyn.propS).o;tgt=pr.getWorldPosition(V(0,0,0)).lerp(c,.35);dist=Y?4:2.6;if(Y&&k==='aft'){yaw=-.75;pitch=0}}
     if(st.ex)dist*=1.35;flyCam(tgt,dist,yaw,pitch)}
   const flyCam=(tgt,dist,yaw,pitch)=>{st.fly={tgt,dist,k:0,yaw:yaw===undefined?undefined:yaw+Math.round((st.cam.yaw-yaw)/(Math.PI*2))*Math.PI*2,pitch}};
@@ -679,7 +847,9 @@ function startEngine(){
   st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;for(const k in labEl)labEl[k]._w=0;topSync();renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
 
   place();renderModes();renderSys();renderSide();paint();say(intro());
-  hint('Синие линии на корпусе — уровень воды снаружи: низ мотора ниже ватерлинии. Поэтому на шланге охлаждения стоит антисифон, а на выхлопе — водяной замок.');
+  hint(MY?'Мотор моторной яхты: на Swift Trawler 41 их два, каждый со своим валом и винтом. Вид «В яхте» здесь только для парусной яхты, поэтому для этого мотора его нет.'
+    :'Синие линии на корпусе — уровень воды снаружи: низ мотора ниже ватерлинии. Поэтому на шланге охлаждения стоит антисифон, а на выхлопе — водяной замок.');
+  if(EN_AFTER==='mot')motCard();EN_AFTER=null;
   let last=performance.now();
   function frame(now){
     if(!st.on)return;const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;const t=st.t,s=st.s;
@@ -694,7 +864,7 @@ function startEngine(){
     if(st.inside)innerTick(dt);
     flowTick(dt);puffTick(dt);
     for(const n in dyn.lamps){const L=dyn.lamps[n],on=n==='oil'?s.key&&s.bat&&!s.run:n==='chg'?s.key&&s.bat&&(!s.run||s.belt!=='ok'):n==='tmp'?s.key&&s.bat&&s.hot>=.8:st.glowT>0;L.material.emissiveIntensity=on?1.6:0}
-    dyn.needle.rotation.x=-(st.rpm/3000)*2.4+1.2;dyn.key.rotation.x=s.key?-.8:0;
+    dyn.needle.rotation.x=-(st.rpm/RMAX)*2.4+1.2;dyn.key.rotation.x=s.key?-.8:0;
     pultTick();
     const c=st.cam;if(st.fly){const f=st.fly,k=1-Math.exp(-dt*4);c.tgt.lerp(f.tgt,k);c.dist+=(f.dist-c.dist)*k;if(f.yaw!==undefined){c.yaw+=(f.yaw-c.yaw)*k;c.pitch+=(f.pitch-c.pitch)*k}
       if(c.tgt.distanceTo(f.tgt)<.004&&Math.abs(c.dist-f.dist)<.01&&(f.yaw===undefined||Math.abs(c.yaw-f.yaw)<.01&&Math.abs(c.pitch-f.pitch)<.01))st.fly=null}
@@ -707,7 +877,7 @@ function startEngine(){
     renderer.render(scene,cam);drawLabels();
     st.raf=requestAnimationFrame(frame)}
   st.raf=requestAnimationFrame(frame);
-  st.select=select;st.fix0=fixStart;st.view=setView;st.mode={yacht:setYacht,inside:setInside,explode:setExplode,drive:setDrive,sys:setSys,pult:togglePult,list:fixList};// для ссылок из других вкладок и автотестов
+  st.select=select;st.fix0=fixStart;st.view=setView;st.mode={yacht:setYacht,inside:setInside,explode:setExplode,drive:setDrive,sys:setSys,pult:togglePult,list:fixList,motor:motorPick,passport:motCard};st.M=M;st.lay=LAY;st.hoses=HOSES;st.parts=parts;// для ссылок из других вкладок и автотестов
   return true;
 }
 
@@ -716,6 +886,9 @@ function startEngine(){
 function engOpen(x,back,part){openChapter('engine');if(!E3||!E3.on)return;const fx=!(part&&ENG[x])&&typeof ENG_FIX!=='undefined'&&ENG_FIX[x];
   if(fx)E3.fix0(x);else if(ENG[x])E3.select(x,true);
   if(back)crumb(back[0],back[1],x&&(fx||ENG[x]||{}).n)}
+
+/* открыть «Двигатель» с мотором лодки из «Флота» и сразу с его паспортом */
+function engMotor(id,boat){const m=motorById(id);if(!m)return;try{localStorage.setItem('gals-eng-motor',id);localStorage.setItem('gals-eng-drive',motorDrive(m,boat))}catch(e){}EN_AFTER='mot';openChapter('engine')}
 
 /* вкладка сразу за «Устройством яхты»: добавляется отсюда, чтобы не править массив TABS в app.js */
 (function(){const i=TABS.findIndex(t=>t.id==='anatomy');TABS.splice(i<0?TABS.length-1:i+1,0,{id:'engine',n:'Двигатель',en:'Engine'});

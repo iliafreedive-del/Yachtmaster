@@ -63,14 +63,7 @@ function startFleet(){
     $('#fh').innerHTML=`<p class="fmk">${f.mk} · ${f.yr}</p><h2>${f.s}</h2><p class="fen">${f.en} · ${String(P.lenM).replace('.',',')} м</p>`;
     $('#fb').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.b===st.id));
     $('#fs').hidden=!P.sail;$('#fs').textContent=st.sails?'Убрать паруса':'Поднять паруса';
-    const chosen=boatType()===st.id;
-    $('#fc').innerHTML=`<button class="ftog" id="ftog" aria-expanded="${st.specs}">Характеристики · specs <span>${st.specs?'▾':'▴'}</span></button>
-      <div class="fbody" ${st.specs?'':'hidden'}><h3>${f.n}${en(f.en)}</h3><div class="fspec">${f.spec.map(([r,e,v])=>`<div><span>${r} · ${e}</span><b>${v}</b></div>`).join('')}</div>
-      ${f.dz&&f.dz!=='—'?`<p class="fdz">Проект: ${f.dz}</p>`:''}<p class="fcert">✓ Bareboat Skipper: ${String(P.lenM).replace('.',',')} м из допустимых 24 м${P.sail?'':' · моторный допуск уточнить'}</p>${P.sail?'':'<p class="fnote">Только для марины (День 4): парусов нет.</p>'}</div>
-      <button class="btn${chosen?' ghost':''}" id="fpick" ${chosen?'disabled':''}>${chosen?'✓ Выбрана для практики':'Выбрать для практики'}</button>`;
-    $('#ftog').onclick=()=>{st.specs=!st.specs;build()};
-    $('#fpick').onclick=()=>{setBoatType(st.id);build();hint(`Готово: ${f.n} пойдёт в практику${P.sail?' Дней 2–4':' Дня 4'}.`,'good')};
-    say(f.t);hint('');
+    card(f,P);say(f.t);hint('');
     // в боковой панели: как узнать лодку, что внутри, как ведёт себя в тренажёре
     const sec=(t,list)=>`<li class="sec">${t}</li>`+list.map(x=>`<li class="now"><i>•</i><span>${rich(x)}</span></li>`).join('');
     $('#taskLbl').textContent='Паспорт лодки · boat profile';
@@ -78,6 +71,23 @@ function startFleet(){
     st.dist=st.id==='sloop'?24:st.id==='cat'?34:st.id==='motor'?27:32;
     setView(st.studio,true);
   }
+  /* карточка лодки: характеристики, мотор на выбор (каталог js/content/engines.js), выбор лодки для практики */
+  function card(f,P){const chosen=boatType()===st.id,ms=typeof motorsOf==='function'?motorsOf(st.id):[],mc=ms.length?motorOf(st.id):null,ne=f.ne||1,each=ne>1?' каждый':'';
+    const spec=f.spec.map(([r,e,v])=>mc&&/^engines?$/.test(e)?[r,e,`${ne>1?ne+' × ':''}${mc.mk} ${mc.n}, ${nfm(mc.hp,0)} л. с.`]:[r,e,v]);
+    const mot=mc?`<div class="fmot"><h4>Мотор на выбор · engine options</h4><div class="chips en-mots">${ms.map(m=>{const t=m.boats.find(b=>b[0]===st.id);
+        return`<button data-fm="${m.id}" aria-pressed="${m.id===mc.id}">${m.mk} ${m.n}<span class="en">${nfm(m.hp,0)} л. с. · ${MOTOR_TAG[t[1]]}</span></button>`}).join('')}</div>
+      <p>${ne>1?`${ne} мотора ${mc.mk} ${mc.n}`:`${mc.mk} ${mc.n}`}: ${motorCylTxt(mc)}, ${nfm(mc.l,2)} л, ${nfm(mc.hp,0)} л. с., ${mc.kg[0]} кг${each}. На полном газу — около ${lph(motorFuel(mc)[0]*ne)} л топлива в час${ne>1?' на оба':''} (оценка по мощности).</p>
+      <button class="btn ghost sm" id="fmotGo">Паспорт и устройство мотора →</button></div>`:'';
+    $('#fc').innerHTML=`<button class="ftog" id="ftog" aria-expanded="${st.specs}">Характеристики · specs <span>${st.specs?'▾':'▴'}</span></button>
+      <div class="fbody" ${st.specs?'':'hidden'}><h3>${f.n}${en(f.en)}</h3><div class="fspec">${spec.map(([r,e,v])=>`<div><span>${r} · ${e}</span><b>${v}</b></div>`).join('')}</div>${mot}
+      ${f.dz&&f.dz!=='—'?`<p class="fdz">Проект: ${f.dz}</p>`:''}<p class="fcert">✓ Bareboat Skipper: ${String(P.lenM).replace('.',',')} м из допустимых 24 м${P.sail?'':' · моторный допуск уточнить'}</p>${P.sail?'':'<p class="fnote">Только для марины (День 4): парусов нет.</p>'}</div>
+      <button class="btn${chosen?' ghost':''}" id="fpick" ${chosen?'disabled':''}>${chosen?'✓ Выбрана для практики':'Выбрать для практики'}</button>`;
+    $('#ftog').onclick=()=>{st.specs=!st.specs;card(f,P)};
+    $('#fpick').onclick=()=>{setBoatType(st.id);card(f,P);hint(`Готово: ${f.n} пойдёт в практику${P.sail?' Дней 2–4':' Дня 4'}.`,'good')};
+    // мотор, выбранный здесь, открывается и во вкладке «Двигатель»
+    $('#fc').querySelectorAll('[data-fm]').forEach(b=>b.onclick=()=>{const m=motorById(b.dataset.fm);motorSetBoat(st.id,m.id);
+      try{localStorage.setItem('gals-eng-motor',m.id);localStorage.setItem('gals-eng-drive',motorDrive(m,st.id))}catch(e){}card(f,P);hint(`Мотор ${m.mk} ${m.n} — он же откроется во вкладке «Двигатель».`,'good')});
+    const go=$('#fmotGo');if(go)go.onclick=()=>engMotor(mc.id,st.id)}
   /* миниатюры витрины: каждая лодка снимается в студии на тот же холст, пока браузер не успел ничего показать */
   function thumbs(){
     const pr=renderer.getPixelRatio(),r=host.getBoundingClientRect(),tw=300,th=180,tc=new THREE.PerspectiveCamera(30,tw/th,.3,400),box=new THREE.Box3(),c=new THREE.Vector3(),sz=new THREE.Vector3(),out={};

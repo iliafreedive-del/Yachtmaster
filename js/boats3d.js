@@ -203,6 +203,9 @@ function makeCruiser(o){
   const bulb=new THREE.SphereGeometry(1,12,8);bulb.scale(.24,.17,1.25);k.add(bulb,'h:'+bot,0,-2.08,-.3);
   // два пера руля (twin rudders), как у Sun Odyssey 410 с широкой кормой
   [1,-1].forEach(s=>k.add(prismZY([[5.05,.2],[5.5,.2],[5.42,-1.3],[5.15,-1.3]],.07),bot,s*.8,0,0,0,0,s*.08));
+  // гребной вал под 12° выходит из днища за килем, у винта его держит кронштейн; винт трёхлопастный — так же, как во вкладке «Двигатель»
+  // (там вал и винт рисуются свои, поэтому noProp)
+  if(!o.noProp)g.add(shaftProp(k,s=>[0,-.32-Math.sin(12*D)*s,3.1+Math.cos(12*D)*s],z=>yb(z)));
   // рубка с окнами, люками и поручнями
   // рубка по чертежу: низкая, от кокпита (z 2,4) до мачты, впереди — скат к палубе
   k.add(prismR([[-2.45,1],[2.4,1],[2.4,1.56],[-.9,1.62],[-2.45,1.15]],2.3,0,.12),'h:'+0xfbfaf6,0,0,0);
@@ -265,8 +268,14 @@ function makeCruiser(o){
   g.userData.parts=[[0,9,-1.0,'Мачта','mast'],[0,2.6,1.5,'Гик','boom'],[0,8.5,-3.6,'Штаг','forestay'],[1.4,7,-.7,'Ванты','shrouds'],[0,8,2.8,'Ахтерштаг','backstay'],
     [0,1.7,.2,'Рубка','coachroof'],[0,1.9,2.0,'Спрейхуд','sprayhood'],[0,1.6,3.9,'Кокпит','cockpit'],[o.tiller?0:.85,2.5,5.2,o.tiller?'Румпель':'Штурвалы',o.tiller?'tiller':'twin wheels'],[0,1.75,.95,'Солнечные панели','solar panels'],[0,1.75,3.85,'Стол кокпита','cockpit table'],
     [1.55,1.7,3.1,'Лебёдка','winch'],[2.1,1.8,1.2,'Леера','lifelines'],[0,1.9,-5.4,'Носовой релинг','pulpit'],[0,1.3,-6.3,'Бушприт с якорем','anchor bowsprit'],[1.7,1.3,.4,'Погон стакселя','genoa track'],[0,1.9,1.3,'Погон гика-шкота','mainsheet traveller'],
-    [0,.55,6.4,'Купальная платформа','swim platform'],[0,-1.4,-.6,'Киль','keel'],[.8,-.8,5.3,'Два пера руля','twin rudders']];
+    [0,.55,6.4,'Купальная платформа','swim platform'],[0,-1.4,-.6,'Киль','keel'],[.8,-.8,5.3,'Два пера руля','twin rudders']].concat(o.noProp?[]:[[0,-.75,4.4,'Винт на валу','propeller & shaft']]);
   return g}
+/* вал с кронштейном и винт: at(s) — точка вала на расстоянии s от фланца редуктора, yb(z) — днище; винт — отдельная группа, наклонена вдоль вала */
+function shaftProp(k,at,yb){const a=12*D,b=at(1.15),top=yb(b[2])+.02;k.rod(at(.72),at(1.4),.022,'steel',8);k.box(.035,top-b[1],.12,0xb08d57,0,(top+b[1])/2,b[2]);
+  const g=new THREE.Group(),pk=kit3();g.position.set(...at(1.38));g.rotation.x=a;propBlades(pk,.11);pk.build(g);return g}
+/* ступица и три лопасти винта в плоскости XY; r — радиус до середины лопасти */
+function propBlades(pk,r){pk.add(new THREE.CylinderGeometry(.035,.028,.11,14),'h:'+0xb08d57,0,0,0,Math.PI/2,0,0);
+  for(let i=0;i<3;i++){const t=i*Math.PI*2/3;pk.add(new THREE.BoxGeometry(.09,r*1.64,.012),'h:'+0xc9a464,Math.cos(t)*r,Math.sin(t)*r,0,0,.5,t-Math.PI/2)}return pk}
 
 /* ---------- парусный катамаран 40 футов ---------- */
 const RIG_CAT={sheet:[4.5,2.7],sweep:.2,mast:[0,2.6,-1.1],mastH:15,pivot:[0,3.15,-1.1],mainH:13.4,foot:4.9,tack:[0,1.55,-5.75],head:[0,16,-1.25],clewY:2.35,jibL:3,top:[0,17.7,-1.1],stay:[0,1.5,-5.75],staytop:[0,17.4,-1.15]};
@@ -284,6 +293,10 @@ function makeCat(o){
     const dg=deckFrom(hw,-6,6,.4);k.add(dg,0xebe8df,s*X,deck+.01,0);
     k.box(.02,.2,3.2,'glass',s*(X+hw(0)*.99+.012),1.0,0).box(.02,.14,.9,'glass',s*(X+hw(-3)*.99+.012),1.0,-3);
     k.add(prismZY([[-1.5,.05],[2.5,.05],[1.8,-.55],[-.5,-.55]],.14),bot,s*X,0,0).add(prismZY([[5.2,.25],[5.65,.25],[5.55,-.75],[5.28,-.75]],.07),bot,s*X,0,0);
+    // колонка saildrive: нога из днища, внизу обтекатель с редуктором и винт — по колонке в каждом корпусе
+    k.add(prismZY([[3.55,yb(3.6)+.03],[3.85,yb(3.6)+.03],[3.83,-.36],[3.6,-.36]],.08),0x2e3a44,s*X,0,0);
+    {const pod=new THREE.SphereGeometry(1,14,8);pod.scale(.075,.075,.24);k.add(pod,'h:'+0x2e3a44,s*X,-.4,3.75);
+      const pg=new THREE.Group(),pk=kit3();pg.position.set(s*X,-.4,4.03);propBlades(pk,.1);pk.build(pg);g.add(pg)}
     // ступени на транцах
     k.box(1.1,.06,.5,'teak',s*X,.95,5.75).box(1.1,.06,.5,'teak',s*X,.6,6.05);
     k.rail([[s*X-.25,deck+.02,-5.2],[s*X,deck+.6,-5.6],[s*X+.25,deck+.02,-5.2]],.022,'steel');
@@ -316,7 +329,7 @@ function makeCat(o){
   if(typeof makeDinghy==='function'){const d=makeDinghy(0x5d6770);d.position.set(0,1.75,6.6);d.rotation.y=Math.PI/2;d.scale.setScalar(.8);g.add(d)}
   g.userData.parts=[[0,10,-1.1,'Мачта','mast'],[0,3.4,1,'Гик','boom'],[-X,1.7,-3,'Левый корпус','port hull'],[X,1.7,-3,'Правый корпус','starboard hull'],
     [0,1.6,-4.2,'Батут','trampoline'],[0,2.9,0,'Салон','saloon'],[0,2.9,4,'Хардтоп','hardtop'],[2.15,2.9,3,'Пост рулевого','helm station'],
-    [0,1.9,4.5,'Кокпит','cockpit'],[0,9,-3.8,'Штаг','forestay'],[X,1.1,6.2,'Ступени транца','transom steps'],[0,3,6.6,'Шлюпбалки и тузик','davits & dinghy'],[0,3.1,3.9,'Солнечные панели','solar panels'],[-X,-.5,.5,'Мини-киль','keel'],[X,-.4,5.4,'Перо руля','rudder blade']];
+    [0,1.9,4.5,'Кокпит','cockpit'],[0,9,-3.8,'Штаг','forestay'],[X,1.1,6.2,'Ступени транца','transom steps'],[0,3,6.6,'Шлюпбалки и тузик','davits & dinghy'],[0,3.1,3.9,'Солнечные панели','solar panels'],[-X,-.5,.5,'Мини-киль','keel'],[X,-.4,5.4,'Перо руля','rudder blade'],[-X,-.45,3.8,'Колонка с винтом','saildrive & prop']];
   return g}
 
 /* призма с завалом бортов внутрь (tumblehome): профиль (z,y), ширина wb на высоте y0 и wt на высоте y1 */

@@ -571,6 +571,23 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .en-btns .btn{padding:7px 10px;font-size:13px}
 .steps .en-go{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer}.steps .en-go:hover,.steps .en-go:focus-visible{color:var(--ink);text-decoration:underline dotted}
 @container (max-width:700px){.en-rows .an-layers{flex-wrap:nowrap;overflow-x:auto}}
+/* мотор: кнопка в ряду режимов, паспорт в карточке, таблица сравнения, выбор мотора (и в карточке «Флота») */
+.en-modes .en-mot{border-color:var(--buoy);font-weight:600}
+.en-pass{grid-template-columns:1fr;gap:7px;margin:4px 0 6px}
+.en-pass b{font-size:13px;line-height:1.35}
+.en-boats{margin:0 0 8px;padding-left:18px;font-size:13px;line-height:1.45}.en-boats li{margin-bottom:3px}
+.en-mots button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border-radius:10px;line-height:1.25}
+.en-mots button .en{font-size:10.5px;margin-top:1px}
+.en-cmp{overflow-x:auto;margin:4px -4px 8px;overscroll-behavior-x:contain}
+.en-cmp table{border-collapse:collapse;font-size:12.5px;white-space:nowrap;width:100%}
+.en-cmp th{font-family:var(--f-mono);font-weight:500;font-size:10px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);text-align:right;vertical-align:bottom;line-height:1.3;padding:4px 4px;border-bottom:1px solid var(--line)}
+.en-cmp td{font-family:var(--f-mono);text-align:right;padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.06)}
+.en-cmp th:first-child,.en-cmp td:first-child{text-align:left;font-family:inherit;position:sticky;left:0;background:#0b1f2c}
+.en-cmp td:first-child span{display:block;font-size:10.5px;color:var(--muted);line-height:1.2}
+.en-cmp tbody tr{cursor:pointer}.en-cmp tbody tr:hover td{background:rgba(242,163,58,.1)}
+.en-cmp tr.on td{color:var(--buoy)}.en-cmp tr.on td:first-child{box-shadow:inset 3px 0 0 var(--buoy)}
+.fmot{margin-top:10px}.fmot h4{margin:0 0 5px;font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fmot p{margin:6px 0 0;font-size:13px;line-height:1.4}.fmot .btn{margin-top:6px}
 /* Галс · адаптив: телефоны, планшеты, большие мониторы. Сцена занимает экран по высоте (dvh учитывает адресную строку телефона) */
 .stage{height:clamp(420px,calc(100vh - 200px),1100px);height:clamp(420px,calc(100dvh - 200px),1100px)}
 .stage.tall{height:clamp(560px,calc(100vh - 200px),1200px);height:clamp(560px,calc(100dvh - 200px),1200px);min-height:0}
