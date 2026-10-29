@@ -94,13 +94,14 @@ function coachSteps(all,kind){
 function crewSay(t,cls,sec){const e=$('#tkMsg');if(!e)return;e.textContent=t;e.className='toast '+(cls||'');e.hidden=false;sim.sayT=sec||2.6}
 function crewCmd(k){
   if(!sim||!sim.crew||!sim.running||!$('#dlg').hidden)return;
-  if(k==='ra'&&sim.cmd==='none'){sim.cmd='ra';sim.cmdT=1.3;crewSay(SAILCOACH.say.raWait,'')}
-  else if(k==='lh'){if(sim.cmd==='ready'){sim.cmd='lh';sim.cmdT=0;sim.cmdW=false;crewSay(crewGybe()?SAILCOACH.say.glh:SAILCOACH.say.lh,'')}else if(sim.cmd!=='lh')crewSay(SAILCOACH.say.early,'warn',4)}
+  const vs=typeof voiceSay==='function'?voiceSay:()=>{};
+  if(k==='ra'&&sim.cmd==='none'){sim.cmd='ra';sim.cmdT=1.3;crewSay(SAILCOACH.say.raWait,'');vs(crewGybe()?'Stand by to gybe!':'Ready about!')}
+  else if(k==='lh'){if(sim.cmd==='ready'){sim.cmd='lh';sim.cmdT=0;sim.cmdW=false;crewSay(crewGybe()?SAILCOACH.say.glh:SAILCOACH.say.lh,'');vs(crewGybe()?'Gybe-ho!':'Lee-ho!')}else if(sim.cmd!=='lh')crewSay(SAILCOACH.say.early,'warn',4)}
 }
 function crewTick(dt){
   if(!sim.crew)return;
   if(sim.sayT>0){sim.sayT-=dt;if(sim.sayT<=0&&$('#tkMsg'))$('#tkMsg').hidden=true}
-  if(sim.cmd==='ra'){sim.cmdT-=dt;if(sim.cmdT<=0){sim.cmd='ready';crewSay(crewGybe()?SAILCOACH.say.gra:SAILCOACH.say.ra,'')}}
+  if(sim.cmd==='ra'){sim.cmdT-=dt;if(sim.cmdT<=0){sim.cmd='ready';crewSay(crewGybe()?SAILCOACH.say.gra:SAILCOACH.say.ra,'');if(typeof voiceSay==='function')voiceSay('Ready!','crew',true)}}
   else if(sim.cmd==='lh'){sim.cmdT+=dt;
     if(sim.cmdT>10&&!sim.cmdW){sim.cmdW=true;crewSay(SAILCOACH.say.stale,'warn',4)}
     if(sim.cmdT>22){sim.cmd='none';crewSay(SAILCOACH.say.reset,'warn',4)}}
