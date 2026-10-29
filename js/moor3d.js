@@ -224,7 +224,7 @@ function startMoor3D(mode){
     const s=L[st.si];st.okT=0;
     (s.hl||[]).forEach(q=>{const e=host.querySelector(q);if(e)e.classList.add('hl')});
     $('#m4coach').hidden=false;$('#m4coach').classList.remove('min');
-    $('#m4coach').innerHTML=`<p class="qn">Мастер-класс · шаг ${st.si+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="m4next">Дальше</button></div>':''}`;
+    $('#m4coach').innerHTML=`${coachQn(st.si,L.length,s)}<p>${rich(s.t)}</p>${s.info?'<div class="row"><button class="btn" id="m4next">Дальше</button></div>':''}`;
     if(s.info)$('#m4next').onclick=()=>{st.si++;enterStep()};
     renderSteps();
   }
@@ -360,6 +360,7 @@ function startMoor3D(mode){
     place($('#m4lB'),0,2.2,10);if(st.held)$('#m4lB').hidden=true;
     if(!st.lazy)place($('#m4lL'),1.6,.4,6);else $('#m4lL').hidden=true;
     if(ring.visible)place($('#m4lT'),M4TURN.x,1.4,M4TURN.z);else $('#m4lT').hidden=true;
+    declutter([$('#m4lT'),$('#m4lB'),$('#m4lL')]);
     if(st.msgT>0){st.msgT-=dt;const m=$('#m4msg');m.style.opacity=Math.min(1,st.msgT);if(st.msgT<=0)m.hidden=true}
     $('#m4rud').style.left=(50+st.rud*46)+'%';$('#m4wg').setAttribute('transform',`rotate(${st.rud*270})`);
     $('#m4knob').style.top=((4-st.thrI)*20+2)+'px';$('#m4thrN').innerHTML=`${M4N[st.thrI][0]}${en(M4N[st.thrI][1])}`;

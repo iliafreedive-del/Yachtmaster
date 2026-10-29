@@ -188,7 +188,7 @@ function start3D(){
   function lessonEnter(){const s=L[st.li];st.yaw0=st.yaw;st.iso0=st.isoYaw;st.mode0=st.mode;st.talked=false;st.acted=null;
     $('#stage').querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));(s.hl||[]).forEach(q=>{const e=$('#stage').querySelector(q);if(e)e.classList.add('hl')});
     const box=$('#d1coach');box.hidden=false;box.classList.remove('min');
-    box.innerHTML=`<p class="qn">Мастер-класс · шаг ${st.li+1} из ${L.length} · ${s.en}</p><p>${rich(s.t)}</p><p class="live" id="d1live"></p>${s.info?'<div class="row"><button class="btn" id="d1next">Дальше</button></div>':''}`;
+    box.innerHTML=`${coachQn(st.li,L.length,s)}<p>${rich(s.t)}</p><p class="live" id="d1live"></p>${s.info?'<div class="row"><button class="btn" id="d1next">Дальше</button></div>':''}`;
     if(s.info)$('#d1next').onclick=lessonNext;
     sayT(s.t);hint('');sideTasks()}
   function lessonNext(){st.li++;if(st.li>=L.length){lessonDone();return}hint('Верно! Следующий шаг.','good');lessonEnter()}
@@ -265,6 +265,9 @@ function start3D(){
     for(const id in HS){const d=labels[id];const sh=st.labels||id===best;if(!sh){d.hidden=true;continue}
       const pp=HS[id].p;v3.set(pp[0],pp[1]+.35,pp[2]).project(cam);
       if(v3.z>1){d.hidden=true;continue}d.hidden=false;d.style.left=((v3.x+1)/2*W)+'px';d.style.top=((1-v3.y)/2*H)+'px'}
+    // подписей много: сначала та, у которой стоишь, потом ближние к герою; налезающие прячутся, пока не подойдёшь
+    if(st.labels){const hp=hero.position,dd=id=>Math.hypot(hp.x-HS[id].p[0],hp.z-HS[id].p[2]);
+      declutter(Object.keys(HS).sort((a,b)=>(b===best)-(a===best)||dd(a)-dd(b)).map(id=>labels[id]),36)}else declutter([best&&labels[best]]);
     st.raf=requestAnimationFrame(loop)};
   st.raf=requestAnimationFrame(loop);
   $('#stage').focus();
