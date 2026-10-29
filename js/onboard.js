@@ -107,10 +107,10 @@ function obRefHtml(){
      <div class="row">${obLes('t12')}</div></div></details></div>`}
 
 /* ---------- вкладка ---------- */
-const OB_NAV=[['in','Приёмка'],['brief','Брифинг'],['dep','Перед выходом'],['radio','Радио'],['proc','Порядок действий'],['ref','Справка']];
-function obSteps(){const{nm,cs,mm}=obYacht();
+const OB_NAV=[['in','Приёмка'],['brief','Брифинг'],['dep','Перед выходом'],['anc','На якоре'],['radio','Радио'],['proc','Порядок действий'],['ref','Справка']];
+function obSteps(){const{nm,cs,mm}=obYacht(),k=ONBOARD.lists.length;
   $('#steps').innerHTML=ONBOARD.lists.map((L,i)=>{const[m,n]=obCount(L);return`<li class="${m===n?'done':''}" data-obgo="${L.id}"><i>${m===n?'✓':i+1}</i><span>${L.n} <span class="cnt">${m}/${n}</span></span></li>`}).join('')+
-    `<li class="${nm&&cs&&mm.length===9?'done':''}" data-obgo="radio"><i>${nm&&cs&&mm.length===9?'✓':4}</i><span>Радиокарточка</span></li><li data-obgo="proc"><i>5</i><span>Порядок действий</span></li><li data-obgo="ref"><i>6</i><span>Справка</span></li>`;
+    `<li class="${nm&&cs&&mm.length===9?'done':''}" data-obgo="radio"><i>${nm&&cs&&mm.length===9?'✓':k+1}</i><span>Радиокарточка</span></li><li data-obgo="proc"><i>${k+2}</i><span>Порядок действий</span></li><li data-obgo="ref"><i>${k+3}</i><span>Справка</span></li>`;
   $('#steps').querySelectorAll('li').forEach(li=>li.style.cursor='pointer')}
 const obNavH=()=>{const n=$('#obNav');return n?n.offsetHeight:0};
 function obGo(id){const c=$('#ob-'+id),b=$('#board');if(!c)return;b.scrollTo({top:Math.max(0,c.offsetTop-obNavH()-8),behavior:'smooth'});if(typeof focusStage==='function')focusStage()}
@@ -131,7 +131,7 @@ function renderOnboard(){
    ${ONBOARD.lists.map(obListHtml).join('')}${obRadioHtml()}${obProcHtml()}${obRefHtml()}</div>`;
   $('#board').scrollTop=0;obRadioDraw();obSteps();obSpy();
   const L0=ONBOARD.lists.find(L=>{const[m,n]=obCount(L);return m<n});
-  say(L0&&obCount(L0)[0]?`«${L0.n}»: отмечено ${obCount(L0)[0]} из ${obCount(L0)[1]}. Продолжай, когда будешь на яхте.`:'Это шпаргалка на яхту: приёмка, брифинг экипажу, проверки перед выходом и радиокарточка с именем и позывным твоей яхты. Отмечай пункты по ходу дела.')}
+  say(L0&&obCount(L0)[0]?`«${L0.n}»: отмечено ${obCount(L0)[0]} из ${obCount(L0)[1]}. Продолжай, когда будешь на яхте.`:'Это шпаргалка на яхту: приёмка, брифинг экипажу, проверки перед выходом, якорная стоянка и радиокарточка с именем и позывным твоей яхты. Отмечай пункты по ходу дела.')}
 
 /* ---------- печать ---------- */
 function obPrint(what){if(typeof printSheet!=='function')return;const d=new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});

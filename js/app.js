@@ -33,7 +33,7 @@ let crumbFn=null;
 function crumb(label,fn,where){
   crumbFn=fn||null;$('#crumbB').hidden=!fn;$('#crumbT').textContent=label||'';
   $('#crumbN').textContent=where||(TABS.find(t=>t.id===cur)||{}).n||'';document.body.classList.toggle('crumbed',!!fn)}
-function stopAll(){crumb();sim=null;stop3D();stopSail3D();stopMoor3D();if(typeof stopHelm3D==='function')stopHelm3D();stopFleet3D();if(typeof stopLabs==='function')stopLabs();hideDialog();for(const k in keys)keys[k]=false}
+function stopAll(){crumb();sim=null;stop3D();stopSail3D();stopMoor3D();if(typeof stopHelm3D==='function')stopHelm3D();if(typeof stopAnchor3D==='function')stopAnchor3D();stopFleet3D();if(typeof stopLabs==='function')stopLabs();hideDialog();for(const k in keys)keys[k]=false}
 
 function openChapter(id){
   stopAll();cur=id;renderTabs();padMode(null);$('#instBox').hidden=true;$('#boatBox').hidden=true;$('#keysHelp').innerHTML='';hint('');
@@ -65,10 +65,11 @@ function startPractice(p){
   phase='practice';
   const inCourse=cur==='course'&&typeof crs!=='undefined'&&crs.lesson,
     back=()=>crumb(inCourse?'К уроку':'К брифингу',()=>{if(inCourse){stopAll();openLesson(crs.lesson.id,0)}else openChapter(cur)},inCourse?crs.lesson.n:chap(cur).n+' · практика');
-  // День 3, День 4 и «Рулёжка»: сначала мастер-класс, после него — практика
+  // День 3, День 4, «Рулёжка» и «Якорная стоянка»: сначала мастер-класс, после него — практика
   if(p==='deck3d')deckMode=deckMode||(done['day1-lesson']?'practice':'lesson');
   if(p==='moor3d')moorMode=moorMode||(done['day4-lesson']?'practice':'lesson');
   if(p==='helm3d')helmMode=helmMode||(done['helm-lesson']?'practice':'lesson');
+  if(p==='anchor3d')anchorMode=anchorMode||(done['anchor-lesson']?'practice':'lesson');
   // День 3: мастер-класс поворота с командами (js/sailcoach.js) — только в 3D
   if(p==='tack')tackMode=window.THREE?tackMode||(done['day3-lesson']?'practice':'lesson'):'practice';
   // перед практикой — карточка «Условия» (js/practice.js); перезапуск той же практики идёт без неё
@@ -79,8 +80,9 @@ function startPractice(p){
   // без WebGL — прежняя 2D-швартовка
   else if(p==='moor3d'){if(!(window.THREE&&startMoor3D(moorMode))){p='moor';startSim('moor')}}
   else if(p==='helm3d'){if(!(window.THREE&&startHelm3D(helmMode)))no3D()}
+  else if(p==='anchor3d'){if(!(window.THREE&&startAnchor3D(anchorMode)))no3D()}
   else startSim(p);
-  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>C</kbd> или <kbd>1</kbd> <kbd>2</kbd> — вид камеры, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху (ветер вверху), <kbd>4</kbd> сверху по курсу, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> <kbd>4</kbd> сверху, <kbd>C</kbd> — следующая.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',helm3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'');
+  $('#keysHelp').innerHTML=({deck3d:'<kbd>W A S D</kbd> идти, мышь или палец — камера, <kbd>C</kbd> или <kbd>1</kbd> <kbd>2</kbd> — вид камеры, <kbd>E</kbd> — действие.',points:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху (ветер вверху), <kbd>4</kbd> сверху по курсу, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',tack:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> выбрать шкот, <kbd>↓</kbd> потравить. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> <kbd>4</kbd> сверху, <kbd>C</kbd> — следующая.',moor:'<kbd>←</kbd> <kbd>→</kbd> руль, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа.',helm3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться.',anchor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>G</kbd> отдать якорь, <kbd>V</kbd> травить, <kbd>H</kbd> выбирать (держать), <kbd>B</kbd> шар, <kbd>L</kbd> огонь, <kbd>M</kbd> карта. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> нос, <kbd>4</kbd> сверху, <kbd>C</kbd> — следующая.',moor3d:'<kbd>←</kbd> <kbd>→</kbd> штурвал, <kbd>↑</kbd> <kbd>↓</kbd> рычаг газа, <kbd>Q</kbd> <kbd>E</kbd> подруливающее. Камера: <kbd>1</kbd> у штурвала, <kbd>2</kbd> за кормой, <kbd>3</kbd> сверху, <kbd>C</kbd> — следующая. Мышь или палец — осмотреться, колесо мыши — ближе/дальше.',exam:''}[p]||'');
   if(p!=='exam')back();
   focusStage();
 }

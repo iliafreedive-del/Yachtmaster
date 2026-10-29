@@ -795,3 +795,32 @@ LABS.radio=el=>{
   el.querySelectorAll('#raK button').forEach(b=>b.onclick=()=>{el.querySelectorAll('#raK button').forEach(x=>x.setAttribute('aria-pressed',x===b));k=b.dataset.k;n=1;draw()});
   $('#raN').onclick=()=>{n++;draw();const l=RADIO[k][1][n-1];if(l&&!/^\(/.test(l[1])&&typeof voiceSay==='function')voiceSay(l[1],l[0])};$('#raR').onclick=()=>{n=1;draw()};draw();
 };
+
+/* ---------- сколько цепи: вид сбоку на цепную линию (catX, catPts — в js/anchor3d.js). Натяжение — учебное: парусность яхты 12 м, 0,33 кгс на узел² ---------- */
+LABS.scope=el=>{
+  el.innerHTML=`<svg viewBox="0 0 320 210" id="scS" aria-label="Якорная цепь сбоку"></svg>${rng('scD','Глубина',2,15,.5,6,' м')}${rng('scL','Вытравлено цепи',5,60,1,28,' м')}${rng('scW','Ветер',0,35,1,12,' уз')}<p class="lo" id="scO"></p>`;
+  const f1=v=>String(Math.round(v*10)/10).replace('.',',');
+  const draw=()=>{
+    const dep=+$('#scD').value,L=+$('#scL').value,kn=+$('#scW').value,h=dep+1,H=Math.max(.5,.33*kn*kn),sc=L/h;
+    $('#scDV').textContent=f1(dep)+' м';$('#scLV').textContent=L+' м';$('#scWV').textContent=kn+' уз';
+    const ok=L>h+.05,X=ok?catX(L,h,H,A5W):0,c=ok?catPts(L,h,X,A5W,48):null,a=H/A5W,s=Math.sqrt(h*h+2*a*h),lay=ok&&L>=s?L-s:0;
+    const ang=!ok?90:L>=s?0:Math.atan(Math.sinh(Math.atanh(Math.min(.999999,h/L))-X/a/2))/D;
+    const k=Math.min(118/(h+.5),236/Math.max(X+4,10)),y0=50,yb=y0+dep*k,xb=286,xa=xb-X*k,yr=y0-k;
+    const pts=ok?c.P.map(([x,y])=>`${(xa+x*k).toFixed(1)},${(yb-y*k).toFixed(1)}`).join(' '):`${xb},${yr} ${xb},${(yr+L*k).toFixed(1)}`;
+    const R=ok?Math.round(Math.sqrt(L*L-h*h)+12):0;
+    $('#scS').innerHTML=`<rect x="0" y="0" width="320" height="${y0}" fill="var(--panel)"/><rect x="0" y="${y0}" width="320" height="${(yb-y0).toFixed(1)}" fill="#1f6f86" opacity=".55"/>
+      <rect x="0" y="${yb.toFixed(1)}" width="320" height="${(210-yb).toFixed(1)}" fill="#c9b37f"/>
+      ${arw(14,20,14+Math.max(10,kn*2.6),20,'#9fd3e6',2.5)}<text x="14" y="38" class="f-s" style="fill:#9fd3e6">ВЕТЕР · WIND ${kn} уз</text>
+      <path d="M${xb} ${yr.toFixed(1)} L${xb+40} ${(yr+1).toFixed(1)} L${xb+44} ${y0+3} L${xb+12} ${y0+9} Z" fill="var(--hull)" stroke="#8b8574"/><line x1="${xb+20}" y1="${yr.toFixed(1)}" x2="${xb+20}" y2="2" stroke="#c9ced0" stroke-width="2"/>
+      <polyline points="${pts}" fill="none" stroke="#2b2f31" stroke-width="2.6" stroke-linejoin="round"/>
+      ${ok?`<path d="M${(xa-9).toFixed(1)} ${(yb-1).toFixed(1)} L${(xa+3).toFixed(1)} ${(yb-6).toFixed(1)} L${(xa+3).toFixed(1)} ${(yb+1).toFixed(1)} Z" fill="#6a7074"/>`:''}
+      ${ok&&ang>1?`<text x="${Math.max(6,xa-4).toFixed(1)}" y="${(yb-12).toFixed(1)}" class="f-s" style="fill:#ffb3ad">${Math.round(ang)}°</text>`:''}
+      <text x="6" y="${Math.min(204,yb+16).toFixed(1)}" class="f-s" style="fill:#3b3220">ДНО · SEABED</text>`;
+    let v,cls;
+    if(!ok){v='Цепи меньше, чем глубина с роульсом: якорь не достаёт дна.';cls='bad'}
+    else if(ang>1){v=`Цепь оторвалась от дна: якорь тянут вверх под углом ${Math.round(ang)}°, и он может вырваться. Вытрави больше.`;cls='bad'}
+    else if(sc<4){v='Цепь лежит по дну, но её меньше 4 глубин: в порыв натяжение дёрнет якорь. Учебное правило — не меньше 4.';cls='warn'}
+    else{v='Якорь тянут вдоль дна, а вес цепи гасит рывки — так якорь держит.';cls='good'}
+    $('#scO').innerHTML=`Цепь ${L} м — <b>${f1(sc)} глубины</b> (${f1(dep)} м + роульс ≈ 1 м). На дне лежит ${Math.round(lay)} м, натяжение ≈ ${Math.round(H)} кгс.<br><span class="${cls}">${v}</span><br><span class="keys">Круг разворота ≈ ${R} м: цепь плюс длина яхты 12 м. Нужно ${Math.ceil(4*h)} м цепи на 4 глубины.</span>`};
+  el.querySelectorAll('input').forEach(i=>i.oninput=draw);draw();
+};

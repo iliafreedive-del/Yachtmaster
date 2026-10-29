@@ -21,6 +21,7 @@ const gotoBtn=l=>`<button class="btn ghost sm" data-goto="${l}">${gotoName(l)} �
 /* начать практику упражнения из журнала */
 function startEx(ex){
   if(ex==='helm'){openLesson('p1',0);helmMode='practice';startLessonPractice();return}
+  if(ex==='anchor'){openLesson('p4',0);anchorMode='practice';startLessonPractice();return}
   if(ex==='exam'){openChapter('exam');if(typeof drRun==='function')drRun('exam');return}
   if(ex==='day1')deckMode='practice';
   if(ex==='day4')moorMode='practice';
@@ -50,7 +51,7 @@ function renderJournal(){
     <p class="ex">Здесь собраны твои практики в этом браузере: время, условия и ошибки. Тренажёр запоминает ошибки и подсказывает, что повторить.</p></div>
    <div class="card"><p class="qn">Слабые места · weak spots</p>${wl.length?wl.map(w=>{const d=DEBRIEF[w.k];
       return `<div class="di"><p><b>${d.n}</b> ${en(d.en)} <span class="cnt">${EXN[w.ex]}: в ${w.n} из ${w.of} последних попыток</span></p><p>${rich(d.t)}</p><div class="row">${d.l?gotoBtn(d.l):''}<button class="btn ghost sm" data-ex="${w.ex}">Тренировать</button></div></div>`}).join(''):
-      `<p class="ex">${pr.length?'Ошибок в последних попытках нет. Попробуй свежий ветер и режим «минимум подсказок».':'Пока пусто: пройди практику Дней 2–4 или «Рулёжки».'}</p>`}
+      `<p class="ex">${pr.length?'Ошибок в последних попытках нет. Попробуй свежий ветер и режим «минимум подсказок».':'Пока пусто: пройди практику Дней 2–4, «Рулёжки» или «Якорной стоянки».'}</p>`}
     ${wr.length?`<p class="lbl" style="margin-top:14px">Экзамен: где были ошибки</p>${wr.map(([l,n])=>`<div class="row" style="align-items:center;margin:4px 0">${gotoBtn(l)}<span class="cnt">ошибок: ${n}</span></div>`).join('')}`:''}</div>
    ${typeof drTopicStats==='function'?`<div class="card"><p class="qn">Теория по темам · theory</p><div class="jtop">${DTOPICS.map(t=>{const s=drTopicStats(t.id);return`<div><span>${t.n}</span><i class="dbar"><i style="width:${s.p}%"></i></i><small>${s.m} из ${s.n}</small></div>`}).join('')}</div><div class="row"><button class="btn ghost sm" data-ex="exam">Пробный экзамен</button></div></div>`:''}
    <div class="card"><p class="qn">Практика · practice</p><div class="tw"><table class="jt"><thead><tr><th>Упражнение</th><th>Попыток</th><th>Пройдено</th><th>Лучшее время</th><th>Последняя</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>
