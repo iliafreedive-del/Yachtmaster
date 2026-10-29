@@ -14,7 +14,9 @@ function debriefHtml(iss,ok){
   if(!ks.length)return ok?'<div class="debrief"><p class="qn">Разбор · debrief</p><p>Чисто: ошибок, которые замечает тренажёр, нет.</p></div>':'';
   return `<div class="debrief"><p class="qn">Разбор · debrief</p>${ks.map(k=>{const d=DEBRIEF[k];
     return `<div class="di"><p><b>${d.n}</b> ${en(d.en)} <span class="cnt">${d.u==='%'?`${iss[k]}% времени`:`× ${iss[k]}`}</span></p><p>${d.t}</p>${d.l?gotoBtn(d.l):''}</div>`}).join('')}</div>`}
-const gotoName=l=>{const L=typeof findLesson==='function'&&findLesson(l);return L?'Урок: '+L.n:chap(l)?'Брифинг: '+chap(l).n:l};
+/* куда ведёт «Повторить»: урок «Курса», брифинг главы или деталь и мастер-класс «Двигателя» ('eng:крыльчатка') */
+const gotoEng=l=>{const x=l.slice(4);return typeof ENG_FIX!=='undefined'&&ENG_FIX[x]?'Мастер-класс: '+ENG_FIX[x].n:typeof ENG!=='undefined'&&ENG[x]?'Двигатель: '+ENG[x].n:'Двигатель'};
+const gotoName=l=>{if(l.startsWith('eng:'))return gotoEng(l);const L=typeof findLesson==='function'&&findLesson(l);return L?'Урок: '+L.n:chap(l)?'Брифинг: '+chap(l).n:l};
 const gotoBtn=l=>`<button class="btn ghost sm" data-goto="${l}">${gotoName(l)} →</button>`;
 /* начать практику упражнения из журнала */
 function startEx(ex){
@@ -27,7 +29,7 @@ function startEx(ex){
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-goto],[data-ex]');if(!b)return;
   hideDialog();stopAll();
   if(b.dataset.ex){startEx(b.dataset.ex);return}
-  const l=b.dataset.goto;if(chap(l))openChapter(l);else openLesson(l,0)});
+  const l=b.dataset.goto;if(l.startsWith('eng:')&&typeof engOpen==='function')engOpen(l.slice(4));else if(chap(l))openChapter(l);else openLesson(l,0)});
 
 const fmtD=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' '+new Date(d).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 const condTxt=c=>c?[{low:'слабый',mid:'средний',high:'свежий'}[c.wind]||'',c.gust?'порывы':'',{morning:'утро',evening:'вечер'}[c.tod]||'',c.hints==='min'?'без подсказок':''].filter(Boolean).join(', '):'';

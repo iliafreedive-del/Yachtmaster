@@ -540,6 +540,37 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 @container (max-width:700px){.an-cr{flex-wrap:nowrap;overflow-x:auto;cursor:grab}}
 @container (max-width:420px){.an-q{flex:1 1 60px;min-width:60px}.an-bar{gap:4px}.an-bar>button,.an-vw>button{padding:6px 7px;font-size:12px}}
 .an-tl.wind{cursor:default;border-left-color:#fff;font-style:italic}
+/* вкладка «Двигатель» (js/engine3d.js): два ряда кнопок — режимы и системы; лампы пульта; список ремонтов и шаги мастер-класса */
+.en-rows{position:absolute;top:54px;left:10px;right:10px;z-index:3;display:flex;flex-direction:column;align-items:flex-start;gap:5px;pointer-events:none}
+.en-rows .an-layers{position:static;pointer-events:auto;max-width:100%}
+.en-modes button{color:var(--ink)}
+.en-modes button .en{font-size:10px;color:#a9c4cf}
+.en-modes button[aria-pressed="true"]{background:var(--buoy);color:#1b1206;border-color:var(--buoy)}.en-modes button[aria-pressed="true"] .en{color:#5a3a0d}
+.an-tl.en-cyl{cursor:default;border-left-color:#ffb347;pointer-events:none}
+.an-tl.en-wl{cursor:default;border-left-color:#4aa3df;font-style:italic;pointer-events:none}
+.en-spare{border-left:3px solid var(--stbd);background:rgba(60,191,126,.1);border-radius:6px;padding:7px 10px;font-size:13.5px}
+.en-spare b{color:#9be3bd}
+.en-fl{display:flex;flex-direction:column;gap:5px}
+.en-fl button{font:inherit;text-align:left;background:rgba(22,52,73,.6);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer}
+.en-fl button:hover,.en-fl button:focus-visible{border-color:var(--buoy)}
+.en-fl b{font-weight:600;font-size:13.5px}.en-fl b+.en{margin-left:6px;font-size:11px}
+.en-fl .t{display:block;margin-top:3px;font-size:12.5px;line-height:1.4;color:var(--muted)}
+.en-step{font-size:15px;line-height:1.5}
+.en-tap{font-size:13px;color:var(--muted)}
+.en-tg{font:inherit;font-weight:600;background:none;border:0;border-bottom:1px dashed var(--buoy);color:var(--buoy);padding:0;cursor:pointer}
+.en-bar{margin-top:12px}
+.en-lamps{display:flex;flex-wrap:wrap;gap:6px 12px;margin:6px 0 8px;font-size:12.5px}
+.en-lamps>span{display:flex;align-items:center;gap:5px}
+.en-lamps .en{font-size:10.5px}
+.en-lamps i{width:11px;height:11px;border-radius:50%;background:#2c3b40;border:1px solid var(--line);transition:background .15s,box-shadow .15s}
+.en-lamps [data-lamp="oil"].on i,.en-lamps [data-lamp="tmp"].on i{background:#ff5a4d;box-shadow:0 0 8px #ff5a4d}
+.en-lamps [data-lamp="chg"].on i{background:#ffa53a;box-shadow:0 0 8px #ffa53a}
+.en-lamps [data-lamp="glow"].on i{background:#ffd23c;box-shadow:0 0 8px #ffd23c}
+.en-rpm{font-size:13px;color:var(--muted)}.en-rpm b{font-family:var(--f-mono);font-size:20px;font-weight:500;color:var(--ink)}
+.an-pult .en-btns{gap:6px}
+.en-btns .btn{padding:7px 10px;font-size:13px}
+.steps .en-go{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer}.steps .en-go:hover,.steps .en-go:focus-visible{color:var(--ink);text-decoration:underline dotted}
+@container (max-width:700px){.en-rows .an-layers{flex-wrap:nowrap;overflow-x:auto}}
 /* Галс · адаптив: телефоны, планшеты, большие мониторы. Сцена занимает экран по высоте (dvh учитывает адресную строку телефона) */
 .stage{height:clamp(420px,calc(100vh - 200px),1100px);height:clamp(420px,calc(100dvh - 200px),1100px)}
 .stage.tall{height:clamp(560px,calc(100vh - 200px),1200px);height:clamp(560px,calc(100dvh - 200px),1200px);min-height:0}

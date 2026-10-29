@@ -379,12 +379,14 @@ function startAnatomy(){
     root.querySelectorAll('.an-tog').forEach(b=>b.onclick=()=>{const t=b.dataset.t;st.open[t]=st.open[t]?0:1;host.querySelectorAll(`.an-tog[data-t="${t}"]`).forEach(x=>x.textContent=st.open[t]?'Закрыть':'Открыть')});
     root.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>select(b.dataset.go,true));
     root.querySelectorAll('[data-les]').forEach(b=>b.onclick=()=>{const[l,s]=b.dataset.les.split(':');openLesson(l,+s)});
+    root.querySelectorAll('[data-eng]').forEach(b=>b.onclick=()=>engOpen(b.dataset.eng,['Устройство яхты',()=>openChapter('anatomy')],true));
     root.querySelectorAll('.an-x').forEach(b=>b.onclick=()=>{if(root===pultBox){togglePult(false)}else select(null)})}
   function renderCard(){
     const id=st.sel;if(!id){card.hidden=true;return}
     const a=ANAT[id],ly=layerName(a.l);togglePult(false,true);
     const how=(a.how||[]).map(([w,t],i)=>`<details${i?'':' open'}><summary>${w}</summary><p>${rich(t)}</p></details>`).join('');
-    const les=a.les&&typeof openLesson==='function'?`<button class="btn ghost an-les" data-les="${a.les[0]}:${a.les[1]}">Открыть урок в «Курсе»</button>`:'';
+    const les=(a.les&&typeof openLesson==='function'?`<button class="btn ghost an-les" data-les="${a.les[0]}:${a.les[1]}">Открыть урок в «Курсе»</button>`:'')+
+      (a.eng&&typeof engOpen==='function'?`<button class="btn ghost an-les" data-eng="${a.eng}">Двигатель по частям: вкладка «Двигатель» →</button>`:'');
     card.innerHTML=`<div class="an-head"><p class="an-ly" style="--lc:${AN_LAYER_C[a.l]}">${ly.n} <span class="en">· ${ly.en}</span></p><button class="an-x" aria-label="Закрыть карточку">✕</button></div>
       <h3>${a.n}<span class="en">${a.en}</span>${DIMTXT[id]?`<b class="an-dv">${DIMTXT[id]}</b>`:''}</h3>
       <p>${rich(a.d)}</p>${a.ctl||a.tog?`<div class="an-ctl">${(a.ctl||[]).map(ctlHtml).join('')}${a.tog?togHtml(a.tog):''}<p class="an-st" id="anSt1"></p></div>`:''}
@@ -589,6 +591,7 @@ function startAnatomy(){
       <h3>${r.n}<span class="en">${r.en}</span></h3><p>${rich(T.d)}</p>${r.note?`<p>${rich(r.note)}</p>`:''}
       ${how?`<h4>Когда и что делать</h4><div class="an-how">${how}</div>`:''}${T.warn?`<p class="an-warn"><b>Осторожно.</b> ${rich(T.warn)}</p>`:''}
       ${near?`<h4>Ещё внутри</h4><div class="chips an-rel">${near}</div>`:''}
+      ${(r.t==='eng'||r.t==='tankF')&&typeof engOpen==='function'?`<button class="btn ghost an-les" data-eng="${r.t==='eng'?'block':'tank'}">${r.t==='eng'?'Двигатель по частям':'Топливная система'}: вкладка «Двигатель» →</button>`:''}
       <p class="an-note">${I.n}, ${I.v}. ${I.src}</p>`;
     card.hidden=false;card.scrollTop=0;wire(card);
     say(`<b>${r.n}</b> ${en('· '+r.en)}. ${T.d}`);
