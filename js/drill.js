@@ -229,11 +229,12 @@ function drRun(mode,topic){
   else if(mode==='err')items=drPick(drErrs(),DS_N);
   else if(mode==='due')items=drPick(drDue(),DS_N);
   else if(mode==='topic')items=drPick(drBank().filter(it=>it.t===topic),DS_N);
+  else if(mode==='order')items=drBank().filter(it=>it.k==='order'); // все «расставь по порядку» — из вкладки «На борту»
   else items=drMix(DS_N);
   if(!items.length){drHome();return}
   DS={mode,topic,items:mode==='exam'?items:spread(items),i:0,base:items.length,ok:0,xp:0,combo:0,best:0,t0:Date.now(),re:new Set(),first:{},wrong:[],ans:[]};
   if(mode==='exam'){DS.end=Date.now()+DEX_MIN*6e4;DS.timer=setInterval(drTick,500);say('Как на экзамене: ответ сразу засчитывается, объяснения — в конце. Время пошло.')}
-  else say(mode==='due'?'Повторение по срокам. Верный ответ отодвигает задание на больший срок, ошибка возвращает его в повторение сразу.':mode==='err'?'Повторяем задания, где были ошибки. Две верные попытки подряд — и задание уйдёт из списка.':mode==='topic'?`Тема «${topicOf(topic).n}». Ошибёшься — задание вернётся в конце тренировки.`:'Задания из всех тем. Ошибёшься — задание вернётся в конце тренировки.');
+  else say(mode==='due'?'Повторение по срокам. Верный ответ отодвигает задание на больший срок, ошибка возвращает его в повторение сразу.':mode==='err'?'Повторяем задания, где были ошибки. Две верные попытки подряд — и задание уйдёт из списка.':mode==='topic'?`Тема «${topicOf(topic).n}». Ошибёшься — задание вернётся в конце тренировки.`:mode==='order'?'Порядок действий: человек за бортом, MAYDAY, повороты, швартовка, якорь. Ошибёшься — задание вернётся в конце тренировки.':'Задания из всех тем. Ошибёшься — задание вернётся в конце тренировки.');
   drTask()}
 function drTick(){if(!DS||DS.mode!=='exam')return;const left=Math.max(0,DS.end-Date.now()),el=$('#dTime');
   if(el){el.textContent=`${Math.floor(left/6e4)}:${String(Math.floor(left/1e3)%60).padStart(2,'0')}`;el.classList.toggle('low',left<12e4)}
