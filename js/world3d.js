@@ -94,4 +94,4 @@ function declutter(labels,max){
    чтобы было видно яхту. Новый шаг снова раскрывает карточку; заголовок раскрывает её в любой момент */
 document.addEventListener('pointerdown',e=>{if(!(innerWidth<=700||innerHeight<=560)||!e.target.closest)return;
   const st=e.target.closest('.stage');if(!st||!e.target.closest('.helm,.pad,.crew3,.three canvas'))return;
-  st.querySelectorAll('.coach:not([hidden]):not(.min)').forEach(c=>{if(!c.querySelector('[id$="next" i]'))c.classList.add('min')})},true);
+  st.querySelectorAll('.coach:not([hidden]):not(.min):not(.keep)').forEach(c=>{if(!c.querySelector('[id$="next" i]'))c.classList.add('min')})},true); // .keep — карточка с кнопками, которые надо нажать

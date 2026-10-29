@@ -5,7 +5,7 @@ let H5=null,helmMode=null;
 /* ворота: центр, направление прохода (°), полуширина; кромка буёв в ±w от центра */
 const H5LG={x:0,z:0,h:0,w:6};
 const H5PG=[{x:0,z:0,h:0,w:6},{x:26,z:-45,h:0,w:6},{x:4,z:-95,h:0,w:6}];
-const H5MARK={x:-8,z:-140},H5MOB={x:-34,z:-70},H5BG={x:-24,z:10,h:180,w:5};
+const H5MARK={x:-8,z:-140},H5BG={x:-24,z:10,h:180,w:5};
 function stopHelm3D(){if(!H5)return;cancelAnimationFrame(H5.raf);H5.ro&&H5.ro.disconnect();H5.off();H5.renderer.dispose();try{H5.renderer.forceContextLoss()}catch(e){}
   $('#three').innerHTML='';$('#stage').classList.remove('tall');H5=null}
 /* пересёк ли отрезок (p→q) створ ворот g в направлении g.h между буями */
@@ -65,10 +65,15 @@ function startHelm3D(mode){
   const sun=new THREE.DirectionalLight(TD.sunCol,TD.sunI),SUN=TD.sun.map(v=>v*74);sun.position.set(SUN[0],SUN[1],SUN[2]);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
   {const c=sun.shadow.camera;c.left=-30;c.right=30;c.top=30;c.bottom=-30;c.near=1;c.far=200}sun.shadow.bias=-.0008;scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
-  // практика — в условиях из карточки «Условия»; в повторных заходах «человек за бортом» оказывается в разных местах
+  // практика — в условиях из карточки «Условия»; в повторных заходах человек падает за борт позже, а кнопки первых действий — вперемешку
   const cond=condGet(),min=!lesson&&cond.hints==='min',vary=!lesson&&(cond.dir==='rnd'||done.helm);
   const wind=lesson?{from:20,kn:4}:gustWind({from:cond.dir==='rnd'?Math.floor(Math.random()*72)*5:45,kn:condKn('helm3d',cond)},cond.gust);
-  const mobP=vary?[H5MOB,{x:28,z:-125},{x:-48,z:-30},{x:12,z:-170}][Math.floor(Math.random()*4)]:H5MOB;
+  // «человек за бортом»: кнопки первых действий — в карточке на месте подсказок, пока их не нажали; в первый раз — по порядку и с подсветкой
+  const MA=vary?HELM.mob.map(a=>[Math.random(),a]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]):HELM.mob;
+  if(!lesson){ui.insertAdjacentHTML('beforeend',`<div class="coach mobc keep" id="h5mob" hidden><p class="mobh">Человек за бортом! <span class="en">man overboard</span></p>
+    <p class="mobs">${HELM.mobSay.fall}</p><div class="acts">${MA.map(a=>`<button class="hb" type="button" data-mob="${a.id}">${a.n}<small>${a.en}</small></button>`).join('')}</div>
+    <p class="live" id="h5mobL"></p></div>`);
+    host.querySelectorAll('[data-mob]').forEach(b=>b.onclick=()=>mobAct(b.dataset.mob))}
   let sea=null,water=null,wg=null;
   if(ocean)sea=makeOcean(scene,{R:320,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:wind.base||wind,calm:lesson?.3:.6,opacity:.9,sky});
   else{wg=new THREE.PlaneGeometry(700,700,70,70);wg.rotateX(-Math.PI/2);
@@ -88,10 +93,15 @@ function startHelm3D(mode){
   const gateBuoys=(g,kind)=>{const c=Math.cos(g.h*D),s=Math.sin(g.h*D);
     return[buoy(g.x-c*g.w,g.z-s*g.w,kind||'r'),buoy(g.x+c*g.w,g.z+s*g.w,kind||'g')]};
   const gates=lesson?[H5LG]:H5PG;gates.forEach(g=>gateBuoys(g));
-  let mark=null,mob=null,bgate=null;
+  let mark=null,man=null,lbuoy=null,splash=null,bgate=null;
   if(!lesson){mark=buoy(H5MARK.x,H5MARK.z,'y');gateBuoys(H5BG,'w');bgate=H5BG;
-    mob=new THREE.Group();mesh(new THREE.TorusGeometry(.42,.13,8,20).rotateX(Math.PI/2),M(0xf07a28),0,.1,0,mob);
-    mob.position.set(mobP.x,0,mobP.z);mob.visible=false;scene.add(mob)}
+    // человек в воде: голова, спасжилет и рука, которой он машет; спасательный круг; всплеск там, где он упал
+    man=new THREE.Group();mesh(new THREE.SphereGeometry(.13,12,10),M(0xd7a17c),0,.24,0,man);
+    mesh(new THREE.TorusGeometry(.19,.09,8,16).rotateX(Math.PI/2),M(0xf2c400),0,.07,0,man);
+    const arm=new THREE.Group();arm.position.set(.2,.12,0);mesh(new THREE.CylinderGeometry(.04,.04,.5,6),M(0xf2c400),0,.25,0,arm);man.add(arm);man.userData.arm=arm;
+    lbuoy=new THREE.Group();mesh(new THREE.TorusGeometry(.42,.13,8,20).rotateX(Math.PI/2),M(0xf07a28),0,.1,0,lbuoy);
+    splash=mesh(new THREE.RingGeometry(.3,.6,24).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false}),0,.15,0);
+    man.visible=lbuoy.visible=splash.visible=false;scene.add(man,lbuoy)}
   // метки шага: зелёный круг-цель и оранжевый круг за кормой
   const ringM=new THREE.MeshBasicMaterial({color:0xf2a33a,transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide});
   const ring=mesh(new THREE.RingGeometry(3,3.6,40).rotateX(-Math.PI/2),ringM,0,.12,0);ring.visible=false;
@@ -107,7 +117,8 @@ function startHelm3D(mode){
   const st={renderer,mode,scene,B,E,cam,running:true,t:0,x:0,z:40,h:0,u:0,v:0,r:0,rud:0,thrI:2,bt:0,eng:false,wind,
     si:0,okT:0,view:'third',yaw:0,camYaw:0,camPit:.6,k:{},touches:0,errs:0,hintT:0,hintId:'',msgT:0,
     gateOk:false,turn:0,h0:0,ast:false,astT:0,btT:0,ring:null,coast:0,box:null,trail:[],tt:0,
-    pr:{engine:false,g1:false,g2:false,g3:false,round:false,mob:false,back:false,off:false},gi:0,rnd:0,rndA:null,wake:[],wt:0};
+    pr:{engine:false,g1:false,g2:false,g3:false,round:false,mob1:false,mob:false,back:false,off:false},gi:0,rnd:0,rndA:null,wake:[],wt:0,
+    mo:null,mobAt:0,mobErr:0,splT:0};
   H5=st;
   const msg=(t,c)=>{const m=$('#h5msg');m.innerHTML=rich(t);m.className='toast '+(c||'');m.hidden=false;st.msgT=5};
 
@@ -169,45 +180,78 @@ function startHelm3D(mode){
   function lessonDone(){
     st.running=false;host.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));$('#h5coach').hidden=true;ring.visible=false;
     done['helm-lesson']=true;store.set(done);renderSteps();
-    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты прошёл ворота, описал [[циркуляция|циркуляцию]], остановил яхту задним ходом, увидел [[заброс винта]], прошёл задним ходом и развернулся на месте. Теперь сам: в практике ветер сильнее — его выберешь перед стартом, — слалом через трое ворот, обход знака, подход к спасательному кругу и ворота задним ходом.</p><div class="row"><button class="btn ghost" id="h5again">Повторить</button><button class="btn" id="h5prac">К практике</button></div>`);
+    showDialog(`<h3>Мастер-класс пройден</h3><p>Ты прошёл ворота, описал [[циркуляция|циркуляцию]], остановил яхту задним ходом, увидел [[заброс винта]], прошёл задним ходом и развернулся на месте. Теперь сам: в практике ветер сильнее — его выберешь перед стартом, — слалом через трое ворот, обход знака, «человек за бортом» (первые действия и подход к человеку) и ворота задним ходом.</p><div class="row"><button class="btn ghost" id="h5again">Повторить</button><button class="btn" id="h5prac">К практике</button></div>`);
     $('#h5again').onclick=()=>{hideDialog();helmMode='lesson';stopHelm3D();startPractice('helm3d')};
     $('#h5prac').onclick=()=>{hideDialog();helmMode='practice';stopHelm3D();startPractice('helm3d')};
   }
   /* ---------- практика ---------- */
   const PR=HELM.practice;
   function practiceHint(now){const p=PR.find(x=>!st.pr[x.id]);if(!p)return;
+    if(st.mo&&!st.pr.mob1){if(now)mobFlash(['shout','buoy','spot','mob'].find(id=>!st.mo.done[id]));return} // пока человек за бортом, подсказка — подсветка следующей кнопки
     if(p.id!==st.hintId){st.hintId=p.id;st.hintT=0}
     if(now||st.hintT>15){st.hintT=-15;$('#h5coach').hidden=false;$('#h5coach').classList.remove('min');$('#h5coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=8}}
   function practiceTick(dt,px,pz){
     const P=st.pr;
     // ворота по порядку
     if(st.gi<3&&h5cross(H5PG[st.gi],px,pz,st.x,st.z)){P['g'+(st.gi+1)]=true;st.gi++;msg(st.gi<3?`Ворота ${st.gi} пройдены.`:'Слалом пройден. Теперь обойди жёлтый буй.','good')}
-    // обход знака: угол вокруг буя, пока яхта ближе 30 м
+    // обход знака: угол вокруг буя, пока яхта ближе 30 м. Через несколько секунд после знака человек падает за борт
     if(st.gi>=3&&!P.round){const d=Math.hypot(st.x-mark.x,st.z-mark.z),a=Math.atan2(st.x-mark.x,st.z-mark.z)/D;
-      if(d<30){if(st.rndA!==null)st.rnd+=norm(a-st.rndA);st.rndA=a;if(Math.abs(st.rnd)>330){P.round=true;mob.visible=true;
-        msg('Знак обойдён. «Человек за бортом!» — оранжевый спасательный круг в воде, подойди к нему.','bad')}}else{st.rndA=null;st.rnd=0}}
-    // человек за бортом: круг у борта, ход почти ноль; винт рядом с человеком — ошибка
-    if(P.round&&!P.mob){const d=Math.hypot(st.x-mobP.x,st.z-mobP.z),[sx,sz]=m4w(st,0,B.L),ds=Math.hypot(sx-mobP.x,sz-mobP.z);
-      if(d<B.W*.9&&Math.abs(st.u)>.3){fail('Яхта наехала на человека в воде. К нему подходят медленно, против ветра, и останавливаются так, чтобы он был у борта.');return}
+      if(d<30){if(st.rndA!==null)st.rnd+=norm(a-st.rndA);st.rndA=a;if(Math.abs(st.rnd)>330){P.round=true;st.mobAt=st.t+(vary?2+Math.random()*7:2.5);
+        msg('Знак обойдён.','good')}}else{st.rndA=null;st.rnd=0}}
+    if(P.round&&!st.mo&&st.t>=st.mobAt)mobFall();
+    if(st.mo&&!P.mob1&&!st.mo.slow&&st.t-st.mo.t0>15){st.mo.slow=true;mobSay(HELM.mobSay.slow,'warn')}
+    // подход: человек у борта, ход почти ноль; винт рядом с человеком — ошибка. Пока яхта не отошла от места падения, наезд и винт не считаются
+    if(st.mo&&!P.mob){const mo=st.mo,d=Math.hypot(st.x-mo.x,st.z-mo.z),[sx,sz]=m4w(st,0,B.L),ds=Math.hypot(sx-mo.x,sz-mo.z);
+      if(d>B.L+2)mo.clear=true;
+      if(mo.clear&&d<B.W*.9&&Math.abs(st.u)>.3){fail('Яхта наехала на человека в воде. К нему подходят медленно, против ветра, и останавливаются так, чтобы он был у борта.');return}
       if(ds<4&&st.thrI!==2&&st.eng&&!st.propWarn){st.propWarn=true;st.errs++;msg('Винт рядом с человеком! Рычаг в нейтраль.','bad')}
       if(ds>6)st.propWarn=false;
-      if(d<B.W+3&&Math.abs(st.u)*MS2KN<.3){P.mob=true;mob.visible=false;msg('Человек на борту. Теперь ворота задним ходом — белые буи.','good')}}
+      if(d<B.W+3&&Math.abs(st.u)*MS2KN<.3){
+        if(P.mob1){P.mob=true;man.visible=lbuoy.visible=false;msg('Человек на борту. Теперь ворота задним ходом — белые буи.','good')}
+        else if(!mo.firstW){mo.firstW=true;mobSay(HELM.mobSay.first,'warn')}}}
     if(P.mob&&!P.back&&st.u<-.1&&h5cross(bgate,px,pz,st.x,st.z)){P.back=true;msg('Ворота задним ходом пройдены. Остановись и заглуши двигатель.','good')}
     if(P.back&&!st.eng&&st.thrI===2)P.off=true;
     st.hintT+=dt;if(!min)practiceHint(false);
     if(st.coachT>0){st.coachT-=dt;if(st.coachT<=0)$('#h5coach').hidden=true}
     if(PR.every(p=>P[p.id]))win();
   }
+  /* человек за бортом: падает с борта у кормы, яхта идёт дальше. Первые действия — кнопки на красной карточке:
+     сначала крик и круг, потом наблюдатель и MOB в любом порядке (DORDER в js/content/drill.js) */
+  function mobFall(){
+    const side=Math.random()<.5?-1:1,[x,z]=m4w(st,side*(B.W+.8),B.L*.2);
+    st.mo={x,z,t0:st.t,done:{},buoy:null,fly:1,mob:null};st.propWarn=true;st.splT=0;
+    man.position.set(x,0,z);splash.position.set(x,.15,z);man.visible=splash.visible=true;
+    $('#h5coach').hidden=true;st.coachT=0;$('#h5msg').hidden=true;st.msgT=0;$('#h5mob').hidden=false;mobBtns();renderSteps()}
+  const mobSay=(t,c)=>{const e=$('#h5mobL');e.innerHTML=rich(t);e.className='live '+(c||'');$('#h5mob').classList.add('go')};
+  function mobBtns(){const mo=st.mo;if(!mo)return;
+    const next=['shout','buoy','spot','mob'].find(id=>!mo.done[id]);
+    host.querySelectorAll('[data-mob]').forEach(b=>{const id=b.dataset.mob,ok=!!mo.done[id];b.classList.toggle('on',ok);b.disabled=ok;b.classList.toggle('hl',!vary&&id===next)})}
+  function mobFlash(id){const b=id&&host.querySelector(`[data-mob="${id}"]`);
+    if(b&&!b.classList.contains('hl')){b.classList.add('hl');setTimeout(()=>{if(H5===st&&vary)b.classList.remove('hl')},1800)}}
+  function mobAct(id){
+    const mo=st.mo,P=st.pr;if(!mo||P.mob1||mo.done[id]||!st.running)return;
+    const need=!mo.done.shout?'shout':!mo.done.buoy?'buoy':null;
+    if(need&&id!==need){st.mobErr++;mobSay(HELM.mobSay[need],'warn');mobFlash(need);return}
+    const a=HELM.mob.find(a=>a.id===id),vs=typeof voiceSay==='function'?voiceSay:()=>{};let t=a.ok,c='good';mo.done[id]=true;
+    if(id==='shout')vs('Man overboard!');
+    else if(id==='buoy'){ // круг бросают с кормы: если человек уже далеко, круг падает в воду, не долетев
+      const[fx,fz]=m4w(st,0,B.L*.7),dd=Math.hypot(mo.x-fx,mo.z-fz)||1,far=dd>25,k=far?15/dd:Math.max(0,1-1.1/dd);
+      mo.buoy={fx,fz,tx:fx+(mo.x-fx)*k,tz:fz+(mo.z-fz)*k};mo.fly=0;lbuoy.visible=true;if(far){t=a.far;c='warn'}}
+    else if(id==='spot')vs('Keep pointing!');
+    else if(id==='mob')mo.mob={x:st.x,z:st.z}; // плоттер запоминает место яхты в момент нажатия
+    mobBtns();renderSteps();
+    if(HELM.mob.every(a=>mo.done[a.id])){P.mob1=true;mo.dt=st.t-mo.t0;$('#h5mob').hidden=true;msg(HELM.mobSay.done.replace('{T}',Math.round(mo.dt)),'good')}
+    else mobSay(t,c)}
   function win(){
     st.running=false;done.helm=true;
     if(cur==='course'&&crs.lesson&&crs.lesson.practice==='helm3d')done['c:'+crs.lesson.id]=true;
     store.set(done);renderTabs();renderSteps();
-    showDialog(`<h3>Рулёжка сдана</h3><p>Время ${Math.round(st.t)} с, касаний буёв: ${st.touches}, ошибок с винтом у человека: ${st.errs}. Ты прошёл слалом, обошёл знак, подобрал человека и прошёл ворота задним ходом.</p>${practiceDone('helm',true,st.t,{buoy:st.touches,prop:st.errs},bid)}<div class="row"><button class="btn ghost" id="h5again">Ещё раз</button>${cur==='course'?'<button class="btn" id="h5back">К урокам</button>':''}</div>`);
+    showDialog(`<h3>Рулёжка сдана</h3><p>Время ${Math.round(st.t)} с, касаний буёв: ${st.touches}, ошибок с винтом у человека: ${st.errs}. Первые действия «человек за бортом» — за ${Math.round(st.mo.dt)} с. Ты прошёл слалом, обошёл знак, поднял человека на борт и прошёл ворота задним ходом.</p>${practiceDone('helm',true,st.t,{buoy:st.touches,prop:st.errs,mobord:st.mobErr},bid)}<div class="row"><button class="btn ghost" id="h5again">Ещё раз</button>${cur==='course'?'<button class="btn" id="h5back">К урокам</button>':''}</div>`);
     $('#h5again').onclick=()=>{hideDialog();stopHelm3D();startPractice('helm3d')};
     if(cur==='course')$('#h5back').onclick=()=>{hideDialog();stopAll();renderCourseHome()};
   }
   function fail(t){st.running=false;st.u=st.v=st.r=0;
-    showDialog(`<h3>Авария</h3><p>${rich(t)}</p>${practiceDone('helm',false,st.t,{buoy:st.touches,prop:st.errs+1},bid)}<div class="row"><button class="btn" id="h5again">Ещё раз</button></div>`);
+    showDialog(`<h3>Авария</h3><p>${rich(t)}</p>${practiceDone('helm',false,st.t,{buoy:st.touches,prop:st.errs+1,mobord:st.mobErr},bid)}<div class="row"><button class="btn" id="h5again">Ещё раз</button></div>`);
     $('#h5again').onclick=()=>{hideDialog();stopHelm3D();startPractice('helm3d')}}
   function renderSteps(){
     if(lesson){$('#taskLbl').textContent='Мастер-класс · рулёжка под мотором';
@@ -259,6 +303,12 @@ function startHelm3D(mode){
   const v3=new THREE.Vector3(),look=new THREE.Vector3(),want=new THREE.Vector3();let first=true,lastT=performance.now(),lastP=0;
   const place=(el,x,y,z)=>{v3.set(x,y,z).project(cam);if(v3.z>1||Math.abs(v3.x)>1.05||Math.abs(v3.y)>1.05){el.hidden=true;return}
     el.hidden=false;el.style.left=((v3.x+1)/2*renderer.domElement.clientWidth)+'px';el.style.top=((1-v3.y)/2*renderer.domElement.clientHeight)+'px'};
+  // подпись за краем экрана прижимается к краю со стрелкой (как знак в Дне 3): сверху кнопки и ветер, снизу пульт
+  const placeEdge=(el,x,y,z,html)=>{v3.set(x,y,z).project(cam);const W=renderer.domElement.clientWidth,H=renderer.domElement.clientHeight;let X=v3.x,Y=v3.y;
+    if(v3.z>1){X=-X;Y=-Y}const top=1-2*Math.min(.45,130/H),bot=-1+2*Math.min(.475,($('#h5helm').offsetHeight+30)/H),
+      off=v3.z>1||Math.abs(X)>.9||Y>top||Y<bot,m=Math.max(Math.abs(X)/.9,Y>0?Y/top:Y/bot,1);if(off){X/=m;Y/=m}
+    el.hidden=false;el.style.left=((X+1)/2*W)+'px';el.style.top=((1-Y)/2*H)+'px';
+    el.innerHTML=(off?`<svg class="edgeA" viewBox="-5 -6 10 12" width="10" height="12" style="transform:rotate(${Math.atan2(-Y,X)/D+90}deg)"><path d="M0-6L5.5 0H2V6H-2V0H-5.5Z" fill="currentColor"/></svg> `:'')+html};
   function target(){ // куда сейчас идти: подпись над целью
     if(lesson){const s=L[st.si];if(!st.running||!s)return null;
       if(s.mark==='gate'&&!st.gateOk)return[H5LG.x,H5LG.z,'ворота','gate'];
@@ -266,7 +316,7 @@ function startHelm3D(mode){
     const P=st.pr;if(!P.engine)return null;
     if(st.gi<3){const g=H5PG[st.gi];return[g.x,g.z,'ворота '+(st.gi+1),'gate '+(st.gi+1)]}
     if(!P.round)return[mark.x,mark.z,'обойти знак','round the mark'];
-    if(!P.mob)return[mobP.x,mobP.z,'человек за бортом','man overboard'];
+    if(!P.mob)return st.mo&&st.mo.done.spot?[st.mo.x,st.mo.z,'человек за бортом','man overboard',1]:null; // подпись — это наблюдатель, который показывает рукой
     if(!P.back)return[bgate.x,bgate.z,'задним ходом','astern'];return null}
   function frame(now){
     if(H5!==st)return;
@@ -275,12 +325,18 @@ function startHelm3D(mode){
     const t=now/1000;
     // вода и яхта на волне
     if(sea){sea.update(t,st.x,st.z);const sr=sea.float(me,st.x,st.z,st.h,B.L,B.W,t,dt,(me.userData.wl||0)*.5);me.position.x=st.x;me.position.z=st.z;me.rotation.set(sr.p,-st.h*D,sr.r);
-      buoys.forEach(b=>{b.g.position.y=sea.height(b.x,b.z,t)-.15});if(mob)mob.position.y=sea.height(mobP.x,mobP.z,t);
+      buoys.forEach(b=>{b.g.position.y=sea.height(b.x,b.z,t)-.15});
       if(wake)wake.update(st.wake,Math.abs(st.u)>.25?m4w(st,0,B.L):null,t);if(bowF)bowF.update(st.u,t)}
     else{me.position.set(st.x,Math.sin(t*1.2)*.04,st.z);me.rotation.set(Math.sin(t*.7)*.01,-st.h*D,Math.sin(t*.9)*.012);
       water.position.set(Math.round(st.x/10)*10,0,Math.round(st.z/10)*10);
       const p=wg.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i)+water.position.x,z=p.getZ(i)+water.position.z;p.setY(i,Math.sin(x*.3+t*1.3)*.05+Math.sin(z*.27-t)*.04)}p.needsUpdate=true;
       buoys.forEach((b,i)=>{b.g.position.y=Math.sin(t*1.4+i)*.05-.1})}
+    // человек в воде машет рукой, круг летит с кормы и качается на волне, всплеск расходится
+    if(st.mo){const mo=st.mo,wy=(x,z)=>sea?sea.height(x,z,t):0;
+      if(man.visible){man.position.y=wy(mo.x,mo.z)-.05;man.userData.arm.rotation.z=-.3+Math.sin(t*5)*.45}
+      if(mo.buoy&&lbuoy.visible){const b=mo.buoy;mo.fly=Math.min(1,mo.fly+dt/.8);const f=mo.fly;
+        lbuoy.position.set(b.fx+(b.tx-b.fx)*f,wy(b.tx,b.tz)+(1-f)*1.4+10*f*(1-f),b.fz+(b.tz-b.fz)*f)}
+      if(splash.visible){st.splT+=dt;const k=1+st.splT*3;splash.scale.set(k,1,k);splash.material.opacity=Math.max(0,.85-st.splT*.6);if(st.splT>1.4)splash.visible=false}}
     if(me.userData.helm)me.userData.helm(st.rud*1.5);else if(me.userData.wheel)me.userData.wheel.rotation.z=-st.rud*2.4;
     ringM.opacity=.45+Math.sin(t*4)*.2;
     {const n=st.trail.length;for(let i=0;i<n;i++){tPos[i*3]=st.trail[i][0];tPos[i*3+1]=.15;tPos[i*3+2]=st.trail[i][1]}
@@ -302,7 +358,9 @@ function startHelm3D(mode){
       cam.position.lerp(v3,k);look.lerp(want,k);cam.lookAt(look);}
     renderer.render(scene,cam);
     // подписи, HUD, панель
-    const tg2=target(),lT=$('#h5lT');if(tg2){lT.innerHTML=`${tg2[2]}<span class="en">${tg2[3]}</span>`;place(lT,tg2[0],2.6,tg2[1])}else lT.hidden=true;declutter([lT]);
+    const tg2=target(),lT=$('#h5lT');lT.classList.toggle('mobt',!!(tg2&&tg2[4]));
+    if(tg2&&tg2[4])placeEdge(lT,tg2[0],.9,tg2[1],`${tg2[2]} · ${Math.round(Math.hypot(tg2[0]-st.x,tg2[1]-st.z))} м<span class="en">${tg2[3]}</span>`);
+    else if(tg2){lT.innerHTML=`${tg2[2]}<span class="en">${tg2[3]}</span>`;place(lT,tg2[0],2.6,tg2[1])}else lT.hidden=true;declutter([lT]);
     if(st.msgT>0){st.msgT-=dt;const m=$('#h5msg');m.style.opacity=Math.min(1,st.msgT);if(st.msgT<=0)m.hidden=true}
     $('#h5rud').style.left=(50+st.rud*46)+'%';$('#h5wg').setAttribute('transform',`rotate(${st.rud*270})`);
     $('#h5knob').style.top=((4-st.thrI)*20+2)+'px';$('#h5thrN').innerHTML=`${M4N[st.thrI][0]}${en(M4N[st.thrI][1])}`;
@@ -317,7 +375,9 @@ function startHelm3D(mode){
     const kn=st.u*MS2KN,s=lesson?L[st.si]:null;
     const extra=s&&s.id==='coast'?`<div><span>Прокатилась · carried way</span><b>${Math.round(st.coast)} м</b></div>`:s&&(s.id==='circle')?`<div><span>Повернули · turned</span><b>${Math.round(Math.abs(st.turn))}°</b></div>`:
       s&&(s.id==='kick'||s.id==='bt'||s.id==='walk')?`<div><span>Нос ушёл · bow swung</span><b>${Math.round(h5dh(st))}°</b></div>`:`<div><span>Касаний буёв</span><b>${st.touches}</b></div>`;
-    $('#inst').innerHTML=`<div><span>Скорость · speed</span><b>${Math.abs(kn).toFixed(1)} уз${kn<-.05?' <small style="font-size:12px;color:var(--muted)">назад</small>':''}</b></div><div><span>Курс · heading</span><b>${String(Math.round(st.h)).padStart(3,'0')}°</b></div>
+    // плоттер после кнопки MOB: пеленг и расстояние до записанной точки, пока человек в воде
+    const mo=st.mo,mob=mo&&mo.mob&&!st.pr.mob?(([dx,dz])=>`<div style="grid-column:1/-1"><span>MOB · пеленг и расстояние · bearing, range</span><b>${String(Math.round((Math.atan2(dx,-dz)/D+360)%360)).padStart(3,'0')}° · ${Math.round(Math.hypot(dx,dz))} м</b></div>`)([mo.mob.x-st.x,mo.mob.z-st.z]):'';
+    $('#inst').innerHTML=`${mob}<div><span>Скорость · speed</span><b>${Math.abs(kn).toFixed(1)} уз${kn<-.05?' <small style="font-size:12px;color:var(--muted)">назад</small>':''}</b></div><div><span>Курс · heading</span><b>${String(Math.round(st.h)).padStart(3,'0')}°</b></div>
       <div style="grid-column:1/-1"><span>Рычаг газа · throttle</span><b>${M4N[st.thrI][0]} <small style="font-size:12px;color:var(--muted)">${M4N[st.thrI][1]}</small></b></div>
       <div><span>Двигатель · engine</span><b>${st.eng?'работает':'заглушен'}</b></div>${extra}
       <div><span>Ветер · wind</span><b>${Math.round(wind.kn)} уз ${compassName(wind.from)}</b></div><div><span>Руль · rudder</span><b>${Math.abs(st.rud)<.05?'прямо':(Math.round(Math.abs(st.rud)*35))+'° '+(st.rud>0?'пр':'лев')}</b></div>`;
