@@ -953,6 +953,11 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
   .coach.mobc{gap:4px}
 }
 .mobc.go p.mobs{display:none} /* после первого нажатия вместо пояснения — что произошло */
+/* человек за бортом под парусом (js/mobsail.js): пять первых действий и три способа подъёма — по три в ряд, MAYDAY — красной рамкой */
+.mobc .acts.n5,.mobc .acts.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mobc .hb.may{border-color:var(--port)}
+.mobc .hb.may.on{border-color:var(--stbd)}
+@container (max-height:520px){.mobc .acts.n5{grid-template-columns:repeat(5,minmax(0,1fr))}}
 /* Якорная стоянка (js/anchor3d.js): карта бухты на плоттере, «ночь» поверх сцены, якорные огни. Пульт брашпиля ведёт себя как кнопки команд в марине */
 .hud3.plot{left:12px;top:calc(var(--tl,32px) + 72px);padding:6px;display:flex;flex-direction:column;gap:5px;width:204px}
 .hud3.plot canvas{display:block;width:192px;height:192px;border-radius:6px;cursor:zoom-in;background:#fff}
