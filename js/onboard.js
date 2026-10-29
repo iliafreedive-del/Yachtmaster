@@ -31,7 +31,7 @@ function obOpenPart(id){openChapter('anatomy');if(typeof A3!=='undefined'&&A3&&A
 let obN=0;
 function obRow(L,g,it){const k=obKey(L,it),on=!!OB.c[k],id='obk'+(obN++),il=it.l||(it.s?g.l:'');
   return`<li class="${on?'on':''}"><input type="checkbox" id="${id}" data-ob="${obEsc(k)}"${on?' checked':''}><label for="${id}"><b>${rich(it.n)}</b>${it.en?' '+en(it.en):''}${it.t?`<span class="t">${rich(it.t)}</span>`:''}</label>
-    <span class="onb-act">${it.a&&ANAT[it.a]?`<button class="onb-go" type="button" data-obp="${it.a}">На яхте</button>`:''}${il?obLes(il,it.s,true):''}</span></li>`}
+    <span class="onb-act">${it.a&&ANAT[it.a]?`<button class="onb-go" type="button" data-obp="${it.a}">На яхте</button>`:''}${it.e&&typeof engOpen==='function'?`<button class="onb-go" type="button" data-obe="${it.e}">${typeof ENG_FIX!=='undefined'&&ENG_FIX[it.e]?'Мастер-класс':'На моторе'}</button>`:''}${il?obLes(il,it.s,true):''}</span></li>`}
 function obListHtml(L){const[m,n]=obCount(L);
   return`<div class="card onb-c" id="ob-${L.id}"><div class="onb-h"><h3>${L.n} ${en(L.en)}</h3><span class="cnt" data-cnt="${L.id}">${m} из ${n}</span></div>
    <i class="onb-bar"><i data-bar="${L.id}" style="width:${n?Math.round(m/n*100):0}%"></i></i><p class="ex">${rich(L.d)}</p>
@@ -155,11 +155,12 @@ function obPrint(what){if(typeof printSheet!=='function')return;const d=new Date
 
 /* ---------- события ---------- */
 document.addEventListener('click',e=>{if(cur!=='onboard'||!e.target.closest)return;
-  const b=e.target.closest('[data-obgo],[data-obclr],[data-obprint],[data-obsay],[data-obp],[data-obl],#obDrill');if(!b)return;
+  const b=e.target.closest('[data-obgo],[data-obclr],[data-obprint],[data-obsay],[data-obp],[data-obe],[data-obl],#obDrill');if(!b)return;
   if(b.dataset.obgo){obGo(b.dataset.obgo);return}
   if(b.dataset.obprint){obPrint(b.dataset.obprint);return}
   if(b.dataset.obsay){obSay(b.dataset.obsay);return}
   if(b.dataset.obp){obOpenPart(b.dataset.obp);return}
+  if(b.dataset.obe){engOpen(b.dataset.obe,['На борту',()=>openChapter('onboard')]);return}
   if(b.dataset.obl){obOpenLes(b.dataset.obl,+b.dataset.i||0);return}
   if(b.id==='obDrill'){openChapter('exam');if(typeof drRun==='function')drRun('order');return}
   const L=ONBOARD.lists.find(x=>x.id===b.dataset.obclr);if(!L)return;
