@@ -9,7 +9,7 @@ function renderTabs(){
   const t=$('#tabs'),a=t.querySelector('[aria-pressed="true"]');
   if(a&&t.scrollWidth>t.clientWidth)t.scrollLeft+=a.getBoundingClientRect().left-t.getBoundingClientRect().left-(t.clientWidth-a.offsetWidth)/2;
   if(!crumbFn)$('#crumbN').textContent=(TABS.find(m=>m.id===cur)||{}).n||'';
-  const n=CH.filter(m=>done[m.id]).length;$('#prog').innerHTML=`Пройдено <b>${n}</b> из ${CH.length} глав`;
+  const n=CH.filter(m=>done[m.id]).length;$('#prog').innerHTML=`<span class="pw">Пройдено </span><b>${n}</b> из ${CH.length} глав`;
 }
 function markDone(k){done[k]=true;store.set(done);renderTabs()}
 function say(t){$('#say').innerHTML=rich(t)}

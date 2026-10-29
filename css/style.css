@@ -26,6 +26,58 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .fs-btn{font:inherit;font-size:12.5px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;display:flex;gap:6px;align-items:center}
 .fs-btn[aria-pressed="true"]{border-color:var(--buoy)}
 .net{font-family:var(--f-mono);font-size:11.5px;color:var(--buoy);border:1px solid var(--buoy);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.net .en{color:inherit;font-size:1em}
+/* настройки (js/settings.js): по центру на большом экране, снизу на телефоне */
+.set-sheet{align-items:center}
+.set-card{max-width:560px;max-height:min(90vh,860px);max-height:min(90dvh,860px);overflow:auto;overscroll-behavior:contain;gap:12px}
+.set-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.set-card section{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.set-card h4{margin:0;font-size:15px}
+.set-card label.fs-note{margin-top:4px}
+.set-card textarea{font:12px/1.35 var(--f-mono);background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical;width:100%;word-break:break-all}
+.set-card select,.set-card input[type=range]{font:inherit;accent-color:var(--buoy)}
+.set-sum{margin:0;font-family:var(--f-mono);font-size:12.5px}
+.set-ok{margin:0;color:var(--stbd);font-size:13px}
+.set-confirm{background:var(--panel2);border:1px solid var(--buoy);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.set-confirm p{margin:0;font-size:13.5px}
+/* отчёт для инструктора: светлый лист поверх игры, печать — только он */
+.report{position:fixed;inset:0;z-index:60;overflow:auto;background:var(--deep);padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px))}
+body.reporting{overflow:hidden}
+.rep-bar{display:flex;gap:8px;justify-content:flex-end;max-width:860px;margin:0 auto 10px}
+.rep{max-width:860px;margin:0 auto;background:#fff;color:#14202a;border-radius:12px;padding:28px 32px;font-size:14px;line-height:1.45}
+.rep header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:2px solid #14202a;padding-bottom:12px;margin-bottom:6px}
+.rep h2{font-family:var(--f-display);font-size:21px;margin:0}
+.rep header p{margin:4px 0 0;color:#4a5b66}
+.rep-who{display:flex;flex-direction:column;gap:6px;align-items:flex-end;font-size:13px}
+.rep-who input{font:inherit;border:0;border-bottom:1px solid #8a9aa4;background:transparent;color:inherit;padding:2px 4px;min-width:210px}
+.rep h3{font-size:15px;margin:18px 0 6px}
+.rep .en{color:#5d6f7a}
+.rep table{width:100%;border-collapse:collapse;font-size:13px}
+.rep th,.rep td{border:1px solid #c8d1d6;padding:5px 7px;text-align:left;vertical-align:top}
+.rep th{background:#eef2f4;font-weight:600}
+.rep ul{margin:6px 0;padding-left:20px}
+.rep-l{font-size:12px;color:#4a5b66}
+.rep-n{margin:6px 0;color:#2d3d47}
+.rep-bar2{display:inline-block;width:120px;height:8px;background:#e3e9ec;border-radius:4px;overflow:hidden;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rep-bar2 i{display:block;height:100%;background:#2b8a5e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rep-f{margin-top:18px;font-size:12px;color:#5d6f7a;border-top:1px solid #c8d1d6;padding-top:8px}
+@media (max-width:700px){
+  .set-sheet{align-items:flex-end}
+  #setBtn span,.net .en,.prog .pw{display:none}
+  .hdr-r{flex-wrap:nowrap;gap:6px}
+  .net:not([hidden])~.prog{display:none} /* без сети на телефоне вместо счётчика глав — значок «офлайн» */
+  .rep-tw{overflow-x:auto;margin:0 -4px}.rep-tw table{min-width:520px}
+  .rep{padding:16px 14px;font-size:13px}.rep table{font-size:12px}.rep th,.rep td{padding:4px 5px}.rep-bar2{width:64px}.rep-who{align-items:flex-start}.rep-who input{min-width:0;width:100%}
+}
+@media print{
+  body.reporting{background:#fff;padding:0;overflow:visible}
+  body.reporting>*:not(#report){display:none!important}
+  .report{position:static;padding:0;background:#fff;overflow:visible}
+  .noprint{display:none!important}
+  .rep{border-radius:0;padding:0;max-width:none;font-size:12.5px}
+  .rep-who input{border:0}.rep-who input::placeholder{color:transparent}
+}
+@page{margin:12mm}
 .fs-tip{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:40;
   display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--buoy);border-radius:12px;padding:8px 8px 8px 12px;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .fs-tip span{flex:1}
