@@ -18,7 +18,7 @@ function renderToday(){
   show('board');hint('');$('#taskLbl').textContent='Сегодня · today';
   const S=todaySteps(),next=S[0],L=typeof allLessons==='function'?allLessons():[],nl=L.find(l=>!done['c:'+l.id]),nd=L.filter(l=>done['c:'+l.id]).length;
   const log=typeof logGet==='function'?logGet():[],wl=typeof logWeak==='function'?logWeak().slice(0,3):[],last=log.filter(r=>r.ex!=='exam')[log.filter(r=>r.ex!=='exam').length-1],lastEx=log.filter(r=>r.ex==='exam').slice(-1)[0];
-  const dr=typeof drStreak==='function',streak=dr?drStreak():0,xp=dr?drToday():0,errs=dr?drErrs().length:0;
+  const dr=typeof drStreak==='function',streak=dr?drStreak():0,xp=dr?drToday():0,errs=dr?drErrs().length:0,due=dr&&typeof drDue==='function'?drDue().length:0;
   const days=CH.filter(c=>c.practice&&c.practice!=='exam'),nDays=days.filter(c=>done[c.id]).length;
   const fmt=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
   $('#board').innerHTML=`<div class="journal today">
@@ -32,7 +32,8 @@ function renderToday(){
    <div class="card"><p class="qn">Теория · course</p>
     ${nl?`<p class="tn2"><b>${nl.mod.n}</b> <span class="cnt">${nd} из ${L.length} уроков</span></p><p class="ex">Следующий урок: ${nl.n} ${en(nl.en)}</p><div class="row"><button class="btn ghost sm" data-goto="${nl.id}">Открыть урок →</button></div>`:`<p class="ex">Все ${L.length} уроков курса пройдены.</p>`}
     ${dr?`<p class="lbl" style="margin-top:8px">Экзамен-тренажёр · drill</p><p class="ex">${streak?`Серия: ${streak} ${todayPl(streak,'день','дня','дней')} подряд. `:''}${xp?`Сегодня ${xp} ${todayPl(xp,'очко','очка','очков')}. `:'Сегодня ещё не занимался. '}${errs?`На повторение: ${errs} ${todayPl(errs,'задание','задания','заданий')}.`:''}</p>
-      <div class="row"><button class="btn ghost sm" data-ex="exam">Пробный экзамен</button>${errs?'<button class="btn ghost sm" id="tErr">Работа над ошибками</button>':''}</div>`:''}</div>
+      ${due?`<p class="ex"><b>Повторить сегодня: ${due} ${todayPl(due,'задание','задания','заданий')}</b> — пора освежить, пока не забылось.</p>`:''}
+      <div class="row">${due?'<button class="btn sm" id="tDue">Повторить сегодня</button>':''}<button class="btn ghost sm" data-ex="exam">Пробный экзамен</button>${errs?'<button class="btn ghost sm" id="tErr">Работа над ошибками</button>':''}</div>`:''}</div>
    <div class="card"><p class="qn">Слабые места · weak spots</p>${wl.length?wl.map(w=>{const d=DEBRIEF[w.k];return`<div class="di"><p><b>${d.n}</b> ${en(d.en)} <span class="cnt">${EXN[w.ex]}</span></p><div class="row">${d.l?gotoBtn(d.l):''}<button class="btn ghost sm" data-ex="${w.ex}">Тренировать</button></div></div>`}).join(''):
      `<p class="ex">${log.length?'В последних попытках ошибок нет.':'Пока пусто: после практик здесь будут твои типичные ошибки и что повторить.'}</p>`}
     ${last?`<div class="row" style="align-items:center"><span class="ex">Последняя практика: ${EXN[last.ex]||last.ex}, ${fmt(last.d)}${last.ok?'':' · не пройдена'}.</span><button class="btn ghost sm" id="tLog">Журнал →</button></div>`:''}</div>
@@ -40,6 +41,7 @@ function renderToday(){
   $('#board').scrollTop=0;
   if(next){$('#tGo').onclick=next.go;if(S[1])$('#tGo2').onclick=S[1].go}
   if($('#tErr'))$('#tErr').onclick=()=>{openChapter('exam');if(typeof drRun==='function')drRun('err')};
+  if($('#tDue'))$('#tDue').onclick=()=>{openChapter('exam');drRun('due')};
   if($('#tLog'))$('#tLog').onclick=()=>openChapter('log');
   $('#steps').innerHTML=S.length?S.slice(0,4).map((s,i)=>`<li class="${i===0?'now':''}"><i>${i+1}</i>${s.n}</li>`).join(''):'<li class="done"><i>✓</i>Неделя пройдена</li>';
   say(next?`${next.n}. ${wl.length?`И повтори: «${DEBRIEF[wl[0].k].n.toLowerCase()}».`:'Жми «Продолжить» — или выбери день сам.'}`:'Неделя пройдена. Держи форму: свежий ветер, минимум подсказок, вопросы экзамена.');

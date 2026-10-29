@@ -162,6 +162,14 @@ function drMark(it,ok){const s=DR.it[it.id]||(DR.it[it.id]={b:0,n:0,w:0,t:0});s.
 const drKnown=it=>(DR.it[it.id]||{}).b>=2;
 function drTopicStats(t){const a=drBank().filter(it=>it.t===t),m=a.filter(drKnown).length;return{n:a.length,m,p:a.length?Math.round(m/a.length*100):0}}
 const drErrs=()=>drBank().filter(it=>{const s=DR.it[it.id];return s&&s.w>0&&s.b<2});
+/* интервальное повторение (spaced repetition): задание возвращается, когда по его коробке подошёл срок —
+   0: сразу, 1: через день, 2: через 3 дня, 3: через неделю, 4: через 16 дней, 5: через 35 дней. Час форы: «завтра» наступает и утром */
+const DR_INT=[0,1,3,7,16,35].map(d=>d*864e5),DR_GRACE=36e5;
+const drDueAt=s=>s.t+DR_INT[Math.min(5,s.b|0)]-DR_GRACE;
+const drDue=()=>{const now=Date.now();return drBank().filter(it=>{const s=DR.it[it.id];return s&&drDueAt(s)<=now})};
+/* когда следующее повторение, если сегодня нечего: «завтра», «через 3 дня»; null — заданий ещё не было */
+function drNextTxt(){let m=Infinity;drBank().forEach(it=>{const s=DR.it[it.id];if(s)m=Math.min(m,drDueAt(s))});if(m===Infinity)return null;
+  const d=Math.max(1,Math.round((m-Date.now())/864e5));return d===1?'завтра':`через ${d} ${d%10===1&&d%100!==11?'день':d%10>=2&&d%10<=4&&(d%100<10||d%100>=20)?'дня':'дней'}`}
 /* выбор: сначала ошибки и новые, потом давно не виденные, с долей случая */
 function drPick(pool,n){const now=Date.now();
   const sc=it=>{const s=DR.it[it.id];if(!s)return 2+Math.random()*1.5;return(s.b===0?2.5:0)+Math.max(0,1.6-s.b*.4)+Math.min((now-s.t)/864e5,3)*.3+Math.random()*1.2};
@@ -197,13 +205,14 @@ const ico=t=>`<svg viewBox="0 0 24 24" class="dico" fill="none" stroke="currentC
 function startExam(){drStop();drHome()}
 function drHome(){
   drStopLive();show('board');hint('');$('#taskLbl').textContent='Экзамен-тренажёр · exam trainer';
-  const B=drBank(),known=B.filter(drKnown).length,err=drErrs().length,st=drStreak(),xp=drToday(),last=typeof logGet==='function'?logGet().filter(r=>r.ex==='exam').slice(-1)[0]:null;
+  const B=drBank(),known=B.filter(drKnown).length,err=drErrs().length,due=drDue().length,nx=due?'':drNextTxt(),st=drStreak(),xp=drToday(),last=typeof logGet==='function'?logGet().filter(r=>r.ex==='exam').slice(-1)[0]:null;
   $('#board').innerHTML=`<div class="drill">
    <div class="card dhead"><p class="qn">Экзамен-тренажёр · exam trainer</p><h3>Готовься к теории, как к экзамену на права</h3>
     <div class="dstats"><div><b>${st}</b><span>${st===1?'день':'дней'} подряд · streak</span></div><div><b>${xp}<small>/${DAY_GOAL}</small></b><span>очков сегодня · XP</span><i class="dbar"><i style="width:${Math.min(100,xp/DAY_GOAL*100)}%"></i></i></div><div><b>${Math.round(known/B.length*100)}%</b><span>освоено · ${known} из ${B.length}</span></div></div></div>
    <div class="dmodes">
     <button class="dmode main" data-mode="exam"><b>Пробный экзамен</b><span>mock exam · ${DEX_N} вопросов из всех тем, ${DEX_MIN} минут, сдал — ${DEX_PASS} верных${last?`. Последний: ${last.score} из ${last.of}`:''}</span></button>
     <button class="dmode" data-mode="mix"><b>Всё вперемешку</b><span>mixed · ${DS_N} заданий из всех тем</span></button>
+    <button class="dmode" data-mode="due" ${due?'':'disabled'}><b>Повторить сегодня</b><span>spaced review · ${due?`${due} ${due%10===1&&due%100!==11?'задание':due%10>=2&&due%10<=4&&(due%100<10||due%100>=20)?'задания':'заданий'} — пора освежить`:nx?`следующее повторение ${nx}`:'появится после первых тренировок'}</span></button>
     <button class="dmode" data-mode="err" ${err?'':'disabled'}><b>Работа над ошибками</b><span>mistakes · ${err?`${err} ${err%10===1&&err%100!==11?'задание':'заданий'}`:'пока пусто'}</span></button></div>
    <p class="lbl">По темам · by topic</p>
    <div class="dtopics">${DTOPICS.map(t=>{const s=drTopicStats(t.id);return`<button class="dtopic" data-t="${t.id}">${ico(t.id)}<span class="dtn"><b>${t.n}</b><small>${t.en}</small></span><i class="dbar"><i style="width:${s.p}%"></i></i><span class="dtc">${s.m} из ${s.n}</span></button>`}).join('')}</div>
@@ -211,19 +220,20 @@ function drHome(){
   $('#board').scrollTop=0;
   $('#board').querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>drRun(b.dataset.mode));
   $('#board').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>drRun('topic',b.dataset.t));
-  $('#steps').innerHTML=`<li class="now"><i>${st}</i>Дней подряд</li><li><i>${xp}</i>Очков сегодня из ${DAY_GOAL}</li><li><i>${err}</i>Заданий с ошибками</li>`;
-  say(err?`Ошибок к повтору: ${err}. Начни с «Работы над ошибками» — так быстрее запоминается.`:'Выбирай: пробный экзамен как настоящий или тренировка по темам. Ошибки потом вернутся в «Работе над ошибками».');
+  $('#steps').innerHTML=`<li class="now"><i>${st}</i>Дней подряд</li><li><i>${xp}</i>Очков сегодня из ${DAY_GOAL}</li><li><i>${due}</i>Повторить сегодня</li><li><i>${err}</i>Заданий с ошибками</li>`;
+  say(due?`Сегодня пора повторить ${due}: задания возвращаются через день, три дня, неделю — так ответы остаются в памяти надолго.`:err?`Ошибок к повтору: ${err}. Начни с «Работы над ошибками» — так быстрее запоминается.`:'Выбирай: пробный экзамен как настоящий или тренировка по темам. Ошибки потом вернутся в «Работе над ошибками».');
 }
 function drRun(mode,topic){
   drStop();let items;
   if(mode==='exam')items=drExamSet();
   else if(mode==='err')items=drPick(drErrs(),DS_N);
+  else if(mode==='due')items=drPick(drDue(),DS_N);
   else if(mode==='topic')items=drPick(drBank().filter(it=>it.t===topic),DS_N);
   else items=drMix(DS_N);
   if(!items.length){drHome();return}
   DS={mode,topic,items:mode==='exam'?items:spread(items),i:0,base:items.length,ok:0,xp:0,combo:0,best:0,t0:Date.now(),re:new Set(),first:{},wrong:[],ans:[]};
   if(mode==='exam'){DS.end=Date.now()+DEX_MIN*6e4;DS.timer=setInterval(drTick,500);say('Как на экзамене: ответ сразу засчитывается, объяснения — в конце. Время пошло.')}
-  else say(mode==='err'?'Повторяем задания, где были ошибки. Две верные попытки подряд — и задание уйдёт из списка.':mode==='topic'?`Тема «${topicOf(topic).n}». Ошибёшься — задание вернётся в конце тренировки.`:'Задания из всех тем. Ошибёшься — задание вернётся в конце тренировки.');
+  else say(mode==='due'?'Повторение по срокам. Верный ответ отодвигает задание на больший срок, ошибка возвращает его в повторение сразу.':mode==='err'?'Повторяем задания, где были ошибки. Две верные попытки подряд — и задание уйдёт из списка.':mode==='topic'?`Тема «${topicOf(topic).n}». Ошибёшься — задание вернётся в конце тренировки.`:'Задания из всех тем. Ошибёшься — задание вернётся в конце тренировки.');
   drTask()}
 function drTick(){if(!DS||DS.mode!=='exam')return;const left=Math.max(0,DS.end-Date.now()),el=$('#dTime');
   if(el){el.textContent=`${Math.floor(left/6e4)}:${String(Math.floor(left/1e3)%60).padStart(2,'0')}`;el.classList.toggle('low',left<12e4)}
@@ -301,7 +311,7 @@ function drEnd(){
     ${goal?'<p class="good">Дневная цель выполнена — 50 очков. Приходи завтра, чтобы не прервать серию.</p>':''}
     ${drReview(d.wrong,false)}
     <div class="row"><button class="btn" id="dAgain">Ещё ${DS_N} заданий</button><button class="btn ghost" id="dHome">К темам</button></div></div></div>`;
-  $('#board').scrollTop=0;$('#dAgain').onclick=()=>drRun(d.mode==='err'&&!drErrs().length?'mix':d.mode,d.topic);$('#dHome').onclick=drHome;
+  $('#board').scrollTop=0;$('#dAgain').onclick=()=>drRun((d.mode==='err'&&!drErrs().length)||(d.mode==='due'&&!drDue().length)?'mix':d.mode,d.topic);$('#dHome').onclick=drHome;
   $('#steps').innerHTML=`<li class="done"><i>✓</i>Заданий: ${n}</li><li class="done"><i>✓</i>Верно: ${d.ok}</li><li class="now"><i>+</i>Очков: ${d.xp}</li>`;
   say(d.wrong.length?'Ошибки уже в «Работе над ошибками»: повтори их завтра, так они запомнятся надолго.':'Без единой ошибки. Попробуй пробный экзамен.')}
 function drExamEnd(timeout){
