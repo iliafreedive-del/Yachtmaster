@@ -936,3 +936,30 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
   .coach.mobc{gap:4px}
 }
 .mobc.go p.mobs{display:none} /* после первого нажатия вместо пояснения — что произошло */
+/* Якорная стоянка (js/anchor3d.js): карта бухты на плоттере, «ночь» поверх сцены, якорные огни. Пульт брашпиля ведёт себя как кнопки команд в марине */
+.hud3.plot{left:12px;top:calc(var(--tl,32px) + 72px);padding:6px;display:flex;flex-direction:column;gap:5px;width:204px}
+.hud3.plot canvas{display:block;width:192px;height:192px;border-radius:6px;cursor:zoom-in;background:#fff}
+.hud3.plot .prow{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.hud3.plot .prow span{font-size:9.5px;line-height:1.2}
+.hud3.plot .hb{min-height:32px;font-size:11.5px;padding:2px 8px;flex:none}
+.a5night{position:absolute;inset:0;background:#0b1630;mix-blend-mode:multiply;opacity:0;pointer-events:none;z-index:1}
+.a5lites{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.a5lites i{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fffbe8;box-shadow:0 0 6px 3px rgba(255,246,210,.85),0 0 18px 8px rgba(255,240,190,.35)}
+@container (min-width:821px){.stage.tall .three .a5ui .tools{right:calc(min(400px,100% - 270px) + 24px)}} /* кнопок больше, чем в рулёжке: переносятся, а не уходят под карточку */
+#a5msg{top:auto;bottom:calc(var(--hh,0px) + 12px);transform:translateX(-50%)} /* сообщение над пультом: не закрывает карточку мастер-класса */
+@container (max-width:820px){#a5actG{order:-1;flex:1 1 100%;background:none;border:0;padding:0}#a5actG .acts{width:min(100%,420px)}#a5actG>.cap{display:none}}
+/* узкая сцена: карта справа под кнопками, карточка мастер-класса слева от неё — так не закрывают друг друга */
+@container (max-width:820px) and (min-height:521px){.hud3.plot{left:auto;right:12px}#a5chart:not([hidden])~#a5coach{right:228px}
+  #a5coach{max-height:min(max(150px,42%),max(150px,calc(100% - var(--tl,32px) - var(--hh,0px) - 150px)))} /* над пультом остаётся место для сообщения */
+  #a5chart:not([hidden])~#a5msg{left:auto;right:12px;transform:none;max-width:204px;top:calc(var(--tl,32px) + 321px);bottom:auto}}
+@container (max-width:460px) and (min-height:521px){#a5chart:not([hidden])~#a5coach{right:182px}#a5chart:not([hidden])~#a5msg{max-width:158px;top:calc(var(--tl,32px) + 275px);font-size:13px}}
+@container (max-width:460px){.hud3.plot{width:158px}.hud3.plot canvas{width:146px;height:146px}.hud3.plot .prow span{display:none}.hud3.plot .prow{justify-content:flex-end}}
+/* низкая сцена (телефон боком): карта слева между кнопками и пультом, «Тревога» сбоку от неё; сообщение — между картой и карточкой */
+@container (max-height:520px){
+  .hud3.plot{--cs:clamp(84px,calc(100cqh - var(--tl,32px) - var(--hw,var(--hh,0px)) - 40px),138px);top:calc(var(--tl,32px) + 20px);bottom:auto;width:auto;flex-direction:row;align-items:flex-end}
+  .hud3.plot canvas{width:var(--cs);height:var(--cs)}
+  .hud3.plot .prow span{display:none}
+  #a5msg{left:12px;right:calc(min(46%,420px) + 24px);transform:none;max-width:none;bottom:calc(var(--hh,0px) + 8px)}
+  #a5chart:not([hidden])~#a5msg{left:calc(clamp(84px,calc(100cqh - var(--tl,32px) - var(--hw,var(--hh,0px)) - 40px),138px) + 124px)}
+}
+@container (max-height:520px) and (min-width:560px){#a5actG{order:0;flex:0 1 auto;background:rgba(10,29,42,.86);border:1px solid var(--line);padding:6px 8px}#a5actG .acts{width:auto}#a5actG>.cap{display:block}}

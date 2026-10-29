@@ -12,8 +12,8 @@ const BOATS={
   sloop:{sail:true,noGo:40,speed:.85,accel:1.5,turn:1.5,heel:1.3,hl:15,hw:7,lenM:8.58,beamM:3,eng:{fwd:3.2,back:2.2,walk:2.5,drift:.45,turn:1.4,spin:0}}};
 function boatType(){try{const t=localStorage.getItem('gals-boat');if(BOATS[t])return t}catch(e){}return'cruiser'}
 function setBoatType(t){try{localStorage.setItem('gals-boat',t)}catch(e){}}
-/* лодка для упражнения: на парусных днях моторная яхта не годится, берём круизную */
-function boatFor(kind){const t=boatType();return !/moor/.test(kind)&&!BOATS[t].sail?'cruiser':t}
+/* лодка для упражнения: на парусных днях моторная яхта не годится, берём круизную; в марине и на якоре годится любая */
+function boatFor(kind){const t=boatType();return !/moor|anchor/.test(kind)&&!BOATS[t].sail?'cruiser':t}
 
 /* ---------- набор деталей: всё одного цвета сливается в один меш, такелаж — в один LineSegments ---------- */
 const MAT3={};let RIG3=null;
@@ -240,8 +240,9 @@ function makeCruiser(o){
   k.add(new THREE.SphereGeometry(.06,6,4),0xe2564d,-.64,1.8,-4.9).add(new THREE.SphereGeometry(.06,6,4),0x3cbf7e,.64,1.8,-4.9).add(new THREE.SphereGeometry(.06,6,4),0xffffff,0,1.36,6);
   // нос: брашпиль, якорь на роульсе; корма: купальная платформа и трап
   // носовая платформа-бушприт с якорем (anchor bowsprit), брашпиль в рундуке, бугель для гика
-  k.box(.5,.3,.4,0x3b3f41,0,1.18,-5).box(.3,.08,1.0,0x9aa3a6,0,1.08,-6.1).box(.16,.1,.7,0x555a5c,0,1.0,-6.25).add(new THREE.ConeGeometry(.18,.34,4),0x555a5c,0,.84,-6.6,Math.PI)
-   .add(new THREE.TorusGeometry(.14,.03,6,10,Math.PI),0x555a5c,0,.68,-6.6,Math.PI/2,0,0);
+  // o.noAnchor — якоря на роульсе нет: его рисует сцена якорной стоянки (js/anchor3d.js)
+  k.box(.5,.3,.4,0x3b3f41,0,1.18,-5).box(.3,.08,1.0,0x9aa3a6,0,1.08,-6.1).box(.16,.1,.7,0x555a5c,0,1.0,-6.25);
+  if(!o.noAnchor)k.add(new THREE.ConeGeometry(.18,.34,4),0x555a5c,0,.84,-6.6,Math.PI).add(new THREE.TorusGeometry(.14,.03,6,10,Math.PI),0x555a5c,0,.68,-6.6,Math.PI/2,0,0);
   // погоны стакселя на бортовой палубе, погон гика-шкота на рубке
   [1,-1].forEach(s=>k.box(.05,.03,1.8,0x3b3f41,s*1.7,1.03,.4).box(.09,.06,.14,0x2b2f31,s*1.7,1.06,.8));
   k.box(1.9,.04,.08,0x3b3f41,0,1.61,1.3).box(.16,.07,.12,0x2b2f31,.35,1.64,1.3);
@@ -437,7 +438,8 @@ function makeMotor(o){
     k.rail([[0,Yt+.38,-6.2],...fd.map(([x,y0,,z])=>[x,y0+.38,z])],.012,'steel')});
   k.rod([0,Yt,-6.2],[0,Yt+.72,-6.2],.025,'steel');
   // нос: роульс с якорем, брашпиль, люки с голубым стеклом, утки
-  k.box(.24,.14,.75,0x9aa3a6,0,sh(-6.25)-.04,-6.45).add(new THREE.ConeGeometry(.16,.3,4),0x6a7074,0,sh(-6.25)-.28,-6.75,Math.PI).add(new THREE.TorusGeometry(.13,.03,6,10,Math.PI),0x6a7074,0,sh(-6.25)-.42,-6.75,Math.PI/2,0,0);
+  k.box(.24,.14,.75,0x9aa3a6,0,sh(-6.25)-.04,-6.45);
+  if(!o.noAnchor)k.add(new THREE.ConeGeometry(.16,.3,4),0x6a7074,0,sh(-6.25)-.28,-6.75,Math.PI).add(new THREE.TorusGeometry(.13,.03,6,10,Math.PI),0x6a7074,0,sh(-6.25)-.42,-6.75,Math.PI/2,0,0);
   k.box(.32,.2,.38,0x3b3f41,0,Yf(-5.3)+.1,-5.3).add(new THREE.CylinderGeometry(.08,.08,.24,10),'steel',0,Yf(-5.3)+.16,-5.3,0,0,Math.PI/2);
   [[-4.6,.45],[-3.6,.55]].forEach(([z,w])=>k.box(w+.06,.06,w+.06,0xd9dee0,0,Yf(z)+.03,z).box(w,.02,w,0x2a6f9e,0,Yf(z)+.07,z));
   [[.55,Yf(-5.0),-5.0],[-.55,Yf(-5.0),-5.0],[1.75,sh(.4)+.06,.4],[-1.75,sh(.4)+.06,.4],[1.65,sh(5.8)+.06,5.8],[-1.65,sh(5.8)+.06,5.8]].forEach(([x,y,z])=>k.box(.28,.07,.09,0x9aa3a6,x,y+.03,z));
