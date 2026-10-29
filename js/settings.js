@@ -43,7 +43,7 @@ function setOpen(){
     <div id="setXtra"></div>
     <section><h4>Без интернета <span class="en">offline</span></h4><p class="fs-note" id="setOff">Проверяю…</p></section>
     <section><h4>Начать заново <span class="en">reset</span></h4>
-      <p class="fs-note">Сотрёт прогресс, журнал и экзамен-тренажёр в этом браузере. Если нужно, сначала сохрани код или файл.</p>
+      <p class="fs-note">Сотрёт прогресс, журнал, экзамен-тренажёр и отметки «На борту» в этом браузере. Если нужно, сначала сохрани код или файл.</p>
       <div class="row"><button class="btn ghost sm" id="setRst" type="button">Стереть прогресс</button></div><div class="set-confirm" id="setRc" hidden></div></section></div>`;
   s.hidden=false;
   const msg=t=>{const m=$('#setMsg');m.textContent=t;m.hidden=false};
@@ -72,18 +72,25 @@ function setOpen(){
   if(!('serviceWorker' in navigator)||typeof offlineReady!=='function')off.textContent='Этот браузер не умеет хранить копию сайта — нужен интернет.';
   else offlineReady().then(ok=>{off.textContent=ok?'Копия сайта сохранена в браузере: Галс откроется и без сети, прогресс сохраняется как обычно. С интернетом он сам берёт свежую версию.':'Копия ещё не готова: открой Галс с интернетом и подожди минуту.'})}
 
-/* ---------- отчёт для инструктора: одна страница, печать или PDF ---------- */
-function reportOpen(){
+/* ---------- лист для печати: отчёт для инструктора, чек-листы и радиокарточка вкладки «На борту» ---------- */
+/* светлый лист поверх игры: печать или PDF, печатается только он (css: body.reporting). cls — свой класс листа */
+function printSheet(html,cls){
   let r=$('#report');if(!r){r=document.createElement('div');r.id='report';r.className='report';document.body.appendChild(r)}
+  r.innerHTML=`<div class="rep-bar noprint"><button class="btn sm" id="repP" type="button">Печать или PDF</button><button class="btn ghost sm" id="repX" type="button">Закрыть</button></div>
+  <div class="rep${cls?' '+cls:''}">${html}</div>`;
+  r.hidden=false;r.scrollTop=0;document.body.classList.add('reporting');scrollTo(0,0);
+  $('#repP').onclick=()=>print();
+  $('#repX').onclick=()=>{r.hidden=true;document.body.classList.remove('reporting')};
+  return r}
+/* отчёт для инструктора: одна страница */
+function reportOpen(){
   const L=logGet(),pr=L.filter(x=>x.ex!=='exam'&&EXN[x.ex]),exs=L.filter(x=>x.ex==='exam'),wl=logWeak(pr).filter(w=>DEBRIEF[w.k]).slice(0,6),d=new Date();
   let name='';try{name=localStorage.getItem('gals-name')||''}catch(e){}
   const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const exRow=(x,lk,ch)=>{const a=pr.filter(q=>q.ex===x),ok=a.filter(q=>q.ok),best=ok.length?Math.min(...ok.map(q=>q.t)):null,last=a[a.length-1];
     return`<tr><td>${EXN[x]}</td><td>${lk?done[lk]?'✓':'—':''}</td><td>${(ch?done[ch]:ok.length)?'✓':'—'}</td><td>${a.length}</td><td>${ok.length}</td><td>${best!=null?best+' с':'—'}</td><td>${last?fmtD(last.d)+(last.ok?'':' · авария'):'—'}</td></tr>`};
   const B=typeof drBank==='function'?drBank():[],kn=B.filter(drKnown).length;
-  r.innerHTML=`<div class="rep-bar noprint"><button class="btn sm" id="repP" type="button">Печать или PDF</button><button class="btn ghost sm" id="repX" type="button">Закрыть</button></div>
-  <div class="rep">
-    <header><div><h2>Галс · отчёт о подготовке</h2><p>Тренажёр к курсу IYT International Bareboat Skipper</p></div>
+  printSheet(`<header><div><h2>Галс · отчёт о подготовке</h2><p>Тренажёр к курсу IYT International Bareboat Skipper</p></div>
       <div class="rep-who"><label>Курсант <input id="repN" value="${esc(name)}" placeholder="имя и фамилия"></label><span>${d.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}</span></div></header>
     <h3>Учебная неделя и практика <span class="en">training week</span></h3>
     <div class="rep-tw"><table><thead><tr><th>Упражнение</th><th>Мастер-класс</th><th>Пройдено</th><th>Попыток</th><th>Успешно</th><th>Лучшее время</th><th>Последняя</th></tr></thead><tbody>
@@ -97,11 +104,7 @@ function reportOpen(){
     ${exs.length?`<p class="rep-n">Пробные экзамены: ${exs.slice(-5).map(x=>`${fmtD(x.d)} — ${x.score} из ${x.of}${x.ok?' (сдан)':''}`).join('; ')}.</p>`:'<p class="rep-n">Пробный экзамен ещё не сдавался.</p>'}
     <h3>Слабые места <span class="en">weak spots</span></h3>
     ${wl.length?`<ul>${wl.map(w=>`<li><b>${DEBRIEF[w.k].n}</b> <span class="en">${DEBRIEF[w.k].en}</span> — ${EXN[w.ex]}: в ${w.n} из ${w.of} последних попыток</li>`).join('')}</ul>`:'<p class="rep-n">По последним попыткам практики ошибок, которые замечает тренажёр, нет.</p>'}
-    <p class="rep-f">Отчёт собран тренажёром «Галс» по данным этого браузера. Тренажёр помогает готовиться, но не заменяет практику на воде с инструктором и экзамен IYT.</p>
-  </div>`;
-  r.hidden=false;document.body.classList.add('reporting');scrollTo(0,0);
-  $('#repN').oninput=e=>{try{localStorage.setItem('gals-name',e.target.value.trim())}catch(err){}};
-  $('#repP').onclick=()=>print();
-  $('#repX').onclick=()=>{r.hidden=true;document.body.classList.remove('reporting')}}
+    <p class="rep-f">Отчёт собран тренажёром «Галс» по данным этого браузера. Тренажёр помогает готовиться, но не заменяет практику на воде с инструктором и экзамен IYT.</p>`);
+  $('#repN').oninput=e=>{try{localStorage.setItem('gals-name',e.target.value.trim())}catch(err){}}}
 
 (function(){const b=$('#setBtn');if(b)b.onclick=setOpen})();
