@@ -53,7 +53,7 @@ function renderLessonQuiz(){
   const L=crs.lesson,Q=L.quiz,z=crs.quiz,q=Q[z.i];
   // варианты в случайном порядке: в данных верный часто стоит первым
   const ord=q.o.map((_,j)=>j);for(let i=ord.length-1;i>0;i--){const r=Math.floor(Math.random()*(i+1));[ord[i],ord[r]]=[ord[r],ord[i]]}
-  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">${L.n} · вопрос ${z.i+1} из ${Q.length} · верно ${z.score}</p><h3>${rich(q.q)}</h3><div class="opts">${ord.map(j=>`<button class="opt" data-j="${j}">${rich(q.o[j])}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
+  $('#board').innerHTML=`<div class="exam"><div class="card"><p class="qn">${L.n} · вопрос ${z.i+1} из ${Q.length} · верно ${z.score}</p><h3>${rich(q.q)}</h3><div class="opts">${ord.map(j=>`<button class="opt" data-j="${j}">${plain(q.o[j])}</button>`).join('')}</div><p class="ex" id="eex" hidden></p><div class="row"><button class="btn" id="enx" hidden>Дальше</button></div></div></div>`;
   $('#board').scrollTop=0;
   $('#board').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     const j=+b.dataset.j;

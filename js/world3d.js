@@ -17,25 +17,37 @@ function sailGrid(rows,cols){
   g.setIndex(idx);g.userData={rows,cols};return g;
 }
 /* boomDeg и jibDeg — углы от диаметральной плоскости, side — борт, откуда дует ветер (+1 правый),
-   camber — пузо паруса, flap — амплитуда полоскания, t — время */
-function trimSails(rig,boomDeg,jibDeg,side,camber,flap,t){
+   camber — пузо паруса, flap — амплитуда полоскания, t — время.
+   o — паруса в свежий ветер (js/reef.js); без него паруса как в Днях 2–3. k0 — уже взятый риф (доля высоты грота), k — риф, который берут сейчас,
+   drop — насколько потравлен грота-фал (0…1), clew — насколько выбран риф-шкентель (0…1), furl — доля закрученной генуи,
+   back — стаксель стоит на ветер (лечь в дрейф), jc и jf — пузо и полоскание стакселя, когда его тримит экипаж отдельно от грота */
+function trimSails(rig,boomDeg,jibDeg,side,camber,flap,t,o){
   const lee=-side,d=rig.d;
   rig.pivot.rotation.y=-side*boomDeg*D;
-  // грот в системе гика: передняя шкаторина по мачте (z=0), задняя — от шкотового угла к фаловому
+  // грот в системе гика: передняя шкаторина по мачте (z=0), задняя — от шкотового угла к фаловому.
+  // С рифом сетка начинается над уже убранной частью k0: две нижние полосы — то, что сейчас ложится на гик (k0…k), остальные — парус над рифом.
+  // Потравленный фал опускает фаловый угол, нижняя полоса складывается к гику; пока риф-шкентель не выбран, новый шкотовый угол висит выше гика
   {const g=rig.main,{rows,cols}=g.userData,p=g.attributes.position;let i=0;
-    for(let r=0;r<=rows;r++){const v=r/rows,y=.15+d.mainH*v,ch=d.foot*(1-v);
+    const k0=o?o.k0||0:0,k=o?Math.max(k0,o.k||0):0,dr=o?o.drop||0:0,sl=(1-(o&&o.clew!=null?o.clew:1))*dr*d.mainH*(k-k0)*.6,R1=k>0?2:0,low=k0+(k-k0)*dr;
+    const vr=r=>!R1?r/rows:r<=R1?k0+(k-k0)*r/R1:k+(1-k)*(r-R1)/(rows-R1),key=k0+':'+k;
+    if(rig.uvK!==key){rig.uvK=key;const uv=g.attributes.uv;let j=0;for(let r=0;r<=rows;r++)for(let c=0;c<=cols;c++,j++)uv.setXY(j,c/cols,vr(r));uv.needsUpdate=true}
+    for(let r=0;r<=rows;r++){const v=vr(r),ch=d.foot*(1-v),up=v>=k||!R1;
       for(let c=0;c<=cols;c++,i++){const u=c/cols,belly=4*u*(1-u)*ch;
+        const y=!R1?.15+d.mainH*v:up?.15+d.mainH*(v-low)+sl*u*(1-(v-k)/(1-k)):.15+d.mainH*(v-k0)*(1-dr)+sl*u*(v-k0)/Math.max(1e-6,k-k0);
         const x=lee*belly*camber+belly*flap*Math.sin(t*26+u*7+v*3);p.setXYZ(i,x,y,u*ch)}}
     p.needsUpdate=true;g.computeVertexNormals()}
-  // стаксель: галсовый угол на носу, фаловый на штаге, шкотовый поворачивается вокруг галсового
+  // стаксель: галсовый угол на носу, фаловый на штаге, шкотовый поворачивается вокруг галсового.
+  // Закрутка уводит шкотовый угол к штагу и чуть вверх, видна только задняя часть паруса; «на ветер» — шкотовый угол на наветренном борту
   {const g=rig.jib,{rows,cols}=g.userData,p=g.attributes.position;
-    const tk=d.tack,hd=d.head,a=-side*jibDeg*D,L=d.jibL,cl=[tk[0]+Math.sin(a)*L,d.clewY,tk[2]+Math.cos(a)*L];let i=0;
+    const f=o?o.furl||0:0,jc=o&&o.jc!=null?o.jc:camber,jf=o&&o.jf!=null?o.jf:flap;
+    const tk=d.tack,hd=d.head,a=(o&&o.back?side:-side)*jibDeg*D,L=d.jibL*(1-f),cy=d.clewY+(hd[1]-d.clewY)*f*.18,cl=[tk[0]+Math.sin(a)*L,cy,tk[2]+Math.cos(a)*L];let i=0;
+    if(rig.uvF!==f){rig.uvF=f;const uv=g.attributes.uv;let j=0;for(let r=0;r<=rows;r++)for(let c=0;c<=cols;c++,j++)uv.setXY(j,f+(1-f)*c/cols,r/rows);uv.needsUpdate=true}
     for(let r=0;r<=rows;r++){const v=r/rows;
       const lx=tk[0]+(hd[0]-tk[0])*v,ly=tk[1]+(hd[1]-tk[1])*v,lz=tk[2]+(hd[2]-tk[2])*v;
       const ex=cl[0]+(hd[0]-cl[0])*v,ey=cl[1]+(hd[1]-cl[1])*v,ez=cl[2]+(hd[2]-cl[2])*v;
       let nx=ez-lz,nz=-(ex-lx);const nl=Math.hypot(nx,nz)||1;nx/=nl;nz/=nl;if(nx*lee<0){nx=-nx;nz=-nz}
       const ch=Math.hypot(ex-lx,ez-lz);
-      for(let c=0;c<=cols;c++,i++){const u=c/cols,belly=4*u*(1-u)*ch,off=belly*camber+belly*flap*Math.sin(t*24+u*6+v*4+1)*lee;
+      for(let c=0;c<=cols;c++,i++){const u=c/cols,belly=4*u*(1-u)*ch,off=belly*jc+belly*jf*Math.sin(t*24+u*6+v*4+1)*lee;
         p.setXYZ(i,lx+(ex-lx)*u+nx*off,ly+(ey-ly)*u,lz+(ez-lz)*u+nz*off)}}
     p.needsUpdate=true;g.computeVertexNormals()}
 }

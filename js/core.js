@@ -16,6 +16,8 @@ const en=t=>t?`<span class="en">${t}</span>`:'';
 /* в каждом тексте английский вариант термина показываем при первом упоминании, чтобы не рябило.
    Видимое слово уже стоит в начале английского (PLB, LOA, saildrive) — повторяем только расшифровку */
 const enRest=(t,vis)=>{const l=vis.toLowerCase();if(!t.toLowerCase().startsWith(l))return t;const r=t.slice(l.length).trim(),m=/^\((.*)\)$/.exec(r);return m?m[1]:r.replace(/^[·,:—-]\s*/,'')};
+// термин без кнопки — для текста внутри других кнопок (варианты ответа): кнопка в кнопке ломает вёрстку
+const plain=s=>String(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(m,k,v)=>v||k);
 function rich(s){const seen={};return s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(m,k,v)=>{const key=gkey(k);if(!key)return v||k;
   const g=G[key],first=!seen[key];seen[key]=1;const x=enRest(enForm(g[1]),v||k),e=first&&x&&!g[1].toLowerCase().startsWith(g[0].toLowerCase())?' '+en('('+x+')'):'';
   return `<button class="term" data-k="${key}">${v||k}</button>${e}`})}

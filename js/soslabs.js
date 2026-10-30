@@ -83,7 +83,7 @@ LABS.fire=el=>{
     const F=SOS_FIRE[ord[i]],good=F.o.findIndex(o=>o[1]);
     $('#frS').innerHTML=fireSvg([],'burn');E.hidden=true;N.hidden=true;
     $('#frQ').innerHTML=`<b>${i+1} из ${ord.length}.</b> ${rich(F.q)}. Что делать?`;
-    $('#frO').innerHTML=sosShuf(F.o.map((_,j)=>j)).map(j=>`<button class="opt" data-j="${j}">${rich(F.o[j][0])}</button>`).join('');
+    $('#frO').innerHTML=sosShuf(F.o.map((_,j)=>j)).map(j=>`<button class="opt" data-j="${j}">${plain(F.o[j][0])}</button>`).join('');
     el.querySelectorAll('#frO .opt').forEach(b=>b.onclick=()=>{const ok=+b.dataset.j===good;
       el.querySelectorAll('#frO .opt').forEach(x=>{x.disabled=true;if(+x.dataset.j===good)x.classList.add('right')});
       if(ok)score++;else b.classList.add('wrong');

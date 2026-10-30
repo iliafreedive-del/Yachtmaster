@@ -1,26 +1,27 @@
 /* Галс · Дни 2 и 3 в 3D: открытое море, камера над яхтой. День 2 — курсы к ветру (kind 'points'),
-   День 3 — лавировка к знаку против ветра поворотами оверштаг (kind 'tack'), урок p5 — человек за бортом под парусом (kind 'mob', логика — js/mobsail.js).
+   День 3 — лавировка к знаку против ветра поворотами оверштаг (kind 'tack'), урок p5 — человек за бортом под парусом (kind 'mob', логика — js/mobsail.js),
+   уроки p8 и p9 — свежий ветер (kind 'reef', логика — js/reef.js): риф на гроте по шагам, закрутка генуи, крен, шквал, лечь в дрейф, бухта-убежище.
    Физика, задания и приборы — общие с 2D-симулятором (sim2d.js), здесь только картинка. */
 let S3=null;
 const K3=.28; // метров сцены на единицу 2D-симулятора: корпус 12 м против 43 единиц
 function stopSail3D(){if(!S3)return;S3.ro&&S3.ro.disconnect();S3.off&&S3.off();S3.renderer.dispose();try{S3.renderer.forceContextLoss()}catch(e){}$('#three').innerHTML='';S3=null}
 function startSail3D(boatId,kind){
-  const P=BOATS[boatId],tack=kind==='tack',mob=kind==='mob',crew=tack||mob,LAY=P.noGo+12; // лейлайн: лучший угол к ветру по поляре тренажёра
+  const P=BOATS[boatId],tack=kind==='tack',mob=kind==='mob',reef=kind==='reef',crew=tack||mob||reef,LAY=P.noGo+12; // лейлайн: лучший угол к ветру по поляре тренажёра
   const host=$('#three');host.innerHTML='';host.hidden=false;
   const renderer=makeRenderer(host);if(!renderer)return false;
   const R=host.getBoundingClientRect();
-  const ui=document.createElement('div'),lesson=tack&&(tackMode==='lesson'||tackMode==='gybe')||mob&&mobMode==='lesson';if(crew)ui.className='tk';
+  const ui=document.createElement('div'),lesson=tack&&(tackMode==='lesson'||tackMode==='gybe')||mob&&mobMode==='lesson'||reef&&reefMode!=='practice';if(crew)ui.className='tk'+(reef?' rf':'');
   // День 3: кнопки команд экипажу и переключатель «мастер-класс / практика»; мастер-класс Дней 2 и 3 — в карточке #scCoach (js/sailcoach.js)
   // «человек за бортом»: кнопки первых действий и подъёма — на красной карточке #smob (в мастер-классе — прямо в карточке шага)
   ui.innerHTML=`<div class="tools"><button id="sc"></button>${crew?`<button id="tkMode">${lesson?'К практике':'Мастер-класс'}</button>`:''}</div>
-    <div class="coach sea" id="scCoach" hidden></div>${mob?'<div class="coach mobc sea" id="smob" hidden></div>':''}
-    ${crew?`<div class="crew3" id="tkCrew"><p class="cap">команды экипажу · crew</p><button class="hb" id="tkRA"></button><button class="hb" id="tkLH">Поворот!<small>Lee-ho · L</small></button></div><div class="toast" id="tkMsg" hidden></div>`:''}
-    <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР · TRUE WIND</span><b id="swt"></b></div></div>
+    <div class="coach sea" id="scCoach" hidden></div>${mob?'<div class="coach mobc sea" id="smob" hidden></div>':''}${reef?'<div class="coach rfc sea" id="srf" hidden></div>':''}
+    ${crew?`<div class="crew3" id="tkCrew"><p class="cap">команды экипажу · crew</p><button class="hb" id="tkRA"></button><button class="hb" id="tkLH">Поворот!<small>Lee-ho · L</small></button>${reef&&!lesson?'<button class="hb sl" id="tkSail">Паруса<small>sails · F</small></button>':''}</div><div class="toast" id="tkMsg" hidden></div>`:''}
+    <div class="hud3 wind"><svg viewBox="-14 -14 28 28" width="34" height="34"><g id="swa"><path d="M0-11V11M-5 5L0 11L5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg><div><span>ИСТИННЫЙ ВЕТЕР · TRUE WIND</span><b id="swt"></b></div>${reef?`<div class="hh" id="hhW">${rfGauge()}<div><span id="hhL">${P.heel>.5?'КРЕН · HEEL':'НАГРУЗКА · LOAD'}</span><b id="hhV">0°</b></div></div>`:''}</div>
     <div class="task3" id="stk"><p class="tt"><span id="stn"></span><b id="stc"></b></p>
       <ol><li id="st1"><i></i><span></span></li><li id="st2"><i></i><span></span><em class="trim"><s id="stz"></s><u id="stm"></u></em></li><li id="st3"><i>3</i><span>Удержи курс и парус 2–3 секунды</span><em><b id="shb"></b></em></li></ol></div>
     <div class="hud3 msg" id="smg" hidden></div>
     <div class="tlabel nogo" id="slN">мёртвая зона<span class="en">no-go zone</span></div><div class="tlabel aim" id="slA"></div>${tack?'<div class="tlabel aim" id="slA2"></div>':''}
-    ${mob?'<div class="tlabel mobt" id="slM" hidden></div><div class="tlabel aim" id="slP" hidden>линия подхода<span class="en">approach line</span></div>':''}`;
+    ${mob?'<div class="tlabel mobt" id="slM" hidden></div><div class="tlabel aim" id="slP" hidden>линия подхода<span class="en">approach line</span></div>':''}${reef?'<div class="tlabel rft" id="slR" hidden></div><div class="tlabel aim" id="slH" hidden></div>':''}`;
   host.appendChild(ui);hudVars(ui);
 
   const scene=new THREE.Scene(),TD=tod3d(),sky=atmos3d(scene,renderer,{near:110,far:420}).getHex();
@@ -58,6 +59,20 @@ function startSail3D(boatId,kind){
     splash=mesh3(new THREE.RingGeometry(.3,.6,24).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false}),0,.15,0,scene);
     const ak=kit3();for(let i=0;i<14;i++)ak.box(.32,.06,2.2,0xf2c23a,0,0,-(3+i*4),0,0,0);appr=ak.build(new THREE.Group());
     man.traverse(o=>{if(o.isMesh)o.castShadow=true});man.visible=lbuoy.visible=splash.visible=appr.visible=false;scene.add(man,lbuoy,appr)}
+  /* свежий ветер: бухта-убежище по курсу — вход между красным и зелёным буями (IALA A: красный — слева при входе), за ним остров с маяком;
+     шквал — тёмная туча с полосой дождя, идёт с наветра; в дрейфе — гладкая полоса на воде с наветренного борта */
+  let port=null,squall=null,slick=null;
+  if(reef){
+    if(reefMode==='practice'){port=new THREE.Group();const pk=kit3();
+      pk.add(new THREE.IcosahedronGeometry(1,1).scale(70,18,45),0x7ea55a,0,-4,-95).add(new THREE.CylinderGeometry(72,76,1.4,14).scale(1,1,.66),0xf0d6a0,0,-.4,-95)
+        .add(new THREE.CylinderGeometry(1.3,1.6,11,10),0xffffff,-22,9,-62).add(new THREE.CylinderGeometry(1.33,1.33,2.2,10),0xd8433a,-22,10.5,-62).add(new THREE.CylinderGeometry(.9,.9,1.5,8),0x2b2f31,-22,15.2,-62)
+        .add(new THREE.CylinderGeometry(.65,.75,1.7,10),0xd8433a,-11,.55,0).add(new THREE.ConeGeometry(.75,1.7,10),0x2c9a55,11,.65,0).build(port);
+      port.traverse(o=>{if(o.isMesh)o.castShadow=true});port.visible=false;scene.add(port)}
+    squall=new THREE.Group();const cm=new THREE.MeshBasicMaterial({color:0x3b4750,fog:false,transparent:true,opacity:.9});
+    [[0,64,0,62,15,42],[-38,60,12,42,12,30],[40,62,-10,46,13,32],[8,72,-18,52,12,34]].forEach(([x,y,z,sx,sy,sz])=>mesh3(new THREE.IcosahedronGeometry(1,1),cm,x,y,z,squall).scale.set(sx,sy,sz));
+    mesh3(new THREE.CylinderGeometry(46,56,62,20,1,true),new THREE.MeshBasicMaterial({color:0x6d7c86,transparent:true,opacity:.26,depthWrite:false,side:THREE.DoubleSide,fog:false}),0,31,0,squall);
+    squall.visible=false;scene.add(squall);
+    slick=mesh3(new THREE.CircleGeometry(1,28).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xdcecef,transparent:true,opacity:0,depthWrite:false}),0,.2,0,scene)}
   /* горизонт: острова и чужие яхты едут вместе с камерой, как задник */
   const horizon=new THREE.Group();scene.add(horizon);
   [[0,250,40,14,0x7ea55a],[70,270,28,10,0x6d9550],[150,240,34,16,0x8fb066],[215,260,24,9,0x7ea55a],[290,250,38,12,0x6d9550]].forEach(([b,r,sx,sy,c])=>{
@@ -90,25 +105,42 @@ function startSail3D(boatId,kind){
   mesh3(new THREE.BoxGeometry(.06,.06,1.4),M3(0x333333),0,0,0,vane);mesh3(new THREE.ConeGeometry(.16,.4,6),M3(0xe2564d),0,0,-.8,vane).rotation.x=-Math.PI/2;
   me.traverse(o=>{if(o.isMesh&&!(o.material&&o.material.isShaderMaterial)){o.castShadow=true;o.receiveShadow=true}});
   const bow=makeBowFoam(me);
+  /* свежий ветер: убранная рифом часть грота лежит на гике, закрученная генуя — валик на штаге (синяя защита от солнца снаружи) */
+  let bunt=null,roll=null;
+  if(reef){const rg=me.userData.rig,d=rg.d,sm=M3(0xf1efe8,{flatShading:false,roughness:.85});
+    bunt=mesh3(new THREE.CylinderGeometry(1,1,1,10).rotateX(Math.PI/2),sm,0,0,0,rg.pivot);bunt.visible=false;
+    // риф-сезни — тёмные шнурки вокруг уложенного паруса
+    [-.36,-.18,0,.18,.36].forEach(z=>mesh3(new THREE.CylinderGeometry(1.06,1.06,.012,10).rotateX(Math.PI/2),M3(0x3a4046),0,0,z,bunt));
+    const a=new THREE.Vector3(...d.tack),hd=new THREE.Vector3(...d.head),dir=hd.clone().sub(a),len=dir.length();
+    roll=mesh3(new THREE.CylinderGeometry(.35,1,len,9),M3(0x2c5a86,{flatShading:false}),(a.x+hd.x)/2,(a.y+hd.y)/2,(a.z+hd.z)/2,me);
+    roll.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());roll.visible=false}
 
   /* камеры: у штурвала (глаза рулевого, видно паруса и колдунчики), за кормой (низко, по курсу), сверху с ветром вверху, сверху по курсу */
-  const st={renderer,mode:'wind',yaw:0,pit:0,camYaw:0,dist:tack?44:mob?54:46,cdist:24,aimStep:-1,heel:0,t:0,d0:0,eyeX:0,others};S3=st;
-  const views=camViews($('#sc'),'sail',[['helm','у штурвала'],['chase','за кормой'],['wind','сверху, ветер вверху'],['course','сверху, по курсу']],'wind',m=>{st.mode=m;st.yaw=0;st.pit=0;st.cut=true});
+  const st={renderer,mode:'wind',yaw:0,pit:0,camYaw:0,dist:tack?44:mob?54:46,cdist:24,sdist:30,aimStep:-1,heel:0,t:0,d0:0,eyeX:0,others};S3=st;
+  // в свежий ветер есть ещё вид сбоку — с наветренной раковины: на нём видно, как грот опускается на гик и как берут риф
+  const views=camViews($('#sc'),'sail',[['helm','у штурвала'],['chase','за кормой'],...(reef?[['side','сбоку']]:[]),['wind','сверху, ветер вверху'],['course','сверху, по курсу']],'wind',m=>{st.mode=m;st.yaw=0;st.pit=0;st.cut=true});st.views=views;
   st.mode=views.get();
   const onKey=e=>{if(S3!==st||!$('#dlg').hidden)return;
     if(crew&&!e.repeat&&(e.code==='KeyR'||e.code==='KeyL')){crewCmd(e.code==='KeyR'?'ra':'lh');e.preventDefault();return}
+    // свежий ветер: F — карточка «Паруса», J и U — закрутить и раскрутить геную, H — дрейф
+    if(reef&&!e.repeat&&sim&&sim.rf){const k={KeyJ:'furl',KeyU:'unfurl',KeyH:'hove'}[e.code];if(k){rfAct(k);e.preventDefault();return}if(e.code==='KeyF'&&!lesson){rfCard();e.preventDefault();return}}
     if(views.key(e))e.preventDefault()};
   if(crew){$('#tkRA').onclick=()=>crewCmd('ra');$('#tkLH').onclick=()=>crewCmd('lh')}
   if(mob){$('#tkMode').onclick=()=>{mobMode=lesson?'practice':'lesson';stopAll();startPractice('mob')};
     ui.addEventListener('click',e=>{const b=e.target.closest('[data-mob]');if(b&&!b.disabled)mobAct(b.dataset.mob)})}
+  if(reef){ui.addEventListener('click',e=>{const b=e.target.closest('[data-rf]');if(b&&!b.disabled)rfAct(b.dataset.rf)});if($('#tkSail'))$('#tkSail').onclick=()=>rfCard();
+    // из практики — выбор мастер-класса: риф или дрейф; из мастер-класса — в практику
+    $('#tkMode').onclick=()=>{const go=m=>{hideDialog();reefMode=m;stopAll();startPractice('reef')};if(lesson){go('practice');return}
+      showDialog(`<h3>Мастер-класс</h3><p>Что разобрать по шагам?</p><div class="row"><button class="btn" id="tkMc1">Риф на гроте · reef</button><button class="btn" id="tkMc2">Лечь в дрейф · heave to</button><button class="btn ghost" id="tkMc0">Отмена</button></div>`);
+      $('#tkMc1').onclick=()=>go('lesson');$('#tkMc2').onclick=()=>go('hove');$('#tkMc0').onclick=()=>{hideDialog();$('#stage').focus()}}}
   if(tack){
     // из практики — выбор мастер-класса: оверштаг или фордевинд; из мастер-класса — назад в практику
     $('#tkMode').onclick=()=>{const go=m=>{hideDialog();tackMode=m;stopAll();startPractice('tack')};if(lesson){go('practice');return}
       showDialog(`<h3>Мастер-класс</h3><p>Какой поворот разобрать по шагам, с командами экипажу?</p><div class="row"><button class="btn" id="tkMc1">Оверштаг · tack</button><button class="btn" id="tkMc2">Фордевинд · gybe</button><button class="btn ghost" id="tkMc0">Отмена</button></div>`);
       $('#tkMc1').onclick=()=>go('lesson');$('#tkMc2').onclick=()=>go('gybe');$('#tkMc0').onclick=()=>{hideDialog();$('#stage').focus()}}}
   window.addEventListener('keydown',onKey);st.off=()=>window.removeEventListener('keydown',onKey);
-  dragCamera(renderer.domElement,(dx,dy)=>{st.yaw-=dx*.006;if(st.mode==='helm'||st.mode==='chase')st.pit=clamp(st.pit+dy*.004,-.5,.6)},
-    dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,16,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
+  dragCamera(renderer.domElement,(dx,dy)=>{st.yaw-=dx*.006;if(st.mode==='helm'||st.mode==='chase'||st.mode==='side')st.pit=clamp(st.pit+dy*.004,-.5,.6)},
+    dy=>{if(st.mode==='chase')st.cdist=clamp(st.cdist+dy*.02,16,60);else if(st.mode==='side')st.sdist=clamp(st.sdist+dy*.02,16,60);else if(st.mode!=='helm')st.dist=clamp(st.dist+dy*.04,18,95)});
   // глаза рулевого в координатах лодки (нос к −Z, правый борт к +X): у наветренного штурвала, у катамарана — пост у правого борта
   const EYE={cruiser:[.85,3,6.3],cat:[2.15,2.5,3.9],sloop:[.75,2.5,3.8]}[boatId]||[.85,3,6],eyeV=new THREE.Vector3();
   st.ro=new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(!r.width)return;renderer.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()});st.ro.observe(host);
@@ -140,8 +172,8 @@ function startSail3D(boatId,kind){
     $('#stz').hidden=sim.min;$('#stz').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#stz').style.width=(16/85*100)+'%';$('#stm').style.left=(s.boom/85*100)+'%';
     $('#st3').className=sim.hold>0?'now':'';$('#shb').style.width=(clamp(sim.hold/2.5,0,1)*100)+'%';
   };
-  // человек за бортом (практика): что делать сейчас — из mobTask() в js/mobsail.js
-  const mobCard3=s=>{const card=$('#stk'),T=mobTask(s);if(!T){card.hidden=true;return}card.hidden=false;card.classList.remove('done');
+  // человек за бортом и свежий ветер (практика): что делать сейчас — из mobTask() в js/mobsail.js и reefTask() в js/reef.js
+  const mobCard3=s=>card3(mobTask(s),s),card3=(T,s)=>{const card=$('#stk');if(!T){card.hidden=true;return}card.hidden=false;card.classList.remove('done');
     $('#stn').textContent=T.n;$('#stc').innerHTML=T.c;li('st1',T.a[0],T.a[1]);li('st2',T.b[0],T.b[1]);
     $('#st3').querySelector('span').textContent=T.d;$('#st3').className=T.now?'now':'';$('#shb').style.width=T.p+'%';
     $('#stz').parentNode.hidden=!T.trim||sim.min;if(T.trim){$('#stz').style.left=(clamp(s.opt-8,0,85)/85*100)+'%';$('#stz').style.width=(16/85*100)+'%';$('#stm').style.left=(s.boom/85*100)+'%'}};
@@ -159,6 +191,21 @@ function startSail3D(boatId,kind){
     const ci=sim.coach&&sim.coach.L[sim.coach.si].id,showL=!sim.min&&m.ph==='back'&&(ci?['mbroad','mclose','mease','mstop'].includes(ci):m.pr.away);appr.visible=showL;
     if(showL){const A=mobLine();appr.position.set(mx,.42,mz);appr.rotation.y=-A.psi*D;appr.scale.z=A.len/56;place($('#slP'),mx+Math.sin(A.psi*D)*A.len*.9,.6,mz-Math.cos(A.psi*D)*A.len*.9)}else $('#slP').hidden=true;
     if(inW&&(m.done.spot||Math.hypot(mx-bx,mz-bz)<40))placeEdge($('#slM'),mx,1.6,mz,'Человек','man overboard');else $('#slM').hidden=true};
+  // свежий ветер: бухта-убежище, шквал с наветра, гладкая полоса в дрейфе, подпись к части паруса на шаге рифа, кренометр
+  const RFP={kick:['оттяжка гика','kicker'],hal:['грота-фал','main halyard'],tack:['рифовый крюк','reefing horn'],up:['передняя шкаторина','luff'],line:['риф-шкентель','reef line'],furl:['закрутка генуи','furler']};
+  const reefDraw=(t,dt,bx,bz,wdx,wdz,s)=>{const R=sim.rf,b=sim.boat,mono=P.heel>.5;
+    if(port&&sim.home){const hx=sim.home.x*K3,hz=sim.home.y*K3;if(!port.visible){port.visible=true;port.rotation.y=-Math.atan2(hx,-hz)}
+      port.position.set(hx,0,hz);placeEdge($('#slH'),hx,3,hz,'Бухта','harbour of refuge')}
+    if(squall){const q=R.sq;squall.visible=!!q;if(q){const c=q.d+60,f=R.from0*D;squall.position.set(bx+Math.sin(f)*c,0,bz-Math.cos(f)*c)}}
+    if(slick){const tg=R.back&&R.lash?.34:0,m=slick.material;m.opacity+=(tg-m.opacity)*Math.min(1,dt*.8);slick.visible=m.opacity>.01;
+      if(slick.visible){const k=P.beamM*1.5,x=bx-wdx*k,z=bz-wdz*k;slick.position.set(x,sea.height(x,z,t)+.12,z);slick.rotation.y=-b.h*D;slick.scale.set(P.beamM*.9,1,P.lenM*.6)}}
+    const cs=sim.coach&&sim.coach.L[sim.coach.si].id,id=cs?{rkick:'kick',rhal:'hal',rtack:'tack',rup:'up',rline:'line',rfurl:'furl'}[cs]:R.card&&R.work&&!sim.min?rfNext():null,lb=$('#slR');
+    if(!id)lb.hidden=true;
+    else{const rg=me.userData.rig,d=rg.d,k=R.work?R.work.k:RF_K[Math.min(2,R.reef+1)];me.updateMatrixWorld();
+      if(id==='furl')me.localToWorld(v3.set(d.tack[0],d.tack[1]+.8,d.tack[2]));
+      else rg.pivot.localToWorld(v3.set(0,id==='kick'?-.6:id==='hal'?d.mainH*.55:id==='up'?d.mainH*.3:id==='line'?.35+d.mainH*k*.25:.3,id==='kick'?.8:id==='line'?d.foot*(1-k):.15));
+      const[n,e2]=RFP[id];place(lb,v3.x,v3.y,v3.z);lb.innerHTML=`${n}<span class="en">${e2}</span>`}
+    rfGaugeSet(mono?R.heel:R.over,s.side)};
   // День 3: карточка лавировки — галс, лейлайн, поворот, расстояние до знака
   const tackCard=(s,dt)=>{
     const b=sim.boat,w=sim.wind,card=$('#stk');if(!sim.running&&!sim.tacks){card.hidden=false}
@@ -195,17 +242,26 @@ function startSail3D(boatId,kind){
     const b=sim.boat,w=sim.wind,s=sim.ss||sailState(b,w,P.noGo);st.t+=dt;const t=st.t;
     const bx=b.x*K3,bz=b.y*K3,to=(w.from+180)*D,wdx=Math.sin(to),wdz=-Math.cos(to);
     // яхта: курс, крен на подветренный борт, лёгкая качка
-    const heelT=s.side*.3*P.heel*s.eff*clamp((180-s.awa)/140,0,1)*(w.kn/12);st.heel+=(heelT-st.heel)*Math.min(1,dt*1.5);
+    // в свежий ветер крен считает физика (js/reef.js): площадь парусов, сила ветра, порыв кладёт яхту
+    const RF=reef&&sim.rf,heelT=RF?s.side*RF.heel*D:s.side*.3*P.heel*s.eff*clamp((180-s.awa)/140,0,1)*(w.kn/12);st.heel+=(heelT-st.heel)*Math.min(1,dt*1.5);
     // волны — от среднего ветра (sim создаётся после сцены, поэтому на первом кадре), порывы и заходы меняют только рябь
     const wb=w.base||w;if(!seaSet){seaSet=true;sea.setWind(wb.from,wb.kn)}else sea.gust(w.from,w.kn);
+    // свежий ветер: волна растёт вместе со средним ветром — та же длина волн, выше гребни (иначе узор на воде прыгает)
+    if(RF){if(!st.W0){st.W0=windWaves(wb.from,wb.kn);st.knW=wb.kn}if(Math.abs(wb.kn-st.knW)>.6){st.knW=wb.kn;sea.setWaves(windWaves(wb.from,wb.kn).map((x,i)=>Object.assign({},st.W0[i],{a:x.a})))}}
     sea.update(t,bx,bz);const r=sea.float(me,bx,bz,b.h,P.lenM/2,P.beamM/2,t,dt,me.userData.wl||0);me.position.x=bx;me.position.z=bz;
     me.rotation.set(r.p,-b.h*D,st.heel+r.r);
-    me.userData.helm(b.rud);
+    me.userData.helm(RF&&RF.lash?RF.lashRud:b.rud);
     const ss=s.st,camber=ss==='good'?.11:ss==='over'?.07:ss==='luff'?.03:0,flap=ss==='nogo'?.07:ss==='luff'?.05:0;
     // гик не прыгает на другой борт, а перелетает: через диаметральную плоскость — быстро (при фордевинде с вытравленным шкотом это удар)
     {const tb=s.side*s.boom;if(st.bd==null)st.bd=tb;const cross=Math.sign(tb)!==Math.sign(st.bd),mx=(cross?260:70)*dt;st.bd+=clamp(tb-st.bd,-mx,mx)}
-    trimSails(me.userData.rig,Math.abs(st.bd),Math.min(s.boom*.85+4,Math.max(s.awa-6,2)),Math.sign(st.bd)||s.side,camber,flap,t);
-    telltales(me.userData.rig,ss,t);vane.rotation.y=-s.rw*D;bow.update(b.v*.5144,t);
+    // свежий ветер: стаксель тримит экипаж по курсу (в дрейфе он на ветер), грот — по гика-шкоту; риф и закрутка — по шагам
+    let jd=Math.min(s.boom*.85+4,Math.max(s.awa-6,2)),js=ss,so;
+    if(RF){const W=RF.work;js=ss==='nogo'?'nogo':'good';jd=RF.back?12:Math.min(s.opt*.85+4,Math.max(s.awa-6,2));
+      so={k0:RF.k0,k:W?W.k:RF.k0,drop:W?W.drop:0,clew:W?W.clew:1,furl:RF.furl,back:RF.back,jc:js==='good'?.11:0,jf:js==='nogo'?.07:0};
+      const fold=RF.k0+(W?(W.k-RF.k0)*W.drop:0),rb=.07+.6*fold,fl=me.userData.rig.d.foot;bunt.visible=fold>.01;bunt.scale.set(rb,rb*.8,fl*.96);bunt.position.set(0,.12+rb*.55,fl*.5);
+      roll.visible=RF.furl>.02;const rr=.03+.16*RF.furl;roll.scale.set(rr,1,rr)}
+    trimSails(me.userData.rig,Math.abs(st.bd),jd,Math.sign(st.bd)||s.side,camber,flap,t,so);
+    telltales(me.userData.rig,js,t);vane.rotation.y=-s.rw*D;bow.update(b.v*.5144,t);
     // ветер в воздухе и кильватер
     wisps.update(dt,[bx,bz],w.from,sim.running?w.kn:w.kn*.5,st.dist/40);
     wakePts.length=0;b.wake.forEach(f=>wakePts.push([f.x*K3,f.y*K3,f.a]));
@@ -216,6 +272,7 @@ function startSail3D(boatId,kind){
       mark.userData.lay.position.set(mx,.45,mz);mark.userData.lay.rotation.y=-w.from*D;mark.userData.lay.visible=!sim.min&&sim.leg!==2}
     if(mark2&&sim.buoy2){const mx=sim.buoy2.x*K3,mz=sim.buoy2.y*K3;mark2.position.set(mx,sea.height(mx,mz,t)-.3,mz);mark2.rotation.z=Math.sin(t*1.3+1)*.06}
     if(mob)mobDraw(t,dt,bx,bz);
+    if(RF)reefDraw(t,dt,bx,bz,wdx,wdz,s);
     others.forEach(o=>{
       if(o.h===null){const a=Math.random()*Math.PI*2,r=60+Math.random()*170;o.x=bx+Math.sin(a)*r;o.z=bz-Math.cos(a)*r;o.h=norm(w.from-o.twa)}
       const dx=bx-o.x,dz=bz-o.z,dist=Math.hypot(dx,dz),toUs=Math.atan2(dx,-dz)/D;
@@ -235,18 +292,18 @@ function startSail3D(boatId,kind){
     aim.forEach(m=>m.visible=!tack&&!!step&&sim.running&&!sim.min&&!sim.coach);
     // камера. Сверху — изометрия: «ветер вверху» по среднему ветру (заходы видны по розе) или «по курсу»; за кормой — низко, по курсу;
     // у штурвала — глаза рулевого, горизонт не кренится, а сами глаза идут с креном и качкой
-    const helm=st.mode==='helm',chase=st.mode==='chase',fov=helm?62:chase?45:30,near=helm?.1:.5;
+    const helm=st.mode==='helm',chase=st.mode==='chase',side=st.mode==='side',fov=helm?62:chase||side?45:30,near=helm?.1:.5;
     if(cam.fov!==fov||cam.near!==near){cam.fov=fov;cam.near=near;cam.updateProjectionMatrix()}
-    const wantYaw=(st.mode==='wind'?-wb.from*D:-b.h*D)+st.yaw,cut=first||st.cut;st.cut=false;
+    const wantYaw=(st.mode==='wind'?-wb.from*D:side?-b.h*D+s.side*1.05:-b.h*D)+st.yaw,cut=first||st.cut;st.cut=false;
     if(cut)st.camYaw=wantYaw;else st.camYaw+=norm((wantYaw-st.camYaw)/D)*D*Math.min(1,dt*(helm?6:2.5));
     if(helm){
       st.eyeX+=(s.side*EYE[0]-st.eyeX)*Math.min(1,dt*2);me.updateMatrixWorld();eyeV.set(st.eyeX,EYE[1],EYE[2]);me.localToWorld(eyeV);
       v3.copy(eyeV);tgt.set(eyeV.x-Math.sin(st.camYaw)*30,eyeV.y-1.2+st.pit*30,eyeV.z-Math.cos(st.camYaw)*30);
       const kk=cut?1:1-Math.exp(-dt*14);cam.position.lerp(v3,kk);look.lerp(tgt,kk);
     }else{
-      const pit=chase?.26+st.pit*.5:.8,k=cut?1:1-Math.exp(-dt*4),dist=chase?st.cdist*Math.max(1,1/cam.aspect)**.5:st.dist*Math.max(1,1/cam.aspect)**.7;
+      const pit=chase?.26+st.pit*.5:side?.2+st.pit*.5:.8,k=cut?1:1-Math.exp(-dt*4),dist=chase?st.cdist*Math.max(1,1/cam.aspect)**.5:side?st.sdist*Math.max(1,1/cam.aspect)**.6:st.dist*Math.max(1,1/cam.aspect)**.7;
       // яхта чуть ниже центра, чтобы карточка задания сверху её не закрывала; за кормой смотрим вперёд по курсу
-      const lead=chase?9:cam.aspect<1?6:5,ty=chase?2.5:1.5;tgt.set(bx-Math.sin(st.camYaw)*lead,ty,bz-Math.cos(st.camYaw)*lead);
+      const lead=chase?9:side?0:cam.aspect<1?6:5,ty=chase?2.5:side?P.lenM*.55:1.5;tgt.set(bx-Math.sin(st.camYaw)*lead,ty,bz-Math.cos(st.camYaw)*lead);
       v3.set(tgt.x+Math.sin(st.camYaw)*Math.cos(pit)*dist,ty+Math.sin(pit)*dist,tgt.z+Math.cos(st.camYaw)*Math.cos(pit)*dist);
       cam.position.lerp(v3,k);look.lerp(tgt,k)}
     first=false;cam.lookAt(look);
@@ -255,13 +312,13 @@ function startSail3D(boatId,kind){
     // HUD
     const Y=st.camYaw,up=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
     $('#swa').setAttribute('transform',`rotate(${Math.atan2(rt,up)/D-180})`);$('#swt').textContent=`${Math.round(w.kn)} уз · ${compassName(w.from)}`;
-    if(sim.coach){$('#stk').hidden=true;coachLive(dt)}else if(tack)tackCard(s,dt);else if(mob)mobCard3(s);else taskCard(step,s,dt);
+    if(sim.coach){$('#stk').hidden=true;coachLive(dt)}else if(tack)tackCard(s,dt);else if(mob)mobCard3(s);else if(reef)card3(reefTask(s),s);else taskCard(step,s,dt);
     if(crew)crewButtons();
     const mg=$('#smg');if(sim.msgT>0&&sim.msg){mg.hidden=false;mg.textContent=sim.msg;mg.className='hud3 msg '+(sim.msgC||'');mg.style.opacity=Math.min(1,sim.msgT)}else mg.hidden=true;
     const nb=w.from*D;place($('#slN'),bx+Math.sin(nb)*14.5,.4,bz-Math.cos(nb)*14.5);
     if(tack){placeEdge($('#slA'),sim.buoy.x*K3,3,sim.buoy.y*K3,'Знак','windward mark');if(sim.buoy2)placeEdge($('#slA2'),sim.buoy2.x*K3,3,sim.buoy2.y*K3,'Нижний знак','leeward mark')}
     else if(step&&sim.running&&!sim.min&&!sim.coach){const ab=(w.from-s.side*(step.lo+step.hi)/2)*D;place($('#slA'),bx+Math.sin(ab)*14.5,.4,bz-Math.cos(ab)*14.5)}else $('#slA').hidden=true;
-    declutter([$('#slA'),$('#slA2'),$('#slM'),$('#slP'),$('#slN')]);
+    declutter([$('#slA'),$('#slA2'),$('#slM'),$('#slP'),$('#slH'),$('#slR'),$('#slN')]);
   };
   return true;
 }
