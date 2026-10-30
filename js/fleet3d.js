@@ -134,6 +134,6 @@ function startFleet(){
 /* выбор лодки в боковой панели практики: подходящие для упражнения типы, смена перезапускает практику */
 function boatPicker(kind,cur){
   const box=$('#boatBox');if(!box)return;box.hidden=false;
-  $('#boatChips').innerHTML=FLEET.filter(f=>/moor|anchor|along|buoy/.test(kind)||BOATS[f.id].sail).map(f=>`<button data-b="${f.id}" aria-pressed="${f.id===cur}" title="${f.n} · ${f.en}">${f.s}</button>`).join('');
+  $('#boatChips').innerHTML=FLEET.filter(f=>/moor|anchor|along|buoy|fail/.test(kind)||BOATS[f.id].sail).map(f=>`<button data-b="${f.id}" aria-pressed="${f.id===cur}" title="${f.n} · ${f.en}">${f.s}</button>`).join('');
   $('#boatChips').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.b===cur)return;setBoatType(b.dataset.b);stopAll();condSkip=true;startPractice(kind)});
 }
