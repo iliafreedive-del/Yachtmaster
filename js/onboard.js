@@ -88,8 +88,8 @@ function obSay(id){const R=ONBOARD.radio.find(r=>r.id===id);if(!R||typeof voiceS
   R.lines.map(l=>obFill(l,v,true)).filter(Boolean).forEach((l,i)=>voiceSay(l,null,i>0));VOICE.on=was}
 
 /* ---------- порядок действий и справка ---------- */
-/* порядки действий по темам: сначала аварии, потом радио, мотор и швартовка, паруса, двигатель */
-const OB_PROC_T=['safety','radio','motor','sail','engine'];
+/* порядки действий по темам: сначала аварии и первая помощь, потом радио, мотор и швартовка, паруса, двигатель */
+const OB_PROC_T=['safety','med','radio','motor','sail','engine'];
 function obProcHtml(){const vo=typeof sayBtn==='function',ids=[...OB_PROC_T,...new Set(DORDER.map(o=>o.t).filter(t=>!OB_PROC_T.includes(t)))].filter(t=>DORDER.some(o=>o.t===t));
   const tp=t=>typeof DTOPICS!=='undefined'&&DTOPICS.find(x=>x.id===t)||{n:t,en:''};
   return`<div class="card onb-c" id="ob-proc"><div class="onb-h"><h3>Порядок действий ${en('procedures')}</h3><span class="cnt">${DORDER.length}</span></div>
@@ -139,7 +139,7 @@ function renderOnboard(){
 /* ---------- печать ---------- */
 function obPrint(what){if(typeof printSheet!=='function')return;const d=new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
   if(what==='radio'){const{nm,cs,mm,p}=obYacht(),v=obVals(),sp=s=>[...s.toUpperCase()].map(c=>/[A-Z]/.test(c)?PHON[c.charCodeAt(0)-65]:/\d/.test(c)?PNUM[+c]:'').filter(Boolean).join(' ');
-    // одна страница A4: MAYDAY во всю ширину, остальное в две колонки
+    // одна страница A4: MAYDAY во всю ширину, остальное в две колонки; «Врач по радио» — только на экране, на листе его фраза в подсказке PAN-PAN
     const scr=R=>`<div class="rep-s rep-${R.id}"><h3>${R.n} <span class="en">${R.en}</span></h3><p class="rep-n">${obPlain(R.d)}</p><div class="rep-sl">${R.lines.map(l=>`<p>${obFill(l,v)}</p>`).join('')}</div></div>`,
       R=id=>ONBOARD.radio.find(r=>r.id===id),cell=(t,h)=>`<div><span>${t}</span>${h}</div>`;
     printSheet(`<header><div><h2>Радиокарточка${nm?' · '+obEsc(nm):''}</h2><p>Держи у рации. 16 канал — вызов и бедствие, говори медленно и чётко.<br>Карточка учебная, из тренажёра «Галс»: сверь имя, позывной и MMSI с радиолицензией яхты.</p></div><div class="rep-who"><span>${d}</span></div></header>
