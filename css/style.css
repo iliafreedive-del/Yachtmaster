@@ -739,6 +739,42 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .flick{transform-box:fill-box;transform-origin:50% 100%;animation:flick .2s ease-in-out infinite alternate}
 @keyframes flick{from{transform:scaleY(1)}to{transform:scaleY(1.07) skewX(2deg)}}
 @media (prefers-reduced-motion:reduce){.kit .kp.show .dot,.leak .kp.busy .dot{animation:none;fill:var(--buoy)}.leak .drip,.flick{animation:none}}
+/* Галс · схемы модуля «Первая помощь» (js/medlabs.js): человек на полу, ритм реанимации, аптечка, случай на борту */
+.mbody .mhl{fill:rgba(226,86,77,.16);stroke:var(--port);stroke-width:2.5;animation:mhl .9s ease-in-out infinite alternate}
+@keyframes mhl{from{stroke-opacity:.3}to{stroke-opacity:1}}
+.mbody .mbr{fill:none;stroke:#8fd0e8;stroke-width:2;stroke-linecap:round}
+.cpr-row{display:flex;gap:10px;align-items:stretch}
+.cpr-push{flex:1;font:inherit;font-size:17px;font-weight:600;min-height:76px;border-radius:16px;border:2px solid var(--port);background:rgba(226,86,77,.16);color:var(--ink);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.cpr-push:active:not(:disabled),.cpr-push.hit{background:var(--port);color:#fff}
+.cpr-push:disabled,.cpr-br:disabled{opacity:.45;cursor:default}
+.cpr-push small,.cpr-br small{font-family:var(--f-mono);font-size:10.5px;font-weight:400;color:var(--muted)}
+.cpr-push:active:not(:disabled) small,.cpr-push.hit small{color:#fff}
+.cpr-br{flex:0 0 110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.cpr-gauge{position:relative;height:30px;margin:0 6px}
+.cpr-gauge::before{content:'';position:absolute;left:0;right:0;top:4px;height:8px;border-radius:4px;background:rgba(147,174,187,.2)}
+.cpr-gauge .cg-band{position:absolute;left:40%;width:20%;top:4px;height:8px;border-radius:4px;background:var(--stbd);opacity:.75}
+.cpr-gauge .cg-mark{position:absolute;top:0;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:var(--buoy);display:none;transition:left .15s}
+.cpr-gauge span{position:absolute;top:16px;font-family:var(--f-mono);font-size:10px;color:var(--muted);transform:translateX(-50%)}
+.cpr-gauge span:nth-of-type(1){left:0;transform:none}.cpr-gauge span:nth-of-type(2){left:40%}.cpr-gauge span:nth-of-type(3){left:60%}.cpr-gauge span:nth-of-type(4){left:100%;transform:translateX(-100%)}
+.cpr-met{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--buoy);margin-right:8px;vertical-align:middle;opacity:.2}
+.medkit .kp{cursor:pointer;outline:none}
+.medkit .kp .hit{fill:transparent;stroke:transparent;stroke-width:2;transition:fill .15s,stroke .15s}
+.medkit .kp:hover .hit,.medkit .kp:focus-visible .hit{fill:rgba(242,163,58,.1);stroke:var(--line)}
+.medkit .kp.on .hit,.medkit .kp.sel .hit{fill:rgba(242,163,58,.2);stroke:var(--buoy)}
+.medkit .kp.ok .hit{fill:rgba(60,191,126,.2);stroke:var(--stbd)}
+.medkit .kp.miss .hit{fill:rgba(242,163,58,.08);stroke:var(--buoy);stroke-dasharray:5 4}
+.medkit .kp.extra .hit{fill:rgba(226,86,77,.18);stroke:var(--port)}
+.mst{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}
+.mst>div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 9px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.mst span{font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mst b{font-size:13px;font-weight:600;line-height:1.3}
+.mst .upd{border-color:var(--stbd);animation:mupd 1s ease-out}
+@keyframes mupd{from{background:rgba(60,191,126,.35)}to{background:var(--panel2)}}
+.csA button.next{border-color:var(--buoy);animation:cnext .9s ease-in-out infinite alternate}
+@keyframes cnext{from{box-shadow:0 0 0 0 rgba(242,163,58,0)}to{box-shadow:0 0 0 3px rgba(242,163,58,.45)}}
+.csA button.no{text-decoration:line-through;color:var(--muted);opacity:.6;cursor:default}
+#csO:empty,#cpL:empty{display:none}
+@media (prefers-reduced-motion:reduce){.mbody .mhl,.csA button.next,.mst .upd{animation:none}.csA button.next{box-shadow:0 0 0 3px rgba(242,163,58,.45)}}
 /* Флот как автосалон: название сверху, витрина миниатюр снизу, сворачиваемые характеристики справа, светлая студия */
 .fhead{position:absolute;top:14px;left:16px;z-index:3;pointer-events:none;max-width:58%}
 .fhead h2{margin:2px 0 0;font-family:var(--f-display);font-weight:600;font-size:clamp(20px,3.2vw,30px);line-height:1.1}

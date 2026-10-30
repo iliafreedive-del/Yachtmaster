@@ -198,7 +198,7 @@ const ICO={rules:'<path d="M5 19 L13 5 M19 19 L11 5" /><path d="M10 7 l3 -2 l1 3
  meteo:'<path d="M3 8 h11 a3 3 0 1 0 -3 -3 M3 12 h15 a3 3 0 1 1 -3 3 M3 16 h7"/>',boat:'<path d="M12 3 v13 M12 4 l6 10 h-6 M11 6 l-5 8 h5"/><path d="M4 17 h16 l-2 3 h-12 z"/>',
  sail:'<path d="M6 20 q8 -8 6 -17 q4 9 6 17 z"/><path d="M2 6 h6 M2 10 h4"/>',motor:'<circle cx="12" cy="12" r="2"/><path d="M12 10 q-1 -6 3 -7 q1 4 -3 7 M14 13 q5 3 3 7 q-4 -1 -5 -6 M10 13 q-5 1 -7 -2 q4 -3 7 0"/>',
  knots:'<path d="M3 16 q6 0 8 -5 q2 -5 6 -3 q3 2 0 5 q-3 3 -6 0 q-2 -3 -5 -5"/><path d="M17 13 q2 3 4 3"/>',safety:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 4 v4 M12 16 v4 M4 12 h4 M16 12 h4" stroke-width="3"/>',
- law:'<path d="M6 21 V4 M6 4 h11 l-2 4 l2 4 h-11"/>',radio:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7 V2 M10 11 h4 M10 14 h4 M10 17 h4"/>',
+ med:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8 v8 M8 12 h8" stroke-width="2.4"/>', law:'<path d="M6 21 V4 M6 4 h11 l-2 4 l2 4 h-11"/>',radio:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7 V2 M10 11 h4 M10 14 h4 M10 17 h4"/>',
  english:'<text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none">EN</text><rect x="3" y="5" width="18" height="14" rx="3"/>'};
 const ico=t=>`<svg viewBox="0 0 24 24" class="dico" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICO[t]||''}</svg>`;
 
