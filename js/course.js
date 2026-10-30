@@ -324,12 +324,13 @@ const SND=[['•','Изменяю курс вправо','Altering course to sta
  ['—','Моторное с ходом в тумане; поворот в узкости','Power-driven making way (fog) / blind bend'],['——','Моторное без хода в тумане','Power-driven stopped (fog)'],['—••','Парусное, NUC, RAM, CBD, рыболовное, буксир в тумане','Sail, NUC, RAM, CBD, fishing, towing (fog)'],
  ['——•','Обгоняю вас по правому борту (узкость)','Overtake on your starboard side'],['——••','Обгоняю вас по левому борту (узкость)','Overtake on your port side'],['—•—•','Согласен на обгон','Agreement to be overtaken']];
 let actx=null;
-function horn(code,fast,onEnd){
+/* o — {f: основной тон, Гц; v: громкость 0–1}: в тумане (js/fog3d.js) у судна гудок ниже, у лодки выше, дальние — тише */
+function horn(code,fast,onEnd,o){
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){onEnd&&onEnd();return()=>{}}
   if(actx.state==='suspended')actx.resume();
-  const k=fast?.5:1,sh=1*k,lg=4*k,gap=1*k;let t=actx.currentTime+.05;const nodes=[];
-  [...code].forEach(ch=>{const d=ch==='•'?sh:lg;[180,270,360].forEach((f,j)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=j?'sine':'sawtooth';o.frequency.value=f;
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(j?.08:.05,t+.04);g.gain.setValueAtTime(j?.08:.05,t+d-.05);g.gain.linearRampToValueAtTime(0,t+d);o.connect(g).connect(actx.destination);o.start(t);o.stop(t+d+.02);nodes.push(o)});t+=d+gap});
+  const k=fast?.5:1,sh=1*k,lg=4*k,gap=1*k,f0=o&&o.f||180,vk=o&&o.v!=null?o.v:1;let t=actx.currentTime+.05;const nodes=[];
+  [...code].forEach(ch=>{const d=ch==='•'?sh:lg;[f0,f0*1.5,f0*2].forEach((f,j)=>{const o=actx.createOscillator(),g=actx.createGain(),a=(j?.08:.05)*vk;o.type=j?'sine':'sawtooth';o.frequency.value=f;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a,t+.04);g.gain.setValueAtTime(a,t+d-.05);g.gain.linearRampToValueAtTime(0,t+d);o.connect(g).connect(actx.destination);o.start(t);o.stop(t+d+.02);nodes.push(o)});t+=d+gap});
   const tm=setTimeout(()=>onEnd&&onEnd(),(t-actx.currentTime)*1000);
   return()=>{clearTimeout(tm);nodes.forEach(o=>{try{o.stop()}catch(e){}})};
 }

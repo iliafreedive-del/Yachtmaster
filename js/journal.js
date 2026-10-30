@@ -28,6 +28,7 @@ function startEx(ex){
   if(ex==='buoy'){openLesson('p7',0);buoyMode='practice';startLessonPractice();return}
   if(ex==='fail'){openLesson('s4',0);failMode='practice';startLessonPractice();return}
   if(ex==='pilot'){openLesson('n3',0);pilotMode='practice';startLessonPractice();return}
+  if(ex==='fog'){openLesson('n4',0);fogMode='practice';startLessonPractice();return}
   if(ex==='tender'){openLesson('p10',0);tenderMode='practice';startLessonPractice();return}
   if(ex==='fuel'){openLesson('h1',0);fuelMode='practice';startLessonPractice();return}
   if(ex==='exam'){openChapter('exam');if(typeof drRun==='function')drRun('exam');return}

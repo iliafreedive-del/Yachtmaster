@@ -1149,3 +1149,64 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
 .hltab th,.hltab td{border:1px solid var(--line);padding:3px 5px;text-align:left;vertical-align:top}
 .hltab th{font:500 10px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .hltab td:nth-child(-n+5){font-family:var(--f-mono);white-space:nowrap}
+/* Туман по приборам (js/fog3d.js): экран плоттера и радара (MFD) — вкладки, экран, кнопки и строки данных. Размер экрана --cs — от высоты сцены;
+   --hf — сколько снизу занимают кнопки тумана (fog3d.js). Широкая сцена: экран слева под кнопками камеры, под ним кнопки тумана, штурвал по центру,
+   карточка мастер-класса справа, сообщение над пультом. Ветер — только если хватает места */
+.fgui{--cs:clamp(150px,calc(100cqh - var(--tl,32px) - var(--hf,96px) - 156px),280px)}
+@container (min-width:821px){.stage.tall .three .fgui .tools{right:calc(min(400px,100% - 270px) + 24px)}}
+.fgui .hud3.wind{left:calc(var(--cs) + 36px)}
+@container (max-width:1149px){.fgui .hud3.wind{display:none}}
+#fgMsg{top:auto;bottom:calc(var(--hh,0px) + 12px);transform:translateX(-50%)}
+#fgFogG{order:-1}
+#fgFogG .hb{hyphens:manual}
+.hud3.mfd{left:12px;top:calc(var(--tl,32px) + 20px);padding:6px;display:flex;flex-direction:column;gap:5px;width:calc(var(--cs) + 12px);box-sizing:border-box}
+.mfd .mtabs{display:flex;gap:4px}
+.mfd .mtabs button{flex:1 1 0;min-width:0;font:inherit;font-size:12px;font-weight:600;line-height:1.1;padding:4px 6px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer}
+.mfd .mtabs button small{display:block;font-family:var(--f-mono);font-weight:400;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mfd .mtabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--buoy);background:rgba(242,163,58,.16)}
+.mfd canvas{display:block;width:var(--cs);height:var(--cs);border-radius:6px;background:#fff;cursor:crosshair;touch-action:none}
+.mfd .mrow{display:flex;align-items:center;gap:5px}
+.mfd .mrow[hidden]{display:none}
+.mfd .mrow .hb:last-child:not(:only-child){margin-left:auto}
+#fgRowR .hb:first-child{margin-right:auto}#fgRowR .hb:last-child{margin-left:0}
+.mfd .hb{min-height:32px;min-width:34px;font-size:11.5px;padding:2px 8px;flex:none}
+.mfd .hb small{font-size:9px}
+.mfd .minfo{margin:0;min-height:4.05em;font:10px/1.35 var(--f-mono);color:var(--muted);letter-spacing:.01em}
+.mfd .minfo b{color:var(--ink);font-weight:500}
+.mfd .minfo span{display:inline;font-size:inherit;letter-spacing:inherit;color:inherit}
+.mfd .minfo .bad{color:#ff8a80}.mfd .minfo .good{color:#9be3b8}
+/* узкая сцена (телефон): экран справа, карточка слева от него; кнопки тумана — отдельной строкой над штурвалом и газом */
+@container (max-width:820px){
+  #fgFogG{flex:1 1 100%;background:none;border:0;padding:0}
+  #fgFogG .acts{width:min(100%,420px)}
+  #fgFogG>.cap{display:none}
+}
+@container (max-width:820px) and (min-height:521px){
+  .fgui{--cs:clamp(140px,min(calc(27cqw + 40px),calc(100cqh - var(--tl,32px) - var(--hh,0px) - 168px)),250px)}
+  .hud3.mfd{left:auto;right:12px}
+  #fgCoach{top:calc(var(--tl,32px) + 20px)}
+  #fgMfd~#fgCoach{right:calc(var(--cs) + 36px)}
+  .mfd .minfo{font-size:9.5px}
+}
+/* низкая сцена (телефон боком): экран слева во всю высоту под кнопками камеры, вкладки, кнопки и данные — столбцом справа от него;
+   пульт — правее экрана, в одну строку, без подписей, кнопки тумана — столбиком; сообщение — наверху слева, поверх кнопок камеры */
+@container (max-height:520px){
+  .fgui{--cs:clamp(92px,min(22cqw,calc(100cqh - var(--tl,32px) - 32px)),170px)}
+  .fgui .helm{left:calc(var(--cs) + 158px)}
+  #fgFogG{flex:0 1 auto;background:rgba(10,29,42,.86);border:1px solid var(--line);padding:4px 6px}
+  #fgFogG .acts{width:auto;grid-template-columns:1fr;gap:4px}
+  #fgFogG .hb{min-height:30px;font-size:11px;padding:2px 6px}#fgFogG .hb small{font-size:8.5px}
+  #fgFogG>.cap,#fgWheelG>.cap,#fgThrG>.cap:first-child{display:none}
+  .hud3.mfd{top:calc(var(--tl,32px) + 12px);display:grid;grid-template-columns:var(--cs) 128px;grid-template-rows:auto auto 1fr;gap:4px 6px;width:auto;align-items:start}
+  .mfd canvas{grid-column:1;grid-row:1/4}
+  .mfd .mtabs,.mfd .mrow,.mfd .minfo{grid-column:2}
+  .mfd .mtabs button{font-size:11px;padding:4px}
+  .mfd .mtabs button small{display:none}
+  .mfd .mrow{gap:4px}
+  .mfd .hb{min-height:30px;min-width:30px;padding:2px 6px;font-size:11px}
+  .mfd .minfo{font-size:9px;min-height:0}
+  #fgMsg{top:12px;bottom:auto;left:12px;right:calc(min(46%,420px) + 24px);transform:none;max-width:none}
+}
+@container (max-height:520px) and (max-width:720px){#fgWheelG .hrow>.hb{display:none}#fgWheelG .rud{width:56px}}
+/* схемы урока «Электронная навигация» (js/enavlabs.js): экраны плоттера на холсте */
+.lab .encv{display:block;width:100%;max-width:440px;height:auto;margin:0 auto;border-radius:10px;background:#fff;touch-action:manipulation}
