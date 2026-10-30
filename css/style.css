@@ -1089,3 +1089,55 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
 .plantab th{font:500 10.5px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .plantab td:nth-child(n+2):nth-child(-n+4){font-family:var(--f-mono);white-space:nowrap}
 @media (max-width:480px){.plantab{font-size:11.5px}.plantab th,.plantab td{padding:3px 4px}}
+/* Тузик и подвесной мотор (js/tender3d.js): пульт — экипаж, органы мотора, румпель сверху, газ и F-N-R; сообщение над пультом */
+@container (min-width:821px){.stage.tall .three .tdui .tools{right:calc(min(400px,100% - 270px) + 24px)}}
+#tdMsg{top:auto;bottom:calc(var(--hh,0px) + 12px);transform:translateX(-50%)}
+.tdtil{width:68px;height:60px;touch-action:none;cursor:ew-resize}
+#tdTilN{min-height:13px;white-space:nowrap}
+/* широкая сцена: весь пульт — одной строкой внизу; кнопки экипажа и мотора компактнее */
+@container (min-width:821px){
+  #tdCrewG .hb,#tdMotG .hb{min-width:0;font-size:12px;padding:3px 5px}
+  #tdCrewG .hb small,#tdMotG .hb small{font-size:9px}
+  #tdTilG .hb{min-width:34px;padding:3px 6px}
+  .tdtil{width:60px;height:53px}
+}
+.tdgear{display:flex;flex-direction:column;gap:4px}
+.tdgear .hb{min-width:56px;min-height:28px;padding:2px 6px}
+/* узкая сцена: экипаж и мотор — двумя строками по шесть кнопок над румпелем, газом и передачей */
+@container (max-width:820px){
+  #tdCrewG,#tdMotG{order:-1;flex:1 1 100%;background:none;border:0;padding:0}
+  #tdCrewG .acts,#tdMotG .acts{width:min(100%,480px);grid-template-columns:repeat(6,minmax(0,1fr))}
+  #tdCrewG>.cap,#tdMotG>.cap{display:none}
+  #tdCoach{max-height:calc(100% - var(--tl,32px) - var(--hh,0px) - 72px);overflow:auto}
+}
+@container (max-width:460px){
+  #tdCrewG .hb,#tdMotG .hb{min-width:0;min-height:34px;font-size:11.5px;padding:2px 2px}
+  #tdCrewG .hb small,#tdMotG .hb small{font-size:8.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tdtil{width:56px;height:50px}
+  .tdgear .hb{min-width:46px;min-height:26px}
+}
+/* низкая сцена (телефон боком): экипаж и мотор снова в своих рамках, в один ряд с румпелем */
+@container (max-height:520px){#tdMsg{left:12px;right:calc(min(46%,420px) + 24px);transform:none;max-width:none;bottom:calc(var(--hh,0px) + 8px)}}
+@container (max-height:520px) and (min-width:560px){
+  #tdHelm{gap:5px;padding:5px 6px}
+  #tdHelm>.hg{padding:4px 5px;gap:2px}
+  #tdCrewG,#tdMotG{order:0;flex:0 1 auto;background:rgba(10,29,42,.86);border:1px solid var(--line)}
+  #tdCrewG .acts,#tdMotG .acts{width:auto;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  #tdCrewG .hb,#tdMotG .hb{min-width:0;min-height:30px;font-size:11px;padding:2px 4px}
+  #tdCrewG .hb small,#tdMotG .hb small{font-size:8.5px}
+  #tdCrewG>.cap,#tdMotG>.cap,#tdThrG>.cap,#tdGearG>.cap{display:none}
+  #tdTilG>.cap:first-child{display:none}#tdTilG .hb{min-width:30px;padding:2px 5px}.tdtil{width:52px;height:46px}
+  .tdgear .hb{min-width:42px;min-height:25px;font-size:11.5px}.tdgear .hb small{font-size:8.5px}
+  #tdCoach{max-height:calc(100% - var(--tl,32px) - var(--hh,0px) - 24px);overflow:auto}
+}
+/* схемы урока «Тузик и подвесной мотор» (js/tenderlabs.js) */
+.tdctl{display:grid;gap:6px}
+.tdctl>div{display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.tdplate{display:flex;flex-direction:column;gap:2px;background:#e9e6dc;color:#1d2226;border:2px solid #9aa1a5;border-radius:6px;padding:6px 10px;font-size:12.5px;line-height:1.35}
+.tdplate b{font-family:var(--f-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tdplate small{color:#5a6266;font-size:11px}
+.tdld{display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap;font-size:13px}
+.tdld small{color:var(--muted);font-size:11.5px}
+.lab .spot.sel circle{fill:rgba(242,163,58,.62);stroke-width:3}
+.tdjet{animation:flow 1s linear infinite}
+@media (prefers-reduced-motion:reduce){.tdjet{animation:none}}
