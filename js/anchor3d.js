@@ -112,6 +112,48 @@ const FXDONE={
   letgo:s=>s.anc.st==='bottom',veer:s=>s.anc.st==='bottom'&&s.anc.L>=s.need-.3,held:s=>s.anc.st==='bottom'&&s.anc.dragT>8&&s.taut,
   radio:s=>s.fx.radio==='PAN-PAN',cause:s=>s.fx.causeOK};
 
+/* бухта в 3D: дно и берег одной сеткой, сосны, домики и таверна, буи зоны купания, створ и каменная банка.
+   Ту же бухту строит урок «Тузик и подвесной мотор» (js/tender3d.js). Возвращает буи зоны купания и знаки створа */
+const A5TRZ=-102; // линия створа: знак на мысу и башня за ним — на одной линии с местом, где встанет яхта в мастер-классе
+function a5bay(scene,lo){
+  a5map();const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
+  // рельеф: дно и берег одной сеткой, цвет по грунту и глубине (в прозрачной воде видно песок, траву и камни)
+  {const S=lo?8:5,EX=1100,n=Math.round(EX/S),g=new THREE.PlaneGeometry(EX,EX,n,n);g.rotateX(-Math.PI/2);g.translate(0,0,-50);
+    const p=g.attributes.position,cl=new Float32Array(p.count*3),C=new THREE.Color(),C2=new THREE.Color(),deep=new THREE.Color(0x0e3a48);
+    const GC={S:0xd8c69a,M:0x8c8670,Wd:0x3d5a34,R:0x7d756a};
+    for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),y=a5y(x,z);p.setY(i,y);
+      if(y<0){C.setHex(GC[a5ground(x,z)]);C.lerp(deep,1-Math.exp(y/6))}
+      else{const sl=a5f(A5MAP.sd,x,z),beach=Math.abs(a5ph(x,z))<.85,st=Math.abs(a5y(x+S,z)-a5y(x-S,z))+Math.abs(a5y(x,z+S)-a5y(x,z-S)),nz=a5noise(x/25,z/25);
+        if(beach&&y<1.7)C.setHex(0xe1cfa1);
+        else if(st>S*2.4||(!beach&&-sl<7))C.setHex(0x625a50).lerp(C2.setHex(0x84796a),a5noise(x/7,z/7));
+        else{C.setHex(0x3d5a2d).lerp(C2.setHex(0x6b7440),clamp((a5noise(x/9,z/9)-.35)*2.2,0,1)).lerp(C2.setHex(0x8a7f58),clamp((nz-.62)*3,0,.7));
+          if(y>48)C.lerp(C2.setHex(0x8f8665),clamp((y-48)/22,0,.8))}}
+      cl[i*3]=C.r;cl[i*3+1]=C.g;cl[i*3+2]=C.b}
+    g.setAttribute('color',new THREE.BufferAttribute(cl,3));g.computeVertexNormals();
+    const t=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95,metalness:0}));t.receiveShadow=true;scene.add(t)}
+  // сосны на склонах, белые домики за пляжем, таверна
+  {const pts=[];for(let i=0;i<1800&&pts.length<(lo?140:340);i++){const x=(a5hash(i,3)-.5)*760,z=-120+(a5hash(i,7)-.5)*700,y=a5y(x,z);
+      if(y>2.5&&y<62&&Math.abs(a5y(x+4,z)-a5y(x-4,z))<5&&a5f(A5MAP.sd,x,z)<-14)pts.push([x,y,z,a5hash(i,11)])}
+    const cone=new THREE.ConeGeometry(1,1,7);cone.translate(0,.5,0);
+    const im=new THREE.InstancedMesh(cone,M(0xffffff,{roughness:.9}),pts.length),C3=new THREE.Color(),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),ps=new THREE.Vector3();
+    pts.forEach(([x,y,z,r],i)=>{const h=5+r*5;m4.compose(ps.set(x,y-.5,z),q,sc.set(1.6+r*1.4,h,1.6+r*1.4));im.setMatrixAt(i,m4);im.setColorAt(i,C3.setHSL(.24+r*.08,.36+r*.16,.12+a5hash(i,13)*.08))});scene.add(im);
+    [[-60,-292],[-38,-300],[30,-296],[55,-288],[88,-270],[-95,-268]].forEach(([x,z],i)=>{const y=a5y(x,z);if(y<.5)return;
+      mesh(new THREE.BoxGeometry(7,4,6),M(0xf4f1ea),x,y+1.6,z).rotation.y=i*.4;const r=mesh(new THREE.ConeGeometry(5.2,2,4),M(0xb8613e),x,y+4.6,z);r.rotation.y=i*.4+Math.PI/4});
+    const bx=8,bz=-262,by=Math.max(.6,a5y(bx,bz));mesh(new THREE.BoxGeometry(12,3,6),M(0xe9e2d0),bx,by+1.2,bz);mesh(new THREE.BoxGeometry(14,.3,8),M(0x4a7a96),bx,by+2.9,bz)}
+  // буи зоны купания: жёлтые шары по дуге в 55 м от пляжа
+  const zone=[];for(let ph=-.72;ph<=.721;ph+=.16){let r=20;for(;r<400;r+=2){const x=A5C.x+Math.sin(ph)*r,z=A5C.z-Math.cos(ph)*r;if(a5f(A5MAP.sb,x,z)<55){zone.push([x,z]);break}}}
+  const zbuoys=zone.map(([x,z])=>mesh(new THREE.SphereGeometry(.45,12,8),M(0xf2c400),x,.1,z));
+  // створ: белый знак на мысу и белая башня на холме за ним — на одной линии с местом, где встанет яхта
+  let trF=null,trR=null;
+  for(let x=-40;x>-400;x-=2)if(a5y(x,A5TRZ)>.4){trF={x:x-8,z:A5TRZ};trR={x:x-95,z:A5TRZ};break}
+  if(trF){const yF=Math.max(1,a5y(trF.x,trF.z)),yR=Math.max(2,a5y(trR.x,trR.z));
+    mesh(new THREE.ConeGeometry(2,3.4,8),M(0xf6f4ee),trF.x,yF+1.4,trF.z);mesh(new THREE.CylinderGeometry(.18,.18,4,8),M(0x1d2226),trF.x,yF+4.6,trF.z);
+    mesh(new THREE.CylinderGeometry(.19,.19,1.1,8),M(0xf6f4ee),trF.x,yF+5.4,trF.z);trF.y=yF+6.4;
+    mesh(new THREE.CylinderGeometry(2.6,3.1,11,14),M(0xeee8da),trR.x,yR+5,trR.z);mesh(new THREE.CylinderGeometry(3.2,3.2,1.2,14),M(0xdcd4c2),trR.x,yR+11,trR.z);trR.y=yR+12}
+  // каменная банка у восточного мыса: камни видны в воде
+  for(let i=0;i<7;i++)mesh(new THREE.DodecahedronGeometry(1.4+a5hash(i,5)*1.6,0),M(0x6f685e),A5SH.x+(a5hash(i,1)-.5)*9,-.9-a5hash(i,2)*.8,A5SH.z+(a5hash(i,3)-.5)*9);
+  return{zone,zbuoys,trF,trR}}
+
 function stopAnchor3D(){if(!A5)return;cancelAnimationFrame(A5.raf);A5.ro&&A5.ro.disconnect();A5.ro2&&A5.ro2.disconnect();A5.off();A5.renderer.dispose();try{A5.renderer.forceContextLoss()}catch(e){}
   $('#three').innerHTML='';$('#stage').classList.remove('tall');A5=null}
 
@@ -172,41 +214,7 @@ function startAnchor3D(mode,kind){
   let sea=null;
   if(ocean)sea=makeOcean(scene,{R:420,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:wind.base,calm:.25,opacity:lo?.8:.7,deep:0x1a5f69,shal:0x2b8a84,rip:.8,sky});
   if(typeof skyDome==='function'){scene.environment=skyEnv(renderer);skyDome(scene,{r:900,hor:sky,top:TD.top,sun:TD.sun,glow:TD.glow,gs:TD.gs,cloud:TD.cloud,cloudE:TD.cloudE})}
-  // рельеф: дно и берег одной сеткой, цвет по грунту и глубине (в прозрачной воде видно песок, траву и камни)
-  {const S=lo?8:5,EX=1100,n=Math.round(EX/S),g=new THREE.PlaneGeometry(EX,EX,n,n);g.rotateX(-Math.PI/2);g.translate(0,0,-50);
-    const p=g.attributes.position,cl=new Float32Array(p.count*3),C=new THREE.Color(),C2=new THREE.Color(),deep=new THREE.Color(0x0e3a48);
-    const GC={S:0xd8c69a,M:0x8c8670,Wd:0x3d5a34,R:0x7d756a};
-    for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),y=a5y(x,z);p.setY(i,y);
-      if(y<0){C.setHex(GC[a5ground(x,z)]);C.lerp(deep,1-Math.exp(y/6))}
-      else{const sl=a5f(A5MAP.sd,x,z),beach=Math.abs(a5ph(x,z))<.85,st=Math.abs(a5y(x+S,z)-a5y(x-S,z))+Math.abs(a5y(x,z+S)-a5y(x,z-S)),nz=a5noise(x/25,z/25);
-        if(beach&&y<1.7)C.setHex(0xe1cfa1);
-        else if(st>S*2.4||(!beach&&-sl<7))C.setHex(0x625a50).lerp(C2.setHex(0x84796a),a5noise(x/7,z/7));
-        else{C.setHex(0x3d5a2d).lerp(C2.setHex(0x6b7440),clamp((a5noise(x/9,z/9)-.35)*2.2,0,1)).lerp(C2.setHex(0x8a7f58),clamp((nz-.62)*3,0,.7));
-          if(y>48)C.lerp(C2.setHex(0x8f8665),clamp((y-48)/22,0,.8))}}
-      cl[i*3]=C.r;cl[i*3+1]=C.g;cl[i*3+2]=C.b}
-    g.setAttribute('color',new THREE.BufferAttribute(cl,3));g.computeVertexNormals();
-    const t=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95,metalness:0}));t.receiveShadow=true;scene.add(t)}
-  // сосны на склонах, белые домики за пляжем, таверна
-  {const pts=[];for(let i=0;i<1800&&pts.length<(lo?140:340);i++){const x=(a5hash(i,3)-.5)*760,z=-120+(a5hash(i,7)-.5)*700,y=a5y(x,z);
-      if(y>2.5&&y<62&&Math.abs(a5y(x+4,z)-a5y(x-4,z))<5&&a5f(A5MAP.sd,x,z)<-14)pts.push([x,y,z,a5hash(i,11)])}
-    const cone=new THREE.ConeGeometry(1,1,7);cone.translate(0,.5,0);
-    const im=new THREE.InstancedMesh(cone,M(0xffffff,{roughness:.9}),pts.length),C3=new THREE.Color(),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),ps=new THREE.Vector3();
-    pts.forEach(([x,y,z,r],i)=>{const h=5+r*5;m4.compose(ps.set(x,y-.5,z),q,sc.set(1.6+r*1.4,h,1.6+r*1.4));im.setMatrixAt(i,m4);im.setColorAt(i,C3.setHSL(.24+r*.08,.36+r*.16,.12+a5hash(i,13)*.08))});scene.add(im);
-    [[-60,-292],[-38,-300],[30,-296],[55,-288],[88,-270],[-95,-268]].forEach(([x,z],i)=>{const y=a5y(x,z);if(y<.5)return;
-      mesh(new THREE.BoxGeometry(7,4,6),M(0xf4f1ea),x,y+1.6,z).rotation.y=i*.4;const r=mesh(new THREE.ConeGeometry(5.2,2,4),M(0xb8613e),x,y+4.6,z);r.rotation.y=i*.4+Math.PI/4});
-    const bx=8,bz=-262,by=Math.max(.6,a5y(bx,bz));mesh(new THREE.BoxGeometry(12,3,6),M(0xe9e2d0),bx,by+1.2,bz);mesh(new THREE.BoxGeometry(14,.3,8),M(0x4a7a96),bx,by+2.9,bz)}
-  // буи зоны купания: жёлтые шары по дуге в 55 м от пляжа
-  const zone=[];for(let ph=-.72;ph<=.721;ph+=.16){let r=20;for(;r<400;r+=2){const x=A5C.x+Math.sin(ph)*r,z=A5C.z-Math.cos(ph)*r;if(a5f(A5MAP.sb,x,z)<55){zone.push([x,z]);break}}}
-  const zbuoys=zone.map(([x,z])=>mesh(new THREE.SphereGeometry(.45,12,8),M(0xf2c400),x,.1,z));
-  // створ: белый знак на мысу и белая башня на холме за ним — на одной линии с местом, где встанет яхта
-  const TRZ=-102;let trF=null,trR=null;
-  for(let x=-40;x>-400;x-=2)if(a5y(x,TRZ)>.4){trF={x:x-8,z:TRZ};trR={x:x-95,z:TRZ};break}
-  if(trF){const yF=Math.max(1,a5y(trF.x,trF.z)),yR=Math.max(2,a5y(trR.x,trR.z));
-    mesh(new THREE.ConeGeometry(2,3.4,8),M(0xf6f4ee),trF.x,yF+1.4,trF.z);mesh(new THREE.CylinderGeometry(.18,.18,4,8),M(0x1d2226),trF.x,yF+4.6,trF.z);
-    mesh(new THREE.CylinderGeometry(.19,.19,1.1,8),M(0xf6f4ee),trF.x,yF+5.4,trF.z);trF.y=yF+6.4;
-    mesh(new THREE.CylinderGeometry(2.6,3.1,11,14),M(0xeee8da),trR.x,yR+5,trR.z);mesh(new THREE.CylinderGeometry(3.2,3.2,1.2,14),M(0xdcd4c2),trR.x,yR+11,trR.z);trR.y=yR+12}
-  // каменная банка у восточного мыса: камни видны в воде
-  for(let i=0;i<7;i++)mesh(new THREE.DodecahedronGeometry(1.4+a5hash(i,5)*1.6,0),M(0x6f685e),A5SH.x+(a5hash(i,1)-.5)*9,-.9-a5hash(i,2)*.8,A5SH.z+(a5hash(i,3)-.5)*9);
+  const TRZ=A5TRZ,{zone,zbuoys,trF,trR}=a5bay(scene,lo);
 
   /* ---------- соседи на якоре ---------- */
   // в «мотор заглох» соседи стоят в середине бухты, в стороне от проходов у берегов
