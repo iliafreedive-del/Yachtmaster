@@ -23,6 +23,8 @@ function startEx(ex){
   if(ex==='helm'){openLesson('p1',0);helmMode='practice';startLessonPractice();return}
   if(ex==='anchor'){openLesson('p4',0);anchorMode='practice';startLessonPractice();return}
   if(ex==='mob'){openLesson('p5',0);mobMode='practice';startLessonPractice();return}
+  if(ex==='along'){openLesson('p6',0);alongMode='practice';startLessonPractice();return}
+  if(ex==='buoy'){openLesson('p7',0);buoyMode='practice';startLessonPractice();return}
   if(ex==='exam'){openChapter('exam');if(typeof drRun==='function')drRun('exam');return}
   if(ex==='day1')deckMode='practice';
   if(ex==='day4')moorMode='practice';
