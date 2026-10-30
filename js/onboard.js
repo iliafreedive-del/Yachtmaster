@@ -88,11 +88,14 @@ function obSay(id){const R=ONBOARD.radio.find(r=>r.id===id);if(!R||typeof voiceS
   R.lines.map(l=>obFill(l,v,true)).filter(Boolean).forEach((l,i)=>voiceSay(l,null,i>0));VOICE.on=was}
 
 /* ---------- порядок действий и справка ---------- */
-function obProcHtml(){const vo=typeof sayBtn==='function';
+/* порядки действий по темам: сначала аварии, потом радио, мотор и швартовка, паруса, двигатель */
+const OB_PROC_T=['safety','radio','motor','sail','engine'];
+function obProcHtml(){const vo=typeof sayBtn==='function',ids=[...OB_PROC_T,...new Set(DORDER.map(o=>o.t).filter(t=>!OB_PROC_T.includes(t)))].filter(t=>DORDER.some(o=>o.t===t));
+  const tp=t=>typeof DTOPICS!=='undefined'&&DTOPICS.find(x=>x.id===t)||{n:t,en:''};
   return`<div class="card onb-c" id="ob-proc"><div class="onb-h"><h3>Порядок действий ${en('procedures')}</h3><span class="cnt">${DORDER.length}</span></div>
    <p class="ex">Короткие порядки из уроков: открой нужный и пройди по шагам. Команды со знаком 🔊 звучат по-английски.</p>
-   ${DORDER.map((o,i)=>`<details class="onb-d"${i?'':' open'}><summary>${o.n}</summary><div><ol>${o.s.map(([r,e])=>`<li>${rich(r)} ${en(e)}${vo&&/!$/.test(e)?sayBtn(e,/^Ready!$/.test(e)?'crew':''):''}</li>`).join('')}</ol>
-     <p class="ex">${rich(o.e)}</p><div class="row">${obLes(o.l)}</div></div></details>`).join('')}
+   ${ids.map((t,k)=>`<div class="onb-g"><p class="lbl">${tp(t).n} <span class="en">· ${tp(t).en}</span></p>${DORDER.filter(o=>o.t===t).map((o,i)=>`<details class="onb-d"${k||i?'':' open'}><summary>${o.n}</summary><div><ol>${o.s.map(([r,e])=>`<li>${rich(r)} ${en(e)}${vo&&/!$/.test(e)?sayBtn(e,/^Ready!$/.test(e)?'crew':''):''}</li>`).join('')}</ol>
+     <p class="ex">${rich(o.e)}</p><div class="row">${obLes(o.l)}</div></div></details>`).join('')}</div>`).join('')}
    <div class="row"><button class="btn ghost sm" type="button" id="obDrill">Проверить себя: расставить по порядку</button></div></div>`}
 function obLab(id){for(const L of allLessons()){const i=L.slides.findIndex(s=>s.lab===id);if(i>=0)return obLes(L.id,L.slides[i].h)}return''}
 function obRefHtml(){

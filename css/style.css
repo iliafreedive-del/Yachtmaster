@@ -723,6 +723,22 @@ button,.term{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .msg{margin:0;padding-left:20px;display:grid;gap:6px;font-size:13.5px}
 .chat{display:grid;gap:6px;max-height:320px;overflow:auto}.chat p{margin:0;padding:7px 10px;border-radius:10px;font-size:13.5px;background:var(--panel2)}
 .chat p.me{border-left:3px solid var(--buoy)}.chat p.them{border-left:3px solid var(--stbd)}
+/* Галс · схемы модуля «Безопасность и аварии» (js/soslabs.js): точки на схеме, леер-лента, течь, огонь */
+.kit .kp,.leak .kp{cursor:pointer;outline:none}
+.kit .kp .hit,.leak .kp .hit{fill:transparent}
+.kit .kp .dot,.leak .kp .dot{fill:rgba(242,163,58,.3);stroke:var(--buoy);stroke-width:2;transition:fill .15s}
+.kit .kp:hover .dot,.kit .kp:focus-visible .dot,.kit .kp.on .dot,.leak .kp:hover .dot,.leak .kp:focus-visible .dot{fill:var(--buoy)}
+.kit .kp.ok .dot{fill:var(--stbd);stroke:var(--stbd)}
+.kit .kp.show .dot,.leak .kp.busy .dot{animation:kpulse .5s ease-in-out infinite alternate}
+@keyframes kpulse{from{fill:rgba(242,163,58,.15);stroke-width:2}to{fill:var(--buoy);stroke-width:4}}
+.leak .kp.dry .dot{fill:rgba(147,174,187,.3);stroke:var(--muted)}
+.leak .kp.wet .dot{fill:var(--port);stroke:var(--port)}
+.kit .kjs{fill:none;stroke:var(--buoy);stroke-width:1.6;stroke-dasharray:5 4;opacity:.6}
+.leak .drip{fill:#9fd3e6;animation:drip .9s linear infinite}
+@keyframes drip{from{transform:translateY(-4px);opacity:1}to{transform:translateY(10px);opacity:0}}
+.flick{transform-box:fill-box;transform-origin:50% 100%;animation:flick .2s ease-in-out infinite alternate}
+@keyframes flick{from{transform:scaleY(1)}to{transform:scaleY(1.07) skewX(2deg)}}
+@media (prefers-reduced-motion:reduce){.kit .kp.show .dot,.leak .kp.busy .dot{animation:none;fill:var(--buoy)}.leak .drip,.flick{animation:none}}
 /* Флот как автосалон: название сверху, витрина миниатюр снизу, сворачиваемые характеристики справа, светлая студия */
 .fhead{position:absolute;top:14px;left:16px;z-index:3;pointer-events:none;max-width:58%}
 .fhead h2{margin:2px 0 0;font-family:var(--f-display);font-weight:600;font-size:clamp(20px,3.2vw,30px);line-height:1.1}

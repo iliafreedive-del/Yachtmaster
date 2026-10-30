@@ -2,8 +2,10 @@
    Мастер-класс по шагам из ANCHOR.lesson (js/content/anchor.js), потом практика по чек-листу ANCHOR.practice.
    Ход яхты — как в js/helm3d.js (метры и секунды). Цепь — цепная линия (catenary) между роульсом и якорем: под нагрузкой
    от ветра и заднего хода она выпрямляется; держание якоря зависит от грунта, длины цепи и того, закопался ли он.
-   Числа учебные, спорное — в docs/roadmap.md. Курс 0° — на север (−Z), правый борт при курсе 0° — к +X. */
-let A5=null,anchorMode=null;
+   Числа учебные, спорное — в docs/roadmap.md. Курс 0° — на север (−Z), правый борт при курсе 0° — к +X.
+   Та же бухта — для урока s4 «Отказ мотора»: startAnchor3D(mode,'fail3d') — мотор глохнет в узкости у подветренного берега,
+   спасают генуя или якорь, потом радио и поиск причины. Тексты — FAIL (js/content/fail.js), шаги — FXDONE. */
+let A5=null,anchorMode=null,failMode=null;
 const A5W=1.9,A5CH=60; // вес метра цепи 10 мм в воде, кгс; цепи в якорном ящике, м
 /* по лодкам: hb — роульс над водой, м; cw — парусность, кгс на узел²; hold — держание закопанного якоря в песке, кгс; dr — осадка, м;
    rl — роульс в модели; top — якорный огонь; ball — шар на штаге; th — тяга винта на малом и полном ходу, кгс */
@@ -97,20 +99,34 @@ const A5DONE={
   letgo:s=>s.anc.st==='bottom',veer:s=>s.anc.st==='bottom'&&s.anc.L>=s.need-.3,
   set:s=>s.holdT>5,off:s=>!s.eng&&s.thrI===2,ball:s=>s.ball,alarm:s=>!!s.alarm,light:s=>s.light,
   night:s=>s.nightDone,leave:s=>s.eng&&!s.light,heave:s=>s.paner,aweigh:s=>s.anc.st!=='bottom',housed:s=>s.anc.st==='home'};
+/* мотор заглох в узкости: два прохода у подветренного берега. Ключ — где берег: 1 — восточный (справа по ходу на юг каменная банка),
+   -1 — западный. s — идём на юг, n — на север; ms, mn — то же для моторной яхты: у неё выход только якорь, поэтому старт дальше от берега,
+   чтобы, легши на цепь, она не встала у самой мели. from — откуда дует ветер (на берег). FXT — чистая вода для мастер-класса: около 11 м, ил */
+const FXS={'1':{s:{x:95,z:-122,h:175},n:{x:102,z:-40,h:352},ms:{x:80,z:-134,h:177},mn:{x:87,z:-40,h:352},from:270},'-1':{s:{x:-112,z:-105,h:180},n:{x:-110,z:-25,h:0},ms:{x:-97,z:-105,h:180},mn:{x:-95,z:-25,h:0},from:90}};
+const FXT={x:60,z:45};
+const fxAng=(h,a)=>Math.abs(norm(h-a)); // угол между направлениями, 0…180°
+const FXDONE={
+  intro:()=>false,look:()=>false,fail:s=>s.fx.on&&!s.eng,neutral:s=>s.fx.on&&s.thrI===2,
+  away:s=>fxAng(s.h,s.wind.from+180)>=96&&fxAng(s.h,s.wind.from)>=35, // нос хотя бы на 6° от траверза к ветру, но не в левентик
+  genoa:s=>s.jib>.95,sail:s=>s.spotD<18,luff:s=>s.jibT===0&&s.jib<.05&&Math.abs(s.u)*MS2KN<.6&&fxAng(s.h,s.wind.from)<40,
+  letgo:s=>s.anc.st==='bottom',veer:s=>s.anc.st==='bottom'&&s.anc.L>=s.need-.3,held:s=>s.anc.st==='bottom'&&s.anc.dragT>8&&s.taut,
+  radio:s=>s.fx.radio==='PAN-PAN',cause:s=>s.fx.causeOK};
 
 function stopAnchor3D(){if(!A5)return;cancelAnimationFrame(A5.raf);A5.ro&&A5.ro.disconnect();A5.ro2&&A5.ro2.disconnect();A5.off();A5.renderer.dispose();try{A5.renderer.forceContextLoss()}catch(e){}
   $('#three').innerHTML='';$('#stage').classList.remove('tall');A5=null}
 
-function startAnchor3D(mode){
+function startAnchor3D(mode,kind){
   const host=$('#three');host.innerHTML='';
+  const P3=kind||'anchor3d',FX=P3==='fail3d',setMode=v=>{if(FX)failMode=v;else anchorMode=v}; // FX — урок «Отказ мотора»
   $('#stage').classList.add('tall');show('three');
   const renderer=makeRenderer(host);if(!renderer){$('#stage').classList.remove('tall');return false}
   padMode(null);$('#instBox').hidden=false;$('#trimBox').hidden=true;
   const R0=host.getBoundingClientRect(),lesson=mode==='lesson',lo=gfxQ()==='low';
-  const bid=typeof boatFor==='function'?boatFor('anchor3d'):'cruiser',BP=typeof BOATS!=='undefined'&&BOATS[bid]||null,BT=A5BT[bid]||A5BT.cruiser;
+  const bid=typeof boatFor==='function'?boatFor(P3):'cruiser',BP=typeof BOATS!=='undefined'&&BOATS[bid]||null,BT=A5BT[bid]||A5BT.cruiser;
   const E=BP?BP.eng:{fwd:4,back:2.6,walk:4,drift:.55,turn:1},B={L:(BP?BP.lenM:12)/2,W:(BP?BP.beamM:4.4)/2};
   B.hull=M4HULL.map(([x,z])=>[x*B.W/2.2,z*B.L/6]);B.ut=M4UT.map(u=>u>0?u*E.fwd/4:u*E.back/2.6);
-  if(typeof boatPicker==='function')boatPicker('anchor3d',bid);
+  if(typeof boatPicker==='function')boatPicker(P3,bid);
+  const jibOK=!FX||!BP||BP.sail; // у моторной яхты паруса нет: выход — только якорь
   a5map();
   const hb=(id,ru,en2)=>`<button class="hb" id="${id}" type="button">${ru}<small>${en2}</small></button>`;
   const ui=document.createElement('div');
@@ -127,9 +143,10 @@ function startAnchor3D(mode){
         <svg class="wheel" id="a5wheel" viewBox="-40 -40 80 80" aria-label="Штурвал"><g id="a5wg"><circle r="33" fill="none" stroke="#c9ced0" stroke-width="5"/>${[0,60,120,180,240,300].map(a=>`<line x1="0" y1="0" x2="${(Math.sin(a*D)*38).toFixed(1)}" y2="${(-Math.cos(a*D)*38).toFixed(1)}" stroke="${a?'#c9ced0':'#f2a33a'}" stroke-width="${a?3:4.5}" stroke-linecap="round"/>`).join('')}<circle r="7" fill="#555a5c" stroke="#c9ced0" stroke-width="2"/></g></svg>
         <button class="hb" data-h="1" aria-label="Штурвал вправо">▶</button></div>
         <div class="rud"><i id="a5rud"></i></div><div class="cap">руль · rudder</div></div>
-      <div class="hg" id="a5actG"><div class="cap">двигатель и брашпиль · engine & windlass</div><div class="acts">
-        ${hb('a5eng','Двигатель','start / stop')}${hb('a5go','Отдать','let go')}${hb('a5ball','Шар','ball')}
-        ${hb('a5veer','Травить','veer')}${hb('a5up','Выбирать','heave')}${hb('a5lite','Огонь','light')}</div></div>
+      <div class="hg" id="a5actG"><div class="cap">${FX?'двигатель, генуя, якорь, радио · engine, genoa, anchor, VHF':'двигатель и брашпиль · engine & windlass'}</div><div class="acts">
+        ${FX?`${hb('a5eng','Двигатель','start / stop')}${hb('a5go','Отдать','let go')}${hb('a5jib','Генуя','genoa')}
+        ${hb('a5veer','Травить','veer')}${hb('a5vhf','Радио','VHF')}${hb('a5why','Причина','find the cause')}`:`${hb('a5eng','Двигатель','start / stop')}${hb('a5go','Отдать','let go')}${hb('a5ball','Шар','ball')}
+        ${hb('a5veer','Травить','veer')}${hb('a5up','Выбирать','heave')}${hb('a5lite','Огонь','light')}`}</div></div>
       <div class="hg" id="a5thrG"><div class="cap">рычаг газа<br>throttle</div>
         <div class="hrow lever"><div class="track" id="a5thr">${[4,3,2,1,0].map(i=>`<button data-t="${i}" aria-label="${M4N[i][0]}"></button>`).join('')}<i class="knob" id="a5knob"></i></div>
         <div class="ticks"><span>▲▲</span><span>▲</span><span>N</span><span>▼</span><span>▼▼</span></div></div>
@@ -147,7 +164,10 @@ function startAnchor3D(mode){
   {const c=sun.shadow.camera;c.left=-30;c.right=30;c.top=30;c.bottom=-30;c.near=1;c.far=200}sun.shadow.bias=-.0008;scene.add(sun,sun.target);
   const M=M3,mesh=(geo,mat,x,y,z,p)=>mesh3(geo,mat,x,y,z,p||scene);
   // ветер дует с берега (с севера): у берега нет волны. В практике — из карточки «Условия», «каждый раз по-новому» — с северной половины
-  const wind=gustWind({from:lesson?0:cond.dir==='rnd'?(Math.floor(Math.random()*21)-10)*5+360:15,kn:lesson?8:condKn('anchor3d',cond)},!lesson&&cond.gust);
+  // «мотор заглох»: ветер дует на берег. Мастер-класс — восточный проход на юг, ветер с запада 12 узлов; «каждый раз по-новому» — любой проход и курс, ветер ±20°
+  const fxRnd=FX&&!lesson&&cond.dir==='rnd',fxSide=fxRnd&&Math.random()<.5?'-1':'1',fxGo=fxRnd&&Math.random()<.5?'n':'s',FS=FXS[fxSide];
+  const wind=gustWind(FX?{from:(FS.from+(fxRnd?Math.round(Math.random()*8-4)*5:0)+360)%360,kn:lesson?12:condKn(P3,cond)}:
+    {from:lesson?0:cond.dir==='rnd'?(Math.floor(Math.random()*21)-10)*5+360:15,kn:lesson?8:condKn('anchor3d',cond)},!lesson&&cond.gust);
   wind.from%=360;wind.base.from%=360;
   let sea=null;
   if(ocean)sea=makeOcean(scene,{R:420,sun:TD.sun,sunCol:TD.sunCol,tint:TD.water,wind:wind.base,calm:.25,opacity:lo?.8:.7,deep:0x1a5f69,shal:0x2b8a84,rip:.8,sky});
@@ -189,7 +209,9 @@ function startAnchor3D(mode){
   for(let i=0;i<7;i++)mesh(new THREE.DodecahedronGeometry(1.4+a5hash(i,5)*1.6,0),M(0x6f685e),A5SH.x+(a5hash(i,1)-.5)*9,-.9-a5hash(i,2)*.8,A5SH.z+(a5hash(i,3)-.5)*9);
 
   /* ---------- соседи на якоре ---------- */
-  const NB=(lesson?[['cat',62,-128,30],['cruiser',-86,-92,28]]:[['cat',62,-128,30],['cruiser',-86,-92,28],['motor',22,-34,40],['sloop',-8,-186,18]]).map(([t,ax,az,L],i)=>{
+  // в «мотор заглох» соседи стоят в середине бухты, в стороне от проходов у берегов
+  const NB=(FX?(lesson?[['cat',-20,-150,30],['cruiser',20,-110,28]]:[['cat',-20,-150,30],['cruiser',20,-110,28],['motor',-40,-60,40],['sloop',-30,-175,18]]):
+    lesson?[['cat',62,-128,30],['cruiser',-86,-92,28]]:[['cat',62,-128,30],['cruiser',-86,-92,28],['motor',22,-34,40],['sloop',-8,-186,18]]).map(([t,ax,az,L],i)=>{
     const P=A5BT[t],bp=BOATS[t],g=makeBoat(t,{band:[0x7a2e2e,0x2e5a3a,0x3a3f6a,0x6a5a2e][i],cover:[0x7a2e2e,0x2e5a3a,0x3a3f6a,0x6a5a2e][i]});g.rotation.order='YXZ';scene.add(g);
     const ball=mesh(new THREE.SphereGeometry(.3,12,8),M(0x111111),...P.ball,g);
     return{t,ax,az,L,g,ball,P,len:bp.lenM/2,wid:bp.beamM/2,h:wind.from,x:ax,z:az,dep:a5dep(ax,az)}});
@@ -199,6 +221,11 @@ function startAnchor3D(mode){
   // наша яхта; якорь в модели не рисуем — свой якорь висит на роульсе и уходит на дно
   const me=makeBoat(bid,{band:0x1f4f7a,cover:0x1f4f7a,full:true,noAnchor:true});me.rotation.order='YXZ';scene.add(me);
   const ballM=mesh(new THREE.SphereGeometry(.3,12,8),M(0x111111),...BT.ball,me);ballM.visible=false;
+  // генуя для урока «Отказ мотора»: сетка от штага до шкотового угла, раскручивается долей st.jib, шкот — на подветренный борт
+  const RG=bid==='cat'?RIG_CAT:bid==='sloop'?RIG_SLOOP:RIG_CRUISER,JU=7,JV=6;let jibG=null,jibM=null;
+  if(FX&&jibOK){jibG=new THREE.BufferGeometry();jibG.setAttribute('position',new THREE.BufferAttribute(new Float32Array(JU*JV*3),3));
+    const I=[];for(let i=0;i<JU-1;i++)for(let j=0;j<JV-1;j++){const a=i*JV+j;I.push(a,a+JV,a+1,a+1,a+JV,a+JV+1)}jibG.setIndex(I);
+    jibM=new THREE.Mesh(jibG,M(0xf4f1e6,{side:THREE.DoubleSide,roughness:.8}));jibM.visible=false;jibM.frustumCulled=false;me.add(jibM)}
   const wake=sea&&typeof makeWake==='function'?makeWake(scene,sea,{n:60,w0:.4,spread:2.2}):null,bowF=sea&&typeof makeBowFoam==='function'?makeBowFoam(me):null;
   // якорь (плуг): веретено, лапа и рым; на роульсе — часть яхты, на дне — отдельно
   const anc=new THREE.Group();{const am=M(0x8c9296,{metalness:.6,roughness:.4});
@@ -226,21 +253,26 @@ function startAnchor3D(mode){
     if(a5ground(x,z)!=='S'||d<4.5||d>7.5||a5swim(x,z))return false;
     for(let i=0;i<24;i++){const a=i/24*Math.PI*2,px=x+Math.sin(a)*R,pz=z-Math.cos(a)*R;if(a5dep(px,pz)<BT.dr+1.2||a5swim(px,pz))return false}
     return NB.every(n=>Math.hypot(n.ax-x,n.az-z)>.85*(R+Math.sqrt(Math.max(0,n.L*n.L-(n.dep+n.P.hb)**2))+2*n.len))};
-  let spot=null;{let best=1e9;for(let z=-170;z<=-100;z+=4)for(let x=-60;x<=40;x+=4){const d=a5dep(x,z),L=Math.ceil(4*(d+BT.hb));if(!spotOK(x,z,L))continue;
+  let spot=null;if(FX){const d=a5dep(FXT.x,FXT.z);spot={x:FXT.x,z:FXT.z,d,L:Math.ceil(4*(d+BT.hb))}}else{let best=1e9;for(let z=-170;z<=-100;z+=4)for(let x=-60;x<=40;x+=4){const d=a5dep(x,z),L=Math.ceil(4*(d+BT.hb));if(!spotOK(x,z,L))continue;
       const c=Math.hypot(x+12,z-(TRZ-34))+Math.abs(d-5.8)*6;if(c<best){best=c;spot={x,z,d,L}}}
     if(!spot){const d=a5dep(-12,-136);spot={x:-12,z:-136,d,L:Math.ceil(4*(d+BT.hb))}}}
 
   /* ---------- состояние ---------- */
-  const st={renderer,mode,scene,B,E,BT,cam,running:true,t:0,x:lesson?-8:4,z:lesson?-52:62,h:lesson?352:345,u:0,v:0,r:0,rud:0,thrI:2,eng:false,wind,
+  // «мотор заглох»: яхта уже идёт по проходу — парусная полным вперёд (4–6 узлов), моторная малым (около 3: полный у неё больше 7); в практике место и курс чуть меняются
+  const FXG=jibOK?4:3;
+  const S0=FX?(()=>{const q=FS[jibOK?fxGo:'m'+fxGo],r=k=>lesson?0:(Math.random()*2-1)*k;return{x:q.x+r(3),z:q.z+r(3),h:(q.h+r(4)+360)%360}})():{x:lesson?-8:4,z:lesson?-52:62,h:lesson?352:345};
+  const st={renderer,mode,scene,B,E,BT,cam,running:true,t:0,x:S0.x,z:S0.z,h:S0.h,u:FX?B.ut[FXG]:0,v:0,r:0,rud:0,thrI:FX?FXG:2,eng:FX,wind,
+    jib:0,jibT:0,heel:0,pw:1,fx:{on:false,t:lesson?9:6+Math.random()*8,cause:lesson?'fuel':['fuel','heat','prop'][Math.floor(Math.random()*3)],side:fxSide,go:fxGo,
+      radio:null,causeOK:false,crank:0,gearT:0,hot:0,safeT:0},
     si:0,okT:0,view:'third',yaw:0,camYaw:0,camPit:.4,k:{},msgT:0,hintT:0,hintId:'',coachT:0,
     anc:{st:'home',L:0,x:0,z:0,y:0,dep:0,g:'S',set:0,dragT:9,drag:0,Ht:0,Hmax:0,dir:0,fwd:false,pileW:false,mv0:0},
     taut:false,load:0,snatch:0,need:0,spotD:999,holdT:0,ball:false,light:false,alarm:null,plotOn:false,zoom:'bay',zoomU:false,
     tr:[],trS:0,trSep:0,dark:0,dusk:null,nt:null,nightDone:false,paner:false,winchT:0,winchW:false,noEngW:false,
-    pr:{engine:false,spot:false,letgo:false,veer:false,set:false,off:false,ball:false,alarm:false,night:false,heave:false},
-    iss:{anc_letgo:0,anc_scope:0,anc_ground:0,anc_swing:0,anc_drag:0,anc_pile:0,anc_winch:0,anc_alarm:0,anc_light:0},trail:[],tt:0,wake:[],wt:0};
+    pr:FX?{neutral:false,safe:false,radio:false,cause:false}:{engine:false,spot:false,letgo:false,veer:false,set:false,off:false,ball:false,alarm:false,night:false,heave:false},
+    iss:{anc_letgo:0,anc_scope:0,anc_ground:0,anc_swing:0,anc_drag:0,anc_pile:0,anc_winch:0,anc_alarm:0,anc_light:0,fail_gear:0,fail_heat:0,fail_crank:0,fail_radio:0,fail_cause:0,fail_late:0},trail:[],tt:0,wake:[],wt:0};
   A5=st;st.spot=spot;st.NB=NB;NB.forEach(n=>{n.h=wind.from;for(let i=0;i<40;i++)nbPlace(n,1)});
-  const msg=(t,c)=>{const m=$('#a5msg');m.innerHTML=rich(t);m.className='toast '+(c||'');m.hidden=false;st.msgT=5};
-  const say2=k=>ANCHOR.say[k];
+  const msg=(t,c)=>{const m=$('#a5msg');m.innerHTML=rich(t);m.className='toast '+(c||'');m.hidden=false;st.msgT=Math.max(5,t.length/22)};
+  const say2=k=>FX&&FAIL.say[k]!==undefined?FAIL.say[k]:ANCHOR.say[k];
   const bowXZ=()=>m4w(st,0,BT.rl[2]);
   const brg=(dx,dz)=>(Math.atan2(dx,-dz)/D+360)%360;
   const fmt=v=>String(Math.round(v*10)/10).replace('.',',');
@@ -248,8 +280,9 @@ function startAnchor3D(mode){
   /* ---------- органы управления ---------- */
   const setThr=i=>{st.thrI=clamp(i,0,4)};
   $('#a5eng').onclick=()=>{
-    if(st.eng){if(st.thrI!==2){msg('Сначала рычаг в нейтраль, потом глушить двигатель.','warn');return}st.eng=false;msg('Двигатель заглушен.','good');return}
+    if(st.eng){if(st.thrI!==2){msg('Сначала рычаг в нейтраль, потом глушить двигатель.','warn');return}st.eng=false;st.fx.alarm=false;msg('Двигатель заглушен.','good');return}
     if(st.thrI!==2){msg('Двигатель заводят только в [[нейтраль|нейтрали]]: поставь рычаг на N.','warn');return}
+    if(FX&&st.fx.on){fxCrank();return}
     st.eng=true;st.pr.engine=true;msg('Двигатель работает. Рычаг в нейтрали — винт не крутится.','good')};
   $('#a5thr').querySelectorAll('button').forEach(b=>b.onclick=()=>setThr(+b.dataset.t));
   const hold=(sel,on,off)=>host.querySelectorAll(sel).forEach(b=>{b.style.touchAction='none';
@@ -261,17 +294,20 @@ function startAnchor3D(mode){
     w.addEventListener('pointerdown',e=>{wd=ang(e);w.setPointerCapture(e.pointerId);e.preventDefault()});
     w.addEventListener('pointermove',e=>{if(wd===null)return;const a=ang(e);let d=a-wd;d=((d+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;wd=a;st.rud=clamp(st.rud+d/(1.5*Math.PI),-1,1)});
     ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>w.addEventListener(ev,()=>wd=null))}
+  // мастер-класс «мотор заглох»: на ходу больше узла якорь не отдаём, пока до мели под ветром есть запас (вернёт это расстояние)
+  const fxWait=kn=>{if(!FX||!lesson||Math.abs(kn)<=1)return 0;const d=leeD(),h=a5dep(st.x,st.z)+BT.hb;return d>Math.sqrt(15*h*h)+3*B.L?d:0};
   // «Отдать»: якорь в свободном падении уходит на дно, цепь бежит сама
   const letGo=()=>{const A=st.anc;if(!st.running||A.st!=='home')return;
-    if(lesson&&L[st.si]&&L[st.si].id!=='letgo'){msg(st.si<L.findIndex(s=>s.id==='letgo')?'Рано: сначала подойди к месту и остановись носом на ветер.':'Якорь уже отдан.','warn');return}
-    const kn=st.u*MS2KN;A.fwd=kn>.6;if(A.fwd){st.iss.anc_letgo++;msg(say2('fwd'),'bad')}
+    if(lesson&&L[st.si]&&L[st.si].id!=='letgo'){msg(st.si<L.findIndex(s=>s.id==='letgo')?FX?say2('early'):'Рано: сначала подойди к месту и остановись носом на ветер.':'Якорь уже отдан.','warn');return}
+    const kn=st.u*MS2KN,w=fxWait(kn);if(w){msg(say2('slow').replace('{V}',fmt(kn)).replace('{L}',w),'warn');return}
+    A.fwd=kn>(FX?1:.6);if(A.fwd){if(!FX)st.iss.anc_letgo++;msg(say2('fwd'),FX?'warn':'bad')}
     A.st='fall';A.L=0;A.set=.1;A.drag=0;A.pileW=false;st.paner=false};
   $('#a5go').onclick=letGo;
   const setBall=on=>{st.ball=on;ballM.visible=on};
-  $('#a5ball').onclick=()=>{if(st.ball){setBall(false);msg(say2('ballOff'));return}
+  if(!FX)$('#a5ball').onclick=()=>{if(st.ball){setBall(false);msg(say2('ballOff'));return}
     if(st.anc.st!=='bottom'){msg('Шар поднимают, когда яхта стоит на якоре.','warn');return}
     setBall(true);msg(say2('ball'),'good')};
-  $('#a5lite').onclick=()=>{st.light=!st.light;if(st.light&&st.ball)setBall(false);msg(say2(st.light?'lightOn':'lightOff'),st.light?'good':'')};
+  if(!FX)$('#a5lite').onclick=()=>{st.light=!st.light;if(st.light&&st.ball)setBall(false);msg(say2(st.light?'lightOn':'lightOff'),st.light?'good':'')};
   const togglePlot=on=>{st.plotOn=on==null?!st.plotOn:on;$('#a5chart').hidden=!st.plotOn;$('#a5plot').setAttribute('aria-pressed',st.plotOn);if(st.plotOn)chartSize()};
   $('#a5plot').onclick=()=>togglePlot();
   $('#a5cv').onclick=()=>{st.zoom=st.zoom==='bay'?'near':'bay';st.zoomU=true};
@@ -279,8 +315,8 @@ function startAnchor3D(mode){
     if(A.st!=='bottom'){msg(say2('alarmUp'),'warn');return}
     const h=A.dep+BT.hb,r=Math.round(Math.sqrt(Math.max(0,A.L*A.L-h*h))+2*B.L+10);st.alarm={x:A.x,z:A.z,r};msg(say2('alarmSet').replace('{R}',r),'good')};
   const views=camViews($('#a5cam'),'anchor',[['helm','у штурвала'],['third','за кормой'],['bow','нос · якорь'],['top','сверху']],'third',v=>{st.view=v;st.yaw=0});st.view=views.get();
-  $('#a5mode').onclick=()=>{anchorMode=lesson?'practice':'lesson';stopAnchor3D();startPractice('anchor3d')};
-  $('#a5rst').onclick=()=>{stopAnchor3D();condSkip=true;startPractice('anchor3d')};
+  $('#a5mode').onclick=()=>{setMode(lesson?'practice':'lesson');stopAnchor3D();startPractice(P3)};
+  $('#a5rst').onclick=()=>{stopAnchor3D();condSkip=true;startPractice(P3)};
   if(!lesson)$('#a5hint').onclick=()=>practiceHint(true);
   const KM={ArrowLeft:'h-1',KeyA:'h-1',ArrowRight:'h1',KeyD:'h1',KeyV:'veer',KeyH:'heave'};
   const kd=e=>{if(A5!==st||!$('#dlg').hidden||(e.target&&e.target.tagName==='INPUT'))return;
@@ -289,8 +325,10 @@ function startAnchor3D(mode){
     if(e.code==='ArrowUp'||e.code==='KeyW'){setThr(st.thrI+1);e.preventDefault()}
     else if(e.code==='ArrowDown'||e.code==='KeyS'){setThr(st.thrI-1);e.preventDefault()}
     else if(e.code==='KeyG'){letGo();e.preventDefault()}
-    else if(e.code==='KeyB'){$('#a5ball').click();e.preventDefault()}
-    else if(e.code==='KeyL'){$('#a5lite').click();e.preventDefault()}
+    else if(e.code==='KeyB'&&!FX){$('#a5ball').click();e.preventDefault()}
+    else if(e.code==='KeyL'&&!FX){$('#a5lite').click();e.preventDefault()}
+    else if(e.code==='KeyJ'&&FX){$('#a5jib').click();e.preventDefault()}
+    else if(e.code==='KeyR'&&FX){$('#a5vhf').click();e.preventDefault()}
     else if(e.code==='KeyM'){togglePlot();e.preventDefault()}
     else if(views.key(e))e.preventDefault()};
   const ku=e=>{if(KM[e.code])st.k[KM[e.code]]=false};
@@ -344,8 +382,10 @@ function startAnchor3D(mode){
     $('#a5alarm').innerHTML=st.alarm?`Тревога: ${st.alarm.r} м<small>alarm on</small>`:'Тревога<small>anchor alarm</small>';$('#a5alarm').classList.toggle('on',!!st.alarm)}
 
   /* ---------- мастер-класс ---------- */
-  const L=ANCHOR.lesson;
-  const stepTxt=t=>{const d=st.anc.st==='bottom'?st.anc.dep:spot.d,h=d+BT.hb;return t.replace('{D}',fmt(d)).replace('{H}',fmt(h)).replace('{N}',Math.ceil(4*h))};
+  const L=FX?FAIL.lesson.filter(s=>!s.only||s.only===(jibOK?'sail':'motor')):ANCHOR.lesson;
+  const stepTxt=t=>{if(FX){const A=st.anc,b=A.st==='bottom',d=b?A.dep:a5dep(st.x,st.z),g=b?A.g:a5ground(st.x,st.z);
+      return t.replace('{K}',Math.round(wind.kn)).replace('{L}',Math.round(leeD())).replace('{D}',fmt(d)).replace('{G}',A5GR[g].n+' · '+A5GR[g].en).replace('{N}',Math.ceil(4*(d+BT.hb)))}
+    const d=st.anc.st==='bottom'?st.anc.dep:spot.d,h=d+BT.hb;return t.replace('{D}',fmt(d)).replace('{H}',fmt(h)).replace('{N}',Math.ceil(4*h))};
   function enterStep(){
     host.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));
     const s=L[st.si];st.okT=0;st.holdT=0;
@@ -357,22 +397,23 @@ function startAnchor3D(mode){
     renderSteps();
   }
   function lessonTick(dt){
-    const s=L[st.si];if(!s||s.info)return;
-    if(A5DONE[s.id](st)){st.okT+=dt;if(st.okT>.35){
-      if(s.id==='set')msg(say2('held'),'good');
+    const s=L[st.si];if(FX&&s&&s.id==='intro'&&st.fx.on){st.si++;enterStep();return}if(!s||s.info)return;
+    if((FX?FXDONE:A5DONE)[s.id](st)){st.okT+=dt;if(st.okT>.35){
+      if(s.id==='set'||s.id==='held')msg(say2('held'),'good');
       else if(s.id==='veer')msg(`Вытравлено ${Math.round(st.anc.L)} м — ${fmt(st.anc.L/(st.anc.dep+BT.hb))} глубины. Стоп травить!`,'good');
-      else if(!['letgo','night','heave','aweigh','housed'].includes(s.id))msg('Верно! Следующий шаг.','good');
+      else if(!['letgo','night','heave','aweigh','housed','fail','radio','cause'].includes(s.id)&&st.si<L.length-1)msg('Верно! Следующий шаг.','good');
       st.si++;if(st.si>=L.length){lessonDone();return}enterStep()}}else st.okT=0;
   }
   function lessonDone(){
     st.running=false;host.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));$('#a5coach').hidden=true;ringSpot.visible=false;
-    done['anchor-lesson']=true;store.set(done);renderSteps();
+    done[FX?'fail-lesson':'anchor-lesson']=true;store.set(done);renderSteps();
+    if(FX){fxLessonDone();return}
     showDialog(`<h3>Мастер-класс пройден</h3><p>Ты выбрал место по карте, подошёл против ветра, отдал якорь, вытравил 4 глубины цепи, проверил держание задним ходом и по створу, поднял шар, поставил якорную тревогу, простоял ночь с заходом ветра и снялся с якоря: «Панер!», «Якорь встал!», «Якорь чист!». Теперь сам: в практике место выбираешь ты, ветер и время суток — из карточки «Условия», соседей больше, а ночью может быть неспокойно.</p><div class="row"><button class="btn ghost" id="a5again">Повторить</button><button class="btn" id="a5prac">К практике</button></div>`);
-    $('#a5again').onclick=()=>{hideDialog();anchorMode='lesson';stopAnchor3D();startPractice('anchor3d')};
-    $('#a5prac').onclick=()=>{hideDialog();anchorMode='practice';stopAnchor3D();startPractice('anchor3d')};
+    $('#a5again').onclick=()=>{hideDialog();setMode('lesson');stopAnchor3D();startPractice(P3)};
+    $('#a5prac').onclick=()=>{hideDialog();setMode('practice');stopAnchor3D();startPractice(P3)};
   }
   /* ---------- практика ---------- */
-  const PR=ANCHOR.practice;
+  const PR=FX?FAIL.practice:ANCHOR.practice;
   function practiceHint(now){const p=PR.find(x=>!st.pr[x.id]);if(!p)return;
     if(p.id!==st.hintId){st.hintId=p.id;st.hintT=0}
     if(now||st.hintT>18){st.hintT=-18;$('#a5coach').hidden=false;$('#a5coach').classList.remove('min');$('#a5coach').innerHTML=`<p class="qn">Шкипер Олег · подсказка</p><p>${rich(p.h)}</p>`;st.coachT=9}}
@@ -386,7 +427,7 @@ function startAnchor3D(mode){
   function swingCheck(){const A=st.anc,h=A.dep+BT.hb,R=Math.sqrt(Math.max(0,A.L*A.L-h*h))+2*B.L;
     for(let i=0;i<32;i++){const a=i/32*Math.PI*2,px=A.x+Math.sin(a)*R,pz=A.z-Math.cos(a)*R;if(a5dep(px,pz)<BT.dr+.6||(a5ground(px,pz)==='R'&&a5dep(px,pz)<BT.dr+2))return'swingS'}
     if(NB.some(n=>Math.hypot(n.ax-A.x,n.az-A.z)<.85*(R+n.R)))return'swingN';return null}
-  function practiceTick(dt){
+  function practiceTick(dt){if(FX){fxPracticeTick(dt);return}
     const P=st.pr,A=st.anc;
     if(st.eng)P.engine=true;
     if(A.st==='bottom'&&P.letgo&&!P.veer&&A.L>=st.need-.3){const sw=swingCheck();
@@ -407,28 +448,137 @@ function startAnchor3D(mode){
     if(PR.every(p=>P[p.id]))win();
   }
   // якорь ушёл с грунта до ночи: стоянку начинаем заново
-  function anchorUp(){const P=st.pr;if(lesson)return;
+  function anchorUp(){const P=st.pr;if(lesson||FX)return;
     if(!P.night){P.spot=P.letgo=P.veer=P.set=P.off=false;st.swW=false;if(st.alarm&&!st.nt){st.alarm=null;P.alarm=false}if(st.ball){setBall(false);if(!st.nt)P.ball=false}}}
-  function win(){
+  function win(){if(FX){fxWin();return}
     st.running=false;done.anchor=true;const tt=st.t-(st.tN||0)*59/60; // ночь шла в 60 раз быстрее: в зачёт — время, которое прошло у игрока
     if(cur==='course'&&crs.lesson&&crs.lesson.practice==='anchor3d')done['c:'+crs.lesson.id]=true;
     store.set(done);renderTabs();renderSteps();
     showDialog(`<h3>Якорная стоянка сдана</h3><p>Время ${Math.round(tt)} с. Ночью ветер заходил на ${Math.round(st.ntS||0)}° и дул до ${Math.round(st.ntK||0)} узлов. Якорь всего прополз ${fmt(st.anc.drag)} м. Ты выбрал место, вытравил цепь, проверил держание, поднял шар и огонь, поставил тревогу и утром снялся с якоря.</p>${practiceDone('anchor',true,tt,st.iss,bid)}<div class="row"><button class="btn ghost" id="a5again">Ещё раз</button>${cur==='course'?'<button class="btn" id="a5back">К урокам</button>':''}</div>`);
-    $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice('anchor3d')};
+    $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice(P3)};
     if(cur==='course')$('#a5back').onclick=()=>{hideDialog();stopAll();renderCourseHome()};
   }
   function fail(t){if(!st.running)return;st.running=false;st.u=st.v=st.r=0;
     if(lesson){showDialog(`<h3>Стоп</h3><p>${rich(t)}</p><div class="row"><button class="btn" id="a5again">Начать мастер-класс заново</button></div>`);
-      $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice('anchor3d')};return}
-    showDialog(`<h3>Авария</h3><p>${rich(t)}</p>${practiceDone('anchor',false,st.t-(st.tN||0)*59/60,st.iss,bid)}<div class="row"><button class="btn" id="a5again">Ещё раз</button></div>`);
-    $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice('anchor3d')}}
+      $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice(P3)};return}
+    showDialog(`<h3>Авария</h3><p>${rich(t)}</p>${practiceDone(FX?'fail':'anchor',false,st.t-(st.tN||0)*59/60,st.iss,bid)}<div class="row"><button class="btn" id="a5again">Ещё раз</button></div>`);
+    $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice(P3)}}
   function renderSteps(){
-    if(lesson){$('#taskLbl').textContent='Мастер-класс · якорная стоянка';
+    if(lesson){$('#taskLbl').textContent=FX?'Мастер-класс · мотор заглох в узкости':'Мастер-класс · якорная стоянка';
       $('#steps').innerHTML=L.map((s,i)=>`<li class="${i<st.si?'done':i===st.si?'now':''}"><i>${i<st.si?'✓':i+1}</i><span>${s.n}${en(s.en)}</span></li>`).join('')}
-    else{const d=st.pr;$('#taskLbl').textContent='Практика · якорная стоянка · anchoring';
+    else{const d=st.pr;$('#taskLbl').textContent=FX?'Практика · мотор заглох · engine failure':'Практика · якорная стоянка · anchoring';
       const first=PR.findIndex(x=>!d[x.id]);
       $('#steps').innerHTML=PR.map((s,i)=>`<li class="${d[s.id]?'done':i===first?'now':''}"><i>${d[s.id]?'✓':i+1}</i><span>${s.n}${en(s.en)}</span></li>`).join('')}
   }
+
+  /* ---------- мотор заглох в узкости (урок s4) ---------- */
+  // до мели под ветром: идём от яхты по ветру, пока глубина больше осадки
+  function leeD(){const to=(wind.from+180)*D,sx=Math.sin(to),sz=-Math.cos(to);for(let r=0;r<=200;r+=2)if(a5dep(st.x+sx*r,st.z+sz*r)<BT.dr+.5)return r;return 999}
+  // чистая вода: в радиусе R нет мелей, соседи не ближе 25 м
+  function clearW(x,z,R){for(let i=0;i<16;i++){const a=i/16*Math.PI*2;for(let r=8;r<=R;r+=8)if(a5dep(x+Math.sin(a)*r,z-Math.cos(a)*r)<BT.dr+1)return false}
+    return NB.every(n=>Math.hypot(n.x-x,n.z-z)>25)}
+  // генуя: скорость по поляре (sim2d.js); одна генуя тянет примерно на половину хода под всеми парусами, острее мёртвой зоны — полощет
+  function sailU(){if(st.jib<.05||!BP)return 0;const twa=fxAng(st.h,wind.from);st.luff=twa<BP.noGo+3;
+    return polar(twa,BP.noGo)*.55*(wind.kn/12)*BP.speed/MS2KN*st.jib}
+  const fxY=()=>{try{return typeof obYacht==='function'?obYacht():{}}catch(e){return{}}};
+  const fxName=()=>fxY().nm||'Galatea',fxPOB=()=>{const p=fxY().p;return p?p+' person'+(p===1?'':'s'):'four persons'};
+  // буй ловушки: если причина — намотка на винт, он стоит там, где яхта окажется к моменту отказа
+  if(FX&&st.fx.cause==='prop'){const dl=B.ut[FXG]*st.fx.t+B.L*.3,px=st.x+Math.sin(st.h*D)*dl,pz=st.z-Math.cos(st.h*D)*dl,pot=new THREE.Group();st.fx.buoy={x:px,z:pz};
+    mesh(new THREE.SphereGeometry(.3,12,8),M(0xf07a28),0,.1,0,pot);mesh(new THREE.CylinderGeometry(.025,.025,1.1,6),M(0x2b2f31),0,.6,0,pot);
+    mesh(new THREE.BoxGeometry(.02,.22,.32),M(0x1d2226),0,1.05,.16,pot);pot.position.set(px,0,pz);scene.add(pot);st.fx.pot=pot}
+  function fxTick(dt){const F=st.fx;
+    // отказ: по времени, а с намоткой — когда яхта прошла над буем ловушки (или чуть позже, если обошла его)
+    if(!F.on&&(F.buoy?Math.hypot(st.x-F.buoy.x,st.z-F.buoy.z)<B.L*.7||st.t>=F.t+6:st.t>=F.t)){F.on=true;F.t0=st.t;
+      if(F.cause==='prop'){st.eng=false;msg(say2('prop'),'bad')}else if(F.cause==='heat'){F.alarm=true;msg(say2('heat'),'bad')}else{F.dying=true;msg(say2('fuel'),'bad')}}
+    if(F.dying){st.pw=Math.max(0,st.pw-dt/3);if(st.pw<=0){F.dying=false;st.eng=false}}
+    if(F.alarm&&st.eng){F.hot+=dt;if(F.hot>20){st.eng=false;F.alarm=false;F.seized=true;st.iss.fail_heat++;msg(say2('heatSeize'),'bad')}}
+    if(F.on&&F.cause==='prop'&&st.eng&&st.thrI!==2){st.eng=false;st.iss.fail_gear++;msg(say2('propGear'),'bad')}
+    if(F.on&&!st.eng&&st.thrI!==2){F.gearT+=dt;if(F.gearT>8&&!F.gearW){F.gearW=true;st.iss.fail_gear++;msg(say2('gear'),'warn')}}
+    // генуя раскручивается за 2 с, сворачивается за 3 с; крен — от ветра в парусе, на подветренный борт
+    st.jib=clamp(st.jib+clamp(st.jibT-st.jib,-dt/3,dt/2),0,1);if(st.jib<.05)st.luff=false;
+    const twa=fxAng(st.h,wind.from),sd=norm(wind.from-st.h)>0?1:-1,hl=st.jib*clamp(Math.sin(twa*D)*wind.kn/16,0,1)*.12*((BP&&BP.heel)||1)*(st.luff?.3:1);
+    st.heel+=(sd*hl-st.heel)*Math.min(1,dt*1.5);
+    if(st.luff&&st.jib>.9){if(!st.luffW){st.luffW=true;msg(say2('luffing'),'warn')}}else st.luffW=false}
+  // «Двигатель» после отказа: топливо и заклинивший мотор не заводятся, перегретый заведётся и снова перегреется, с намоткой — заглохнет на передаче
+  function fxCrank(){const F=st.fx;
+    if(F.cause==='fuel'||F.seized){F.crank++;if(F.crank===3)st.iss.fail_crank++;msg(say2(F.crank>2?'crankMore':'crankFuel'),'warn');return}
+    st.eng=true;if(F.cause==='heat'){F.alarm=true;F.hot=Math.max(F.hot,14);msg(say2('heatAgain'),'bad')}else msg(say2('restart'),'warn')}
+  // якорь лёг: успели ли отдать, пока до опасности под ветром больше круга разворота, и хороший ли грунт
+  function fxLanded(){const A=st.anc,h=A.dep+BT.hb,R=Math.sqrt(15*h*h)+2*B.L,bad=spotCheck();
+    if(!lesson&&leeD()<R-B.L){st.iss.fail_late++;setTimeout(()=>{if(A5===st&&st.running)msg(say2('late'),'warn')},1600)}
+    else if(bad==='Wd'||bad==='R'){if(!lesson)st.iss.anc_ground++;setTimeout(()=>{if(A5===st&&st.running)msg(say2(bad),'bad')},1600)}}
+  function radioPick(k){if(!k)return;const F=st.fx,A=st.anc,anc=A.st==='bottom'&&A.dragT>3,sl=st.jib>.5&&!st.luff;
+    if(k==='PAN-PAN'){F.radio=k;st.pr.radio=true;msg(say2('pan').replace(/\{N\}/g,fxName()).replace('{S}',say2(anc?'stAnc':sl?'stSail':'stDrift')).replace('{P}',fxPOB()),'good');return}
+    if(k==='MAYDAY'&&!lesson&&!anc&&!sl&&leeD()<25){F.radio=k;st.pr.radio=true;msg(say2('mayOK'),'good');return}
+    st.iss.fail_radio++;msg(k==='MAYDAY'?say2('may').replace('{S}',say2(anc?'sAnc':sl?'sSail':'sDrift')):say2('sec'),'warn')}
+  function causePick(k){if(!k)return;const F=st.fx,C=FAIL.causes;
+    if(k===F.cause){F.causeOK=true;st.pr.cause=true;msg(say2('causeOK').replace('{T}',C[k].t),'good')}
+    else{st.iss.fail_cause++;msg(say2('causeBad').replace('{S}',C[F.cause].sym),'warn')}}
+  if(FX){
+    $('#a5jib').onclick=()=>{if(!jibOK){msg(say2('noJib'),'warn');return}
+      if(lesson&&!st.jibT&&L.findIndex(x=>x.id==='genoa')>st.si){msg(say2('earlyJib'),'warn');return}
+      st.jibT=st.jibT?0:1;msg(say2(st.jibT?'jibOut':'jibIn'),'good')};
+    $('#a5vhf').onclick=()=>{if(!st.fx.on){msg(say2('noFail'),'warn');return}if(lesson&&L.findIndex(x=>x.id==='radio')>st.si){msg(say2('earlyRadio'),'warn');return}
+      showDialog(`<h3>Радио · VHF, 16 канал</h3><p>${say2('radioQ')}</p><div class="row">${['MAYDAY','PAN-PAN','SECURITE'].map(k=>`<button class="btn" type="button" data-rv="${k}">${k}</button>`).join('')}<button class="btn ghost" type="button" data-rv="">Отмена</button></div>`);
+      $('#dlgCard').querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{hideDialog();radioPick(b.dataset.rv)})};
+    $('#a5why').onclick=()=>{const F=st.fx,C=FAIL.causes;if(!F.on){msg(say2('noFail'),'warn');return}
+      if(lesson?L.findIndex(x=>x.id==='cause')>st.si:!st.pr.safe){msg(say2('earlyCause'),'warn');return}
+      showDialog(`<h3>Причина · cause</h3><p>${say2('causeQ')}</p>${min?'':`<p class="ex">Что было: ${C[F.cause].sym}</p>`}<div class="row">${Object.keys(C).map(k=>`<button class="btn" type="button" data-cv="${k}">${C[k].n}</button>`).join('')}<button class="btn ghost" type="button" data-cv="">Отмена</button></div>`);
+      $('#dlgCard').querySelectorAll('[data-cv]').forEach(b=>b.onclick=()=>{hideDialog();causePick(b.dataset.cv)})}}
+  function fxPracticeTick(dt){const P=st.pr,F=st.fx,A=st.anc;
+    if(F.on&&!P.neutral&&st.thrI===2&&!st.eng)P.neutral=true;
+    // в безопасности: под генуей на чистой воде или якорь держит — 3 секунды подряд
+    st.safeC=(st.safeC||0)+dt;if(st.safeC>=.25){st.safeC=0;
+      const sail=st.jib>.9&&!st.luff&&Math.abs(st.u)*MS2KN>1&&clearW(st.x,st.z,45),anc=A.st==='bottom'&&A.dragT>8&&st.taut;
+      if(F.on&&!P.safe&&(sail||anc)){F.safeT+=.25;if(F.safeT>=3){P.safe=true;F.safeAt=st.t;F.how=anc?'anc':'sail';msg(say2(anc?'safeAnc':'safeSail'),'good')}}else F.safeT=0}
+    st.hintT+=dt;if(!min&&F.on)practiceHint(false);
+    if(st.coachT>0){st.coachT-=dt;if(st.coachT<=0)$('#a5coach').hidden=true}
+    if(PR.every(p=>P[p.id]))win()}
+  function fxLessonDone(){const C=FAIL.causes[st.fx.cause];
+    showDialog(`<h3>Мастер-класс пройден</h3><p>${jibOK?'Мотор заглох у подветренного берега: ты поставил рычаг в нейтраль, отвернул от скал, пока был ход, раскрутил геную и ушёл на чистую воду.':'Мотор заглох у подветренного берега: ты поставил рычаг в нейтраль, отвернул от скал и отдал якорь, как только погас ход, — у моторной яхты другого выхода нет.'} Потом PAN-PAN и причина: ${C.n.toLowerCase()}.</p>
+      <p>Теперь сам. В практике причина отказа каждый раз другая, проход и ветер — из карточки «Условия», а решать — парус или якорь — тебе.${jibOK?' Якорь без мотора показывает мастер-класс на моторной яхте: выбери её в «Лодке».':''}</p>
+      <div class="row"><button class="btn ghost" id="a5again">Повторить</button>${typeof engOpen==='function'?'<button class="btn ghost" id="a5fix">Как починить</button>':''}<button class="btn" id="a5prac">К практике</button></div>`);
+    $('#a5again').onclick=()=>{hideDialog();setMode('lesson');stopAnchor3D();startPractice(P3)};
+    $('#a5prac').onclick=()=>{hideDialog();setMode('practice');stopAnchor3D();startPractice(P3)};
+    const b=$('#a5fix');if(b)b.onclick=()=>{hideDialog();engOpen(C.fix)}}
+  function fxWin(){st.running=false;done.fail=true;const F=st.fx,C=FAIL.causes[F.cause],tt=st.t-(F.t0||0);
+    if(cur==='course'&&crs.lesson&&crs.lesson.practice==='fail3d')done['c:'+crs.lesson.id]=true;
+    store.set(done);renderTabs();renderSteps();
+    showDialog(`<h3>Яхта в безопасности</h3><p>Мотор заглох через ${Math.round(F.t0)} с. Через ${Math.round((F.safeAt||st.t)-F.t0)} с яхта была в безопасности: ${F.how==='anc'?'якорь держит':'под генуей на чистой воде'}. Сигнал — ${F.radio}, причина — ${C.n.toLowerCase()}.</p>${practiceDone('fail',true,tt,st.iss,bid)}
+      <div class="row"><button class="btn ghost" id="a5again">Ещё раз</button>${typeof engOpen==='function'?`<button class="btn ghost" id="a5fix">Мастер-класс: ${ENG_FIX[C.fix].n}</button>`:''}${cur==='course'?'<button class="btn" id="a5back">К урокам</button>':''}</div>`);
+    $('#a5again').onclick=()=>{hideDialog();stopAnchor3D();startPractice(P3)};
+    const b=$('#a5fix');if(b)b.onclick=()=>{hideDialog();engOpen(C.fix)};
+    if(cur==='course')$('#a5back').onclick=()=>{hideDialog();stopAll();renderCourseHome()}}
+  // генуя: сетка по треугольнику галсовый угол — фаловый — шкотовый, «пузо» на подветренный борт; полощет — рябь по задней шкаторине
+  function jibShape(t){if(!jibM)return;jibM.visible=st.jib>.02;if(!jibM.visible)return;
+    const twa=fxAng(st.h,wind.from),sd=norm(wind.from-st.h)>0?-1:1,T=RG.tack,Hd=RG.head,w=lerp(.6,2.1,(twa-35)/90)*B.W/2.2;
+    const C=[sd*w,RG.clewY+.2,T[2]+RG.jibL*1.15],cx=C[0]-T[0],cz=C[2]-T[2],cl=Math.hypot(cx,cz)||1,nx=sd>0?cz/cl:-cz/cl,nz=sd>0?-cx/cl:cx/cl;
+    const P=jibG.attributes.position.array,fl=st.luff?.35:0;let k=0;
+    for(let i=0;i<JU;i++){const u=i/(JU-1),lx=T[0]+(Hd[0]-T[0])*u,ly=T[1]+(Hd[1]-T[1])*u,lz=T[2]+(Hd[2]-T[2])*u,ex=C[0]+(Hd[0]-C[0])*u,ey=C[1]+(Hd[1]-C[1])*u,ez=C[2]+(Hd[2]-C[2])*u;
+      for(let j=0;j<JV;j++){const v=j/(JV-1)*st.jib,bel=(.11*cl*4*v*(1-v)+fl*Math.sin(t*17+u*5+v*9)*v)*(1-u*.75);
+        P[k++]=lx+(ex-lx)*v+nx*bel;P[k++]=ly+(ey-ly)*v;P[k++]=lz+(ez-lz)*v+nz*bel}}
+    jibG.attributes.position.needsUpdate=true;jibG.computeVertexNormals()}
+  // приборы: угол к ветру, генуя, до мели под ветром; двигатель — обороты и лампы
+  function fxRows(){const twa=Math.round(fxAng(st.h,wind.from)),sd=norm(wind.from-st.h)>0?'правый':'левый',l=leeD(),mu=v=>`<small style="font-size:12px;color:var(--muted)">${v}</small>`;
+    return`<div><span>Угол к ветру · TWA</span><b>${twa}° ${mu(sd+' борт')}</b></div>
+      <div><span>Генуя · genoa</span><b>${!jibOK?'нет':st.jib<.05?'свёрнута':st.jib<.95?'раскручивается':st.luff?'<span class="bad">полощет</span>':'тянет'}</b></div>
+      <div style="grid-column:1/-1"><span>До мели под ветром · lee shore</span><b>${l>=999?'больше 200 м':l<25?`<span class="bad">${l} м</span>`:l+' м'}</b></div>`}
+  function fxEng(){const F=st.fx;if(F.seized)return'<span class="bad">заклинил</span>';
+    if(st.eng){const rpm=[2000,1400,800,1400,2400][st.thrI]*(F.dying?Math.max(.35,st.pw):1);
+      return(F.alarm?'<span class="bad">перегрев!</span> ':F.dying?'<span class="bad">захлёбывается</span> ':'')+Math.round(rpm/50)*50+' об/мин'}
+    return F.on?'<span class="bad">заглох</span>':'заглушен'}
+  function fxLive(s,kn){const twa=Math.round(fxAng(st.h,wind.from)),A=st.anc,l=leeD();
+    if(s.id==='fail'||s.id==='neutral')return`Двигатель: ${fxEng().replace(/<[^>]+>/g,'')} · до мели под ветром ${l>=999?'больше 200':l} м`;
+    if(s.id==='away')return`Курс ${String(Math.round(st.h)).padStart(3,'0')}° · к ветру ${twa}° · ход ${Math.abs(kn).toFixed(1)} уз`;
+    if(s.id==='genoa')return`Генуя: ${st.jib<.05?'свёрнута':st.jib<.95?'раскручивается…':'тянет'} · до мели под ветром ${l>=999?'больше 200':l} м`;
+    if(s.id==='sail')return`До круга ${Math.round(st.spotD)} м · ход ${Math.abs(kn).toFixed(1)} уз · к ветру ${twa}°${st.luff?' · полощет — уваливайся':''}`;
+    if(s.id==='letgo')return`Ход ${Math.abs(kn).toFixed(1)} уз${fxWait(kn)?' — жди':' — отдавай'} · до мели под ветром ${l>=999?'больше 200':l} м · глубина ${fmt(a5dep(st.x,st.z))} м`;
+    if(s.id==='veer')return A.st==='bottom'?`Цепь ${Math.round(A.L)} из ${st.need} м${st.k.veer?'':' · держи «Травить»'}`:'';
+    if(s.id==='held')return A.dragT<1.5?'Якорь ползёт и закапывается…':!st.taut?'Цепь ещё не натянулась…':`Держит · ${Math.min(8,Math.floor(A.dragT))} из 8`;
+    return''}
+  function fxHint(){const F=st.fx,l=leeD();if(!F.on)return'Идёшь под мотором вдоль берега. Ветер дует на берег: держись середины прохода.';
+    if(!lesson&&!st.pr.safe)return l<30?`До мели под ветром ${l} м: решай сейчас — генуя или якорь.`:'Без мотора: генуя или якорь, пока под ветром есть место.';
+    return st.pr.safe||lesson?'Яхта вне опасности: радио, потом причина.':''}
 
   /* ---------- ночь: ускоренное время, ветер заходит и крепчает ---------- */
   function nightStart(){if(st.nt)return;const sh=lesson?80:(Math.random()<.5?-1:1)*(65+Math.random()*35),k=lesson?1.5:1.5+Math.random()*.25;
@@ -454,8 +604,10 @@ function startAnchor3D(mode){
     if(wind.step){wind.step(dt);if(sea)sea.gust(wind.from,wind.kn,.35)}
     if(st.k['h-1'])st.rud=clamp(st.rud-dt*1.1,-1,1);if(st.k.h1)st.rud=clamp(st.rud+dt*1.1,-1,1);
     const px=st.x,pz=st.z,ph=st.h,A=st.anc;
-    const thr=st.eng?THR[st.thrI]:0,uT=st.eng?B.ut[st.thrI]:0;
-    const k=!thr?.12:(Math.sign(uT)!==Math.sign(st.u)&&Math.abs(st.u)>.05)?.9:.4;
+    if(FX)fxTick(dt);
+    const thr=st.eng?THR[st.thrI]*st.pw:0,uS=FX?sailU():0;let uT=st.eng?B.ut[st.thrI]*st.pw:0;if(uS>uT)uT=uS; // генуя тянет, когда мотор встал
+    // без мотора яхта катится долго: в «мотор заглох» ход гаснет как у тяжёлой яхты, а не тормозит винтом
+    const k=FX&&uT>=0&&uT<st.u?.07:!thr?.12:(Math.sign(uT)!==Math.sign(st.u)&&Math.abs(st.u)>.05)?.9:.4;
     st.u+=(uT-st.u)*Math.min(1,dt*k);
     const flow=st.u+(thr>0?1.2*thr:0);
     let rT=st.rud*6*E.turn*flow*(flow<0?.8:1)*6/B.L/(1+.5*Math.max(0,st.u));
@@ -467,7 +619,7 @@ function startAnchor3D(mode){
     st.r+=(rT-st.r)*Math.min(1,dt*1.5);
     st.v+=(-st.v)*Math.min(1,dt*1.2);
     st.h=(st.h+st.r*dt+360)%360;
-    const sh=Math.sin(st.h*D),ch=Math.cos(st.h*D),to=(wind.from+180)*D,dr=wind.kn*.02*E.drift/.55*(1-.5*clamp(Math.abs(st.u)/1.5,0,1));
+    const sh=Math.sin(st.h*D),ch=Math.cos(st.h*D),to=(wind.from+180)*D,dr=wind.kn*.02*E.drift/.55*(1-.5*clamp(Math.abs(st.u)/1.5,0,1))*(FX?1.6:1);
     st.x+=sh*st.u*dt+ch*st.v*dt+Math.sin(to)*dr*dt;
     st.z+=-ch*st.u*dt+sh*st.v*dt-Math.cos(to)*dr*dt;
     windlass(dt);
@@ -475,7 +627,7 @@ function startAnchor3D(mode){
     // мель и берег: под килем меньше осадки — касание
     const dC=a5dep(st.x,st.z),[fx,fz]=m4w(st,0,-B.L*.9),dF=a5dep(fx,fz);
     if(dC<BT.dr||dF<.4){st.x=px;st.z=pz;st.h=ph;st.u*=-.2;st.r=0;
-      fail(dF<.4&&dC>=BT.dr?'Яхта ткнулась носом в берег. К берегу подходят только по глубинам с карты и малым ходом.':`Яхта села на мель: глубина ${fmt(Math.min(dC,dF))} м, осадка ${fmt(BT.dr)} м. ${st.nt?'Ночью якорь пополз, и яхту вынесло на мель. Якорная тревога разбудила бы раньше.':'Смотри на глубины на карте и на эхолот.'}`);return}
+      fail(FX?(dF<.4&&dC>=BT.dr?say2('ashore'):say2('aground').replace('{D}',fmt(Math.min(dC,dF))).replace('{R}',fmt(BT.dr))):dF<.4&&dC>=BT.dr?'Яхта ткнулась носом в берег. К берегу подходят только по глубинам с карты и малым ходом.':`Яхта села на мель: глубина ${fmt(Math.min(dC,dF))} м, осадка ${fmt(BT.dr)} м. ${st.nt?'Ночью якорь пополз, и яхту вынесло на мель. Якорная тревога разбудила бы раньше.':'Смотри на глубины на карте и на эхолот.'}`);return}
     // соседи: столкновение — точка нашего корпуса внутри их корпуса
     for(const n of NB){if(Math.hypot(st.x-n.x,st.z-n.z)>B.L+n.len+2)continue;const s=Math.sin(n.h*D),c=Math.cos(n.h*D);
       if(B.hull.some(([lx,lz])=>{const[wx,wz]=m4w(st,lx,lz),dx=wx-n.x,dz=wz-n.z,ax=dx*c+dz*s,az=-dx*s+dz*c;return Math.abs(ax)<n.wid*.85&&Math.abs(az)<n.len*.92})){
@@ -494,9 +646,11 @@ function startAnchor3D(mode){
   }
   // брашпиль: травить, выбирать; якорь на весу идёт под роульсом
   function windlass(dt){const A=st.anc,[bx,bz]=bowXZ();
-    if(A.st==='home'&&st.k.veer){if(lesson&&L[st.si]&&L[st.si].id!=='letgo'&&st.si<L.findIndex(s=>s.id==='letgo')){st.k.veer=false;msg('Рано: сначала подойди к месту и остановись носом на ветер.','warn');return}A.st='up';A.L=0;A.set=.1;A.drag=0;A.pileW=false;st.paner=false;A.fwd=st.u*MS2KN>.6;if(A.fwd){st.iss.anc_letgo++;msg(say2('fwd'),'bad')}}
+    if(A.st==='home'&&st.k.veer){if(lesson&&L[st.si]&&L[st.si].id!=='letgo'&&st.si<L.findIndex(s=>s.id==='letgo')){st.k.veer=false;msg(FX?say2('early'):'Рано: сначала подойди к месту и остановись носом на ветер.','warn');return}
+      {const kn=st.u*MS2KN,w=fxWait(kn);if(w){st.k.veer=false;msg(say2('slow').replace('{V}',fmt(kn)).replace('{L}',w),'warn');return}}
+      A.st='up';A.L=0;A.set=.1;A.drag=0;A.pileW=false;st.paner=false;A.fwd=st.u*MS2KN>(FX?1:.6);if(A.fwd){if(!FX)st.iss.anc_letgo++;msg(say2('fwd'),FX?'warn':'bad')}}
     if(A.st==='fall')A.L+=1.4*dt;
-    else if(st.k.veer&&A.st!=='home'){if(A.L>=A5CH){if(!A.fullW){A.fullW=true;msg(say2('full'),'warn')}}else A.L=Math.min(A5CH,A.L+.55*dt)}
+    else if(st.k.veer&&A.st!=='home'){if(A.L>=A5CH){if(!A.fullW){A.fullW=true;msg(say2('full'),'warn')}}else A.L=Math.min(A5CH,A.L+(FX&&A.st==='bottom'&&(A.pile||0)>2.5?0:.55*dt))}
     if(st.k.heave&&A.L>0){if(!st.eng&&!st.noEngW){st.noEngW=true;msg(say2('noEng'),'warn')}
       const hard=A.st==='bottom'&&st.taut&&A.Ht>60;
       if(hard){st.winchT+=dt;if(st.winchT>1.5&&!st.winchW){st.winchW=true;st.iss.anc_winch++;msg(say2('winch'),'warn')}}else st.winchT=0;
@@ -510,7 +664,7 @@ function startAnchor3D(mode){
     if(A.st==='fall'||A.st==='up'){A.x=bx;A.z=bz;const dep=a5dep(bx,bz);A.y=BT.hb-A.L;
       if(A.L>=dep+BT.hb){A.st='bottom';A.dep=dep;A.g=a5ground(bx,bz);A.set=.1;A.dragT=0;A.L=dep+BT.hb;st.need=Math.ceil(4*(dep+BT.hb));
         msg(say2('landed').replace('{D}',fmt(dep)).replace('{G}',A5GR[A.g].n+' · '+A5GR[A.g].en),'good');
-        if(!lesson){const bad=spotCheck();if(bad){st.iss.anc_ground+=bad==='Wd'||bad==='R'?1:0;if(bad!=='Wd'&&bad!=='R')st.iss.anc_swing++;setTimeout(()=>{if(A5===st&&st.running)msg(say2(bad),'bad')},1600)}
+        if(FX)fxLanded();else if(!lesson){const bad=spotCheck();if(bad){st.iss.anc_ground+=bad==='Wd'||bad==='R'?1:0;if(bad!=='Wd'&&bad!=='R')st.iss.anc_swing++;setTimeout(()=>{if(A5===st&&st.running)msg(say2(bad),'bad')},1600)}
           else{st.pr.spot=true}st.pr.letgo=true}}}}
   // цепь: нос не уходит от якоря дальше пролёта цепной линии под текущей нагрузкой; если тянет сильнее держания — якорь ползёт
   function chainStep(dt,px,pz){const A=st.anc;if(A.st!=='bottom'){st.taut=false;A.Ht=0;return}
@@ -530,10 +684,10 @@ function startAnchor3D(mode){
     if(A.Ht>A.Hmax+1&&A.L>h){const vd=Math.min(.7,.05+(A.Ht-A.Hmax)/Math.max(A.Hmax,20)*.45),mv=Math.min(vd*dt,Math.max(0,d-.5));
       A.x+=nx*mv;A.z+=nz*mv;A.drag+=mv;A.dragT=0;A.dep=a5dep(A.x,A.z);A.g=a5ground(A.x,A.z);
       if(A.g==='R'){if(Math.random()<mv*.25)A.set=Math.min(.9,A.set+.6)}else A.set=Math.min(A5GR[A.g].max,A.set+mv*A5GR[A.g].rate);A.dir=pull;
-      if(!st.dragMsgT||st.t-st.dragMsgT>8){st.dragMsgT=st.t;if(st.nt||st.pr.set||(lesson&&st.si>L.findIndex(s=>s.id==='set')))msg(say2('drag'),'bad');else if(A.drag>1.2)msg(say2('dragSet'),'warn')}}
+      if(!st.dragMsgT||st.t-st.dragMsgT>8){st.dragMsgT=st.t;const iS=lesson?L.findIndex(s=>s.id===(FX?'held':'set')):-1;if(st.nt||st.pr.set||(iS>=0&&st.si>iS))msg(say2('drag'),'bad');else if(A.drag>1.2)msg(say2('dragSet'),'warn')}}
     else{A.dragT+=dt;if(A.Ht>.3*A.Hmax&&(A.g==='S'||A.g==='M'))A.set=Math.min(1,A.set+dt*.01)}
     // цепь кучей на якоре
-    const pile=A.L-h-d;if(pile>Math.max(6,A.L*.25)&&!A.pileW&&A.L>h+3){A.pileW=true;st.iss.anc_pile++;msg(say2('pile'),'warn')}}
+    const pile=A.L-h-d;A.pile=pile;if(pile>Math.max(6,A.L*.25)&&!A.pileW&&A.L>h+3){A.pileW=true;st.iss.anc_pile++;msg(say2('pile'),'warn')}}
   // створ: угол между знаком и башней, как их видит рулевой; стоит ли он последние 4 с
   function transit(dt){if(!trF)return;st.trS+=dt;if(st.trS<.25)return;st.trS=0;
     const s=norm(brg(trR.x-st.x,trR.z-st.z)-brg(trF.x-st.x,trF.z-st.z));st.trSep=s;st.tr.push([st.t,s]);while(st.tr.length&&st.tr[0][0]<st.t-4)st.tr.shift()}
@@ -565,25 +719,27 @@ function startAnchor3D(mode){
     cg.attributes.position.needsUpdate=true;cg.computeBoundingSphere()}
   function target(){
     if(lesson){const s=L[st.si];if(!st.running||!s)return null;
-      if(s.mark==='spot'&&st.anc.st==='home')return[spot.x,spot.z,'место для якоря','anchor here',1];return null}
+      if(s.mark==='spot'&&st.anc.st==='home')return[spot.x,spot.z,'место для якоря','anchor here',1];
+      if(s.mark==='safe')return[spot.x,spot.z,'чистая вода','open water',1];return null}
     return null}
   function frame(now){
     if(A5!==st)return;
     const dt=Math.min(.05,(now-lastT)/1000);lastT=now;
     // ночь идёт в 60 раз быстрее: полчаса ветра за полминуты
     const nx=st.nt&&!st.nt.pause?60*M4X:M4X;
-    for(let i=0;i<nx&&st.running&&$('#dlg').hidden;i++)physics(dt);
+    const hold=FX&&lesson&&st.fx.on&&L[st.si]&&L[st.si].info;
+    for(let i=0;i<nx&&st.running&&$('#dlg').hidden&&!hold;i++)physics(dt);
     const t=now/1000;
     // темнота: вечер и ночь — «ночной фильтр» поверх сцены, огни — точки поверх него
     const dk=st.nt?(()=>{const f=st.nt.t/st.nt.T;return f<.08?.45+f/.08*.55:f>.88?Math.max(0,1-(f-.88)/.1):1})():st.dusk?Math.min(.45,st.dusk.t/8*.45):0;
     st.dark+=(dk-st.dark)*Math.min(1,dt*2);$('#a5night').style.opacity=(st.dark*.8).toFixed(3);
-    if(sea){sea.update(t,st.x,st.z);const sr=sea.float(me,st.x,st.z,st.h,B.L,B.W,t,dt,(me.userData.wl||0)*.5);me.position.x=st.x;me.position.z=st.z;me.rotation.set(sr.p,-st.h*D,sr.r);
+    if(sea){sea.update(t,st.x,st.z);const sr=sea.float(me,st.x,st.z,st.h,B.L,B.W,t,dt,(me.userData.wl||0)*.5);me.position.x=st.x;me.position.z=st.z;me.rotation.set(sr.p,-st.h*D,sr.r+st.heel);
       zbuoys.forEach((b,i)=>{b.position.y=sea.height(zone[i][0],zone[i][1],t)-.1});
       NB.forEach(n=>{const r=sea.float(n.g,n.x,n.z,n.h,n.len,n.wid,t,dt,(n.g.userData.wl||0)*.5);n.g.position.x=n.x;n.g.position.z=n.z;n.g.rotation.set(r.p,-n.h*D,r.r);n.ball.visible=st.dark<.3});
       if(wake)wake.update(st.wake,Math.abs(st.u)>.25?m4w(st,0,B.L):null,t);if(bowF)bowF.update(st.u,t)}
-    else{me.position.set(st.x,0,st.z);me.rotation.set(0,-st.h*D,0);NB.forEach(n=>{n.g.position.set(n.x,0,n.z);n.g.rotation.set(0,-n.h*D,0)})}
+    else{me.position.set(st.x,0,st.z);me.rotation.set(0,-st.h*D,st.heel);NB.forEach(n=>{n.g.position.set(n.x,0,n.z);n.g.rotation.set(0,-n.h*D,0)})}
     if(me.userData.helm)me.userData.helm(st.rud*1.5);else if(me.userData.wheel)me.userData.wheel.rotation.z=-st.rud*2.4;
-    drawChain(t);
+    drawChain(t);if(FX)jibShape(t);
     // кольца: место (мастер-класс), круг разворота, тревога; соседи — в мастер-классе и с подсказками
     const A=st.anc,tg2=target();ringSpot.visible=!!(lesson&&tg2);if(ringSpot.visible){ringSpot.position.set(spot.x,.15,spot.z);ringSpot.material.opacity=.45+Math.sin(t*4)*.2}
     if(A.st==='bottom'&&!min){const h=A.dep+BT.hb;setRing(ringSw,Math.sqrt(Math.max(0,A.L*A.L-h*h))+2*B.L);ringSw.position.set(A.x,.12,A.z);ringSw.visible=true}else ringSw.visible=false;
@@ -621,8 +777,9 @@ function startAnchor3D(mode){
     $('#a5rud').style.left=(50+st.rud*46)+'%';$('#a5wg').setAttribute('transform',`rotate(${st.rud*270})`);
     $('#a5knob').style.top=((4-st.thrI)*20+2)+'px';$('#a5thrN').innerHTML=`${M4N[st.thrI][0]}${en(M4N[st.thrI][1])}`;
     $('#a5thr').classList.toggle('astern',st.thrI<2);$('#a5thr').classList.toggle('ahead',st.thrI>2);$('#a5eng').classList.toggle('on',st.eng);
-    $('#a5veer').classList.toggle('on',!!st.k.veer&&A.st!=='home');$('#a5up').classList.toggle('on',!!st.k.heave&&A.L>0);$('#a5go').classList.toggle('on',A.st!=='home');
-    $('#a5ball').classList.toggle('on',st.ball);$('#a5lite').classList.toggle('on',st.light);
+    $('#a5veer').classList.toggle('on',!!st.k.veer&&A.st!=='home');if(!FX)$('#a5up').classList.toggle('on',!!st.k.heave&&A.L>0);$('#a5go').classList.toggle('on',A.st!=='home');
+    if(FX){$('#a5jib').classList.toggle('on',st.jibT>0);$('#a5vhf').classList.toggle('on',!!st.fx.radio);$('#a5why').classList.toggle('on',st.fx.causeOK)}
+    else{$('#a5ball').classList.toggle('on',st.ball);$('#a5lite').classList.toggle('on',st.light)}
     const Y=st.camYaw,wdx=Math.sin((wind.from+180)*D),wdz=-Math.cos((wind.from+180)*D),u2=-wdx*Math.sin(Y)-wdz*Math.cos(Y),rt=wdx*Math.cos(Y)-wdz*Math.sin(Y);
     $('#a5wa').setAttribute('transform',`rotate(${Math.atan2(rt,u2)/D-180})`);$('#a5wt').textContent=`${Math.round(wind.kn)} уз · ${compassName(wind.from)}`;
     if(now-lastP>120){lastP=now;panel();drawChart()}
@@ -643,22 +800,24 @@ function startAnchor3D(mode){
       <div style="grid-column:1/-1"><span>Цепь · chain</span><b>${Math.round(A.L)} м${A.st==='bottom'?` · ${fmt(sc)} × глубины${sc<4-.05?` <small style="font-size:12px;color:var(--muted)">нужно ${Math.ceil(4*h)} м</small>`:''}`:''}</b></div>
       <div style="grid-column:1/-1"><span>Якорь · anchor</span><b>${aSt}${A.st==='bottom'?` <small style="font-size:12px;color:var(--muted)">${A5GR[A.g].n}, ${fmt(A.dep)} м</small>`:''}</b></div>
       ${A.st==='bottom'||(s&&s.mark==='tr')?tr:''}
-      <div style="grid-column:1/-1"><span>Рычаг газа · throttle</span><b>${M4N[st.thrI][0]} <small style="font-size:12px;color:var(--muted)">${M4N[st.thrI][1]}</small></b></div>
-      <div><span>Двигатель · engine</span><b>${st.eng?'работает':'заглушен'}</b></div><div><span>Ветер · wind</span><b>${Math.round(wind.kn)} уз ${compassName(wind.from)}</b></div>`;
+      ${FX?fxRows(kn):''}<div style="grid-column:1/-1"><span>Рычаг газа · throttle</span><b>${M4N[st.thrI][0]} <small style="font-size:12px;color:var(--muted)">${M4N[st.thrI][1]}</small></b></div>
+      <div><span>Двигатель · engine</span><b>${FX?fxEng():st.eng?'работает':'заглушен'}</b></div><div><span>Ветер · wind</span><b>${Math.round(wind.kn)} уз ${compassName(wind.from)}</b></div>`;
     // живая подсказка в карточке мастер-класса
     const lv=$('#a5live');if(lv&&s){let t='';
-      if(s.id==='approach'||s.id==='stop')t=`До места ${Math.round(st.spotD)} м · ход ${Math.abs(kn).toFixed(1)} уз · нос к ветру ${Math.round(Math.abs(norm(st.h-wind.from)))}°`;
+      if(FX)t=fxLive(s,kn);
+      else if(s.id==='approach'||s.id==='stop')t=`До места ${Math.round(st.spotD)} м · ход ${Math.abs(kn).toFixed(1)} уз · нос к ветру ${Math.round(Math.abs(norm(st.h-wind.from)))}°`;
       else if(s.id==='veer')t=A.st==='bottom'?`Цепь ${Math.round(A.L)} из ${st.need} м${st.thrI<2?'':' · дай малый назад'}${st.k.veer?'':' · держи «Травить»'}`:'';
       else if(s.id==='set')t=st.thrI!==1?'Рычаг — на малый назад':A.dragT<1.5?'Якорь ползёт и закапывается…':!st.taut?'Цепь ещё не натянулась…':`Держит · ${Math.min(5,Math.floor(st.holdT))} из 5`;
       else if(s.id==='heave')t=`Цепь ${Math.round(A.L)} м · до панера ≈ ${Math.max(0,Math.round(A.L-h))} м${st.taut&&A.Ht>60?' · брашпиль тянет — дай малый вперёд':''}`;
       lv.textContent=t}
     if(!st.running)return;
     if(min){hint('');if(!lesson)renderSteps();return}
-    hint(A.st==='bottom'?(sc<4-.05?`Цепи ${fmt(sc)} глубины — мало: нужно не меньше 4.`:'Якорь держит, пока цепь лежит по дну и тянет вдоль грунта.'):'Ищи песок (S) или ил (M) и глубину 3–12 м. Подходи против ветра.',A.st==='bottom'&&sc>=4-.05?'good':'');
+    hint(FX?fxHint():A.st==='bottom'?(sc<4-.05?`Цепи ${fmt(sc)} глубины — мало: нужно не меньше 4.`:'Якорь держит, пока цепь лежит по дну и тянет вдоль грунта.'):'Ищи песок (S) или ил (M) и глубину 3–12 м. Подходи против ветра.',A.st==='bottom'&&sc>=4-.05?'good':'');
     if(!lesson)renderSteps();
   }
-  say(lesson?'Мастер-класс по якорной стоянке: я подсвечиваю, что делать, и жду, пока сделаешь. Сначала — карта бухты.':`Теперь сам. Ветер ${Math.round(wind.kn)} узлов ${windFrom(wind.from)}${cond.gust?', порывистый':''}. Выбери место, встань на якорь и переночуй. Если застрянешь, нажми «Подсказка».`);
-  if(lesson)enterStep();else{renderSteps();if(!min)practiceHint(true)}
+  if(FX)say(lesson?'Мастер-класс «Мотор заглох в узкости»: я подсвечиваю, что делать, и жду, пока сделаешь. Сначала осмотрись.':say2('start').replace('{B}',fxSide==='1'?'восточного':'западного').replace('{K}',Math.round(wind.kn)));
+  else say(lesson?'Мастер-класс по якорной стоянке: я подсвечиваю, что делать, и жду, пока сделаешь. Сначала — карта бухты.':`Теперь сам. Ветер ${Math.round(wind.kn)} узлов ${windFrom(wind.from)}${cond.gust?', порывистый':''}. Выбери место, встань на якорь и переночуй. Если застрянешь, нажми «Подсказка».`);
+  if(lesson)enterStep();else{renderSteps();if(!min&&!FX)practiceHint(true)}
   if(innerWidth>700&&!lesson)togglePlot(true);
   st.raf=requestAnimationFrame(frame);
   return true;
