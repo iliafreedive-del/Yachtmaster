@@ -29,6 +29,7 @@ function startEx(ex){
   if(ex==='fail'){openLesson('s4',0);failMode='practice';startLessonPractice();return}
   if(ex==='pilot'){openLesson('n3',0);pilotMode='practice';startLessonPractice();return}
   if(ex==='tender'){openLesson('p10',0);tenderMode='practice';startLessonPractice();return}
+  if(ex==='fuel'){openLesson('h1',0);fuelMode='practice';startLessonPractice();return}
   if(ex==='exam'){openChapter('exam');if(typeof drRun==='function')drRun('exam');return}
   if(ex==='day1')deckMode='practice';
   if(ex==='day4')moorMode='practice';

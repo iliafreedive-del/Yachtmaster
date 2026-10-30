@@ -9,6 +9,7 @@ const COURSE=[
  {id:'bb',n:'Теория Bareboat Skipper',en:'Bareboat Skipper theory',lessons:[]},
  {id:'drv',n:'Практика на воде',en:'Hands-on: wind, helming, anchoring, MOB, mooring, heavy weather',lessons:[]},
  {id:'nav',n:'Переход и пилотаж',en:'Passage planning, pilotage, night & fog',lessons:[]},
+ {id:'life',n:'Хозяйство и жизнь на борту',en:'Life aboard: fuel, water, power, galley, heads, crew',lessons:[]},
  {id:'sos',n:'Безопасность и аварии',en:'Safety & emergencies',lessons:[]},
  {id:'med',n:'Первая помощь',en:'First aid',lessons:[]},
  {id:'vhf',n:'Радиосвязь VHF',en:'VHF / SRC radio',lessons:[]}

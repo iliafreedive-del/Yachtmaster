@@ -83,7 +83,7 @@ document.addEventListener('click',e=>{const h=e.target.closest&&e.target.closest
 /* подписи в 3D-сцене не налезают друг на друга и не прячутся под карточки, пульт и кнопки: каждую следующую (по порядку важности)
    сдвигаем на ближайшее свободное место — вниз, вверх или вбок от помехи. max — на сколько пикселей можно сдвинуть;
    если ближе места нет, подпись прячется до следующего кадра (так в Дне 1, где подписей много). Звать каждый кадр после расстановки */
-const DC_OBST='.coach,.task3,.hud3.wind,.hud3.plot,.tools,.hg,.crew3,.pad .g';
+const DC_OBST='.coach,.task3,.hud3.wind,.hud3.plot,.tools,.hg,.crew3,.pad .g,.fuhud';
 function declutter(labels,max){
   labels=labels.filter(el=>el&&!el.hidden);if(!labels.length)return;
   const host=labels[0].offsetParent;if(!host)return;
