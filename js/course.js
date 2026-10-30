@@ -782,12 +782,12 @@ LABS.phon=el=>{
 };
 
 /* ---------- собрать сообщение по порядку ---------- */
-function orderLab(el,items,okText){
+function orderLab(el,items,okText,miss){ // miss — подсказка, если нажали не по порядку
   const order=items.map((_,i)=>i).sort(()=>Math.random()-.5);let next=0;
   el.innerHTML=`<ol class="msg" id="olO"></ol><div class="chips" id="olC">${order.map(i=>`<button data-i="${i}">${items[i][0]}</button>`).join('')}</div><p class="lo" id="olM">Нажимай части сообщения в правильном порядке.</p><div class="row"><button class="btn ghost" id="olR">Заново</button></div>`;
-  $('#olR').onclick=()=>orderLab(el,items,okText);
+  $('#olR').onclick=()=>orderLab(el,items,okText,miss);
   el.querySelectorAll('#olC button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;
-    if(i!==next){$('#olM').innerHTML=`<span class="warn">Не сейчас. Сначала идёт другое: подумай, что спасатель должен услышать раньше.</span>`;return}
+    if(i!==next){$('#olM').innerHTML=`<span class="warn">${miss||'Не сейчас. Сначала идёт другое: подумай, что спасатель должен услышать раньше.'}</span>`;return}
     b.remove();$('#olO').insertAdjacentHTML('beforeend',`<li><b>${items[i][0]}</b>${items[i][1]?`<br><span class="keys">${items[i][1]}</span>`:''}</li>`);next++;if(typeof voiceSay==='function')voiceSay(items[i][0]);
     $('#olM').innerHTML=next===items.length?`<span class="good">${okText}</span>`:'Верно. Дальше.'});
 }

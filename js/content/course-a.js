@@ -8,7 +8,7 @@
 const COURSE=[
  {id:'bb',n:'Теория Bareboat Skipper',en:'Bareboat Skipper theory',lessons:[]},
  {id:'drv',n:'Практика на воде',en:'Hands-on: wind, helming, anchoring, MOB, mooring, heavy weather',lessons:[]},
- {id:'nav',n:'Переход и пилотаж',en:'Passage planning, pilotage, night & fog, electronic navigation',lessons:[]},
+ {id:'nav',n:'Переход и пилотаж',en:'Passage planning, pilotage, night & fog, electronic navigation, port of entry',lessons:[]},
  {id:'life',n:'Хозяйство и жизнь на борту',en:'Life aboard: fuel, water, power, galley, heads, crew',lessons:[]},
  {id:'sos',n:'Безопасность и аварии',en:'Safety & emergencies',lessons:[]},
  {id:'med',n:'Первая помощь',en:'First aid',lessons:[]},
@@ -177,7 +177,8 @@ addLesson('bb',{id:'t2',n:'Юридические аспекты яхтинга'
   <li>До оформления поднят флаг Q, на берег сходит только шкипер с документами.</li>
   <li>Оформляют приход (clearance in) и уход (clearance out): документы яхты, паспорта, судовая роль, иногда транзитлог.</li>
   <li>Внутри Шенгена и ЕС правила проще, на границе ЕС и Турции — полное оформление.</li></ul>
-  <p>Правила меняются каждый год. Шкипер узнаёт свежие у чартерной компании и в лоции.</p>`}
+  <p>Правила меняются каждый год. Шкипер узнаёт свежие у чартерной компании и в лоции.</p>
+  <p>Подробно — флаги на подходе, вызов порта, портовые сигналы, кабинеты и 3D-практика — в уроке «Порт входа» модуля «Переход и пилотаж».</p>`}
  ],
  quiz:[
   {q:'Какая конвенция задаёт правила расхождения судов?',o:['MARPOL','МППСС (COLREGs)','STCW','UNCLOS'],a:1,e:'[[МППСС]] — правила предупреждения столкновений. MARPOL — загрязнение, STCW — подготовка моряков.'},
