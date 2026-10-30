@@ -883,3 +883,69 @@ LABS.scope=el=>{
     $('#scO').innerHTML=`Цепь ${L} м — <b>${f1(sc)} глубины</b> (${f1(dep)} м + роульс ≈ 1 м). На дне лежит ${Math.round(lay)} м, натяжение ≈ ${Math.round(H)} кгс.<br><span class="${cls}">${v}</span><br><span class="keys">Круг разворота ≈ ${R} м: цепь плюс длина яхты 12 м. Нужно ${Math.ceil(4*h)} м цепи на 4 глубины.</span>`};
   el.querySelectorAll('input').forEach(i=>i.oninput=draw);draw();
 };
+
+/* ---------- как работают шпринги: вид сверху на яхту у понтона. Считает та же функция b6step, что 3D-гавань (js/along3d.js) ---------- */
+const SPRINGS={
+  bs:{n:'Отход на носовом шпринге',on:['bs'],thr:'1',wh:'in',w:'on',fend:'bow'},
+  ss:{n:'На кормовом шпринге',on:['ss'],thr:'-1',wh:'0',w:'0',fend:'stern'},
+  hold:{n:'Стоим на четырёх концах',on:['bow','stern','bs','ss'],thr:'0',wh:'0',w:'off'},
+  free:{n:'Без концов',on:[],thr:'1',wh:'out',w:'on'}};
+LABS.springs=el=>{
+  el.innerHTML=`${tog('spP',Object.entries(SPRINGS).map(([k,v])=>[k,v.n]),'bs')}<svg viewBox="-170 -40 340 180" id="spS" aria-label="Яхта у понтона, вид сверху"></svg>
+    <div class="seg" id="spL">${[['bow','Носовой'],['stern','Кормовой'],['bs','Шпринг н.'],['ss','Шпринг к.']].map(([v,t])=>`<button data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div>
+    ${tog('spT',[['-1','Малый назад'],['0','Нейтраль'],['1','Малый вперёд']],'1')}${tog('spW',[['in','Штурвал к понтону'],['0','Прямо'],['out','От понтона']],'in')}${tog('spV',[['on','Прижимной ветер 12 уз'],['0','Штиль'],['off','Отжимной 12 уз']],'on')}
+    <div class="row"><button class="btn ghost" id="spR">↺ Сначала</button></div><p class="lo" id="spO"></p>`;
+  // яхта 12 м левым бортом к понтону, нос на восток; соседи спереди и сзади; кранцы по левому борту
+  const BP=BOATS.cruiser,E=BP.eng,B=b6body(BP.lenM,BP.beamM,E),LOA=2*B.L,K=7.5,W0={x:0,z:.24+B.W,h:90};
+  const deck={bow:[-.45*B.W,-.82*B.L],bs:[-.45*B.W,-.82*B.L],stern:[-.8*B.W,.9*B.L],ss:[-.8*B.W,.9*B.L]};
+  const cleat=k=>{const[px]=m4w(W0,...deck[k]);return k==='bow'?px+3.5:k==='stern'?px-3.5:k==='bs'?px-.42*LOA:px+.42*LOA};
+  const NB=[[B.L+1.6,B.L+1.6+LOA],[-B.L-1.6-LOA,-B.L-1.6]];
+  const obs=[{t:'box',x0:-80,x1:80,z0:-2.4,z1:0,k:'pontoon'},...NB.map(([a,b])=>({t:'box',x0:a,x1:b,z0:.3,z1:.3+2*B.W*.97,k:'nb'}))];
+  const gap=(lx,lz,o)=>o.k==='pontoon'&&lx<=.05?.22:.05;
+  const P=(x,z)=>`${(x*K).toFixed(1)} ${(z*K).toFixed(1)}`,F=[-1,-.85,-.66,-.45,-.22,0,.25,.5,.75,1];
+  const outline=q=>'M'+[...F.map(f=>[b6hw(f)*B.W,f*B.L]),...F.slice().reverse().map(f=>[-b6hw(f)*B.W,f*B.L])].map(([lx,lz])=>P(...m4w(q,lx,lz))).join(' L')+' Z';
+  let s,R={},on=new Set(),thr='1',wh='in',wv='on',fendAt='bow',run=true,tt=0,hit=false,last=0,txt='';
+  const reset=()=>{s={x:W0.x,z:W0.z,h:W0.h,u:0,v:0,r:0,rud:0,thrI:2,eng:true,bt:0,B,E};tt=0;run=true;hit=false;
+    for(const k in deck){const[px,pz]=m4w(s,...deck[k]),c=[cleat(k),-.22];R[k]={p:deck[k],c,L:Math.hypot(px-c[0],pz-c[1])+.05,key:k}}};
+  const press=(id,v)=>el.querySelectorAll('#'+id+' button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));
+  const showOn=()=>el.querySelectorAll('#spL button').forEach(b=>b.setAttribute('aria-pressed',String(on.has(b.dataset.v))));
+  const preset=k=>{const p=SPRINGS[k];on=new Set(p.on);thr=p.thr;wh=p.wh;wv=p.w;fendAt=p.fend||'';press('spT',thr);press('spW',wh);press('spV',wv);showOn();reset()};
+  const own=()=>press('spP',''); // свои настройки — готовый режим больше не подсвечен
+  segOn(el,'spP',preset);segOn(el,'spT',v=>{thr=v;own()});segOn(el,'spW',v=>{wh=v;own()});segOn(el,'spV',v=>{wv=v;own()});
+  // конец подают там, где яхта сейчас: его длина — нынешнее расстояние до утки
+  el.querySelectorAll('#spL button').forEach(b=>b.onclick=()=>{const k=b.dataset.v;if(on.has(k))on.delete(k);else{const[px,pz]=m4w(s,...R[k].p);R[k].L=Math.hypot(px-R[k].c[0],pz-R[k].c[1])+.05;on.add(k)}showOn();own()});
+  $('#spR').onclick=reset;
+  const draw=()=>{
+    const ang=Math.abs(norm(s.h-90)),col={bow:'#f2a33a',stern:'#f2a33a',bs:'#f7d36b',ss:'#f7d36b'},wy=wv==='on'?-1:1;
+    const fz=[-.25,.17,.58].concat(fendAt==='bow'?[-.72]:fendAt==='stern'?[.86]:[]);
+    const lines=[...on].map(k=>{const q=R[k],[px,pz]=m4w(s,...q.p);return`<line x1="${(px*K).toFixed(1)}" y1="${(pz*K).toFixed(1)}" x2="${(q.c[0]*K).toFixed(1)}" y2="${(q.c[1]*K).toFixed(1)}" stroke="${col[k]}" stroke-width="2.4"${q.taut?'':' stroke-dasharray="4 3"'}/>`}).join('');
+    const[rx,rz]=m4w(s,0,.92*B.L),[ex,ez]=m4w(s,Math.sin(s.rud*30*D)*1.3,.92*B.L+Math.cos(s.rud*30*D)*1.3);
+    const t=+thr,[ax,az]=m4w(s,0,-t*.5),[bx,bz]=m4w(s,0,-t*3.5),[wx,wz]=m4w(s,0,B.L+.3),[wx2,wz2]=m4w(s,Math.sin(s.rud*30*D)*1.6,B.L+3);
+    $('#spS').innerHTML=`<rect x="-170" y="0" width="340" height="140" fill="#1f6f86" opacity=".35"/><rect x="-170" y="${-2.4*K}" width="340" height="${2.4*K}" fill="#a48d6c"/><line x1="-170" y1="0" x2="170" y2="0" stroke="#6b5a42" stroke-width="1.5"/>
+      <text x="-166" y="-24" class="f-s">ПОНТОН · PONTOON</text>
+      ${Object.keys(deck).map(k=>`<rect x="${(cleat(k)*K-3).toFixed(1)}" y="${(-.22*K-2).toFixed(1)}" width="6" height="4" fill="#3a3f42"/>`).join('')}
+      ${NB.map(([a,b])=>`<path d="${outline({x:(a+b)/2,z:.32+B.W,h:90})}" fill="#55636c" opacity=".55"/>`).join('')}
+      ${wv!=='0'?[-120,-40,40,120].map(x=>arw(x,wy<0?128:96,x,wy<0?96:128,'#9fd3e6',2)).join('')+`<text x="-166" y="136" class="f-s" style="fill:#9fd3e6">${wv==='on'?'ПРИЖИМНОЙ ВЕТЕР · ONSHORE':'ОТЖИМНОЙ ВЕТЕР · OFFSHORE'}</text>`:''}
+      <path d="${outline(s)}" fill="var(--hull)" stroke="#8b8574"/>
+      ${fz.map(f=>{const[x,z]=m4w(s,-(b6hw(f)*B.W+.14),f*B.L);return`<circle cx="${(x*K).toFixed(1)}" cy="${(z*K).toFixed(1)}" r="2.6" fill="#f4f1e6"/>`}).join('')}
+      ${lines}<line x1="${(rx*K).toFixed(1)}" y1="${(rz*K).toFixed(1)}" x2="${(ex*K).toFixed(1)}" y2="${(ez*K).toFixed(1)}" stroke="#2b2f31" stroke-width="3.5" stroke-linecap="round"/>
+      ${t>0?arw(wx*K,wz*K,wx2*K,wz2*K,'#9fd3e6',2):''}${t?arw(ax*K,az*K,bx*K,bz*K,'#3cbf7e',3):''}
+      <text x="166" y="-24" text-anchor="end" class="f-s" style="fill:var(--ink)">угол к понтону ${Math.round(ang)}°</text>`;
+    const only=k=>on.size===1&&on.has(k);let tx;
+    if(hit)tx='<span class="bad">Касание соседа!</span> Без шпринга яхта ходит вдоль понтона. «Сначала» — и попробуй с концами.';
+    else if(only('bs')&&thr==='1')tx=(wh==='in'?'Носовой шпринг держит нос, нос упирается кранцем в понтон, а струя от винта бьёт в перо, переложенное к понтону, и выталкивает корму.'
+      :'Штурвал не к понтону — струя от винта бьёт мимо пера, и корма почти не выходит. Переложи штурвал к понтону.')+` Корма вышла на <b>${Math.round(ang)}°</b>${ang>=30?' — пора: нейтраль, штурвал прямо, малый назад и «Отдать шпринг!»':''}.`;
+    else if(only('ss')&&thr==='-1')tx=`Кормовой шпринг держит корму, она упирается кранцем в понтон, а на малом назад выходит нос — на <b>${Math.round(ang)}°</b>${wv==='on'?'. Прижимной ветер давит на нос и прижимает его обратно':ang>=25?'. Пора: малый вперёд и «Отдать шпринг!»':''}.`;
+    else if(on.size===4)tx=wv==='off'?'Отжимной ветер тянет яхту от понтона, но четыре конца держат её у кранцев. Шпринги не дают ходить вдоль понтона.':'Яхта стоит: носовой и кормовой держат её у понтона, шпринги — чтобы не ходила вдоль. Дай ход — шпринги не пустят.';
+    else if(!on.size&&wv==='on')tx='Прижимной ветер держит яхту у понтона. Штурвал от понтона — нос отходит, но корма идёт на понтон, а ветер прижимает обратно. Без шпринга остаётся идти вдоль понтона — на соседа.';
+    else tx='Попробуй: оставь один носовой шпринг, малый вперёд и штурвал к понтону. Или один кормовой шпринг и малый назад.';
+    if(!run&&!hit)tx+=' <span class="keys">Яхта ушла далеко — «Сначала».</span>';
+    if(tx!==txt){txt=tx;$('#spO').innerHTML=rich(tx)}};
+  preset('bs');
+  // время идёт вдвое быстрее, чтобы манёвр занимал секунды, а не полминуты
+  return anim(t2=>{const dt=Math.min(.05,t2-last);last=t2;
+    if(run){s.thrI=thr==='1'?3:thr==='-1'?1:2;s.rud=wh==='in'?-1:wh==='out'?1:0;
+      const wind={from:wv==='off'?0:180,kn:wv==='0'?0:12},ropes=[...on].map(k=>R[k]),n=Math.max(1,Math.ceil(dt*240));
+      for(let i=0;i<n;i++)if(b6step(s,dt*2/n,{wind,ropes,obs,gap}).some(c=>c.o.k==='nb'))hit=true;
+      tt+=dt*2;if(Math.abs(s.x)>24||s.z>16||tt>90)run=false}
+    draw()})};

@@ -985,3 +985,10 @@ body.crumbed .stage.tall{height:clamp(560px,calc(100dvh - 248px),1200px)}
   #a5chart:not([hidden])~#a5msg{left:calc(clamp(84px,calc(100cqh - var(--tl,32px) - var(--hw,var(--hh,0px)) - 40px),138px) + 124px)}
 }
 @container (max-height:520px) and (min-width:560px){#a5actG{order:0;flex:0 1 auto;background:rgba(10,29,42,.86);border:1px solid var(--line);padding:6px 8px}#a5actG .acts{width:auto}#a5actG>.cap{display:block}}
+/* Швартовка лагом и бочка (js/along3d.js): команды экипажу в 4 или 2 столбца; сообщение над пультом, как на якорной стоянке */
+.acts.n4{grid-template-columns:repeat(4,minmax(0,1fr))}.acts.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@container (min-width:821px){.stage.tall .three .b6ui .tools{right:calc(min(400px,100% - 270px) + 24px)}}
+#b6msg{top:auto;bottom:calc(var(--hh,0px) + 12px);transform:translateX(-50%)}
+@container (max-width:820px){#b6actG{order:-1;flex:1 1 100%;background:none;border:0;padding:0}#b6actG .acts{width:min(100%,460px)}#b6actG>.cap{display:none}#b6actG .acts.n2{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@container (max-height:520px){#b6msg{left:12px;right:calc(min(46%,420px) + 24px);transform:none;max-width:none;bottom:calc(var(--hh,0px) + 8px)}}
+@container (max-height:520px) and (min-width:560px){#b6actG{order:0;flex:0 1 auto;background:rgba(10,29,42,.86);border:1px solid var(--line);padding:6px 8px}#b6actG .acts{width:auto}#b6actG>.cap{display:block}}
