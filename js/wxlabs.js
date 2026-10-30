@@ -169,7 +169,7 @@ LABS.gonogo=el=>{
 };
 
 /* ---------- ветер против течения: профиль волны сбоку ---------- */
-LABS.tide=el=>{
+LABS.wxtide=el=>{
   el.innerHTML=`<svg viewBox="0 0 300 180" id="tdS" aria-label="Волна при течении по ветру и против"></svg>${tog('tdK',[['with','Течение по ветру'],['none','Нет течения'],['against','Против ветра']],'against')}${rng('tdC','Течение',0,3,.5,2,' уз')}<p class="lo" id="tdO"></p>`;
   let k='against';segOn(el,'tdK',v=>{k=v;$('#tdC').disabled=v==='none'});
   return anim(t=>{const c=k==='none'?0:+$('#tdC').value,s=k==='against'?1:k==='with'?-1:0;$('#tdCV').textContent=String(c).replace('.',',')+' уз';
