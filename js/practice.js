@@ -1,25 +1,25 @@
 /* Галс · условия практики: перед упражнением карточка «Условия» — лодка, сила и направление ветра, порывы и заходы, время суток, подсказки.
    Выбор запоминается в браузере (gals-cond). Сцены читают его через condGet() и ведут ветер через gustWind(); время суток — tod3d() в ocean3d.js. */
 const COND_DEF={wind:'mid',dir:'fix',gust:false,tod:'day',hints:'all'};
-/* сила ветра по упражнениям, узлы: low / mid / high. mid — прежние значения дней */
-const COND_KN={points:[7,12,17],tack:[7,12,17],moor3d:[4,8,13],helm3d:[6,10,15],anchor3d:[6,10,15],mob:[7,12,17],along3d:[4,8,13],buoy3d:[4,8,13],fail3d:[8,12,16]};
-const COND_DIR={points:'с севера',tack:'с севера',moor3d:'вдоль причала, с востока',helm3d:'с северо-востока',anchor3d:'с берега, с севера',mob:'с севера',along3d:'с юго-востока, к понтону',buoy3d:'с юга',fail3d:'с запада, на восточный берег'};
+/* сила ветра по упражнениям, узлы: low / mid / high. mid — прежние значения дней. У «свежего ветра» (reef) — ветер на старте, дальше он растёт (js/reef.js) */
+const COND_KN={points:[7,12,17],tack:[7,12,17],moor3d:[4,8,13],helm3d:[6,10,15],anchor3d:[6,10,15],mob:[7,12,17],along3d:[4,8,13],buoy3d:[4,8,13],fail3d:[8,12,16],reef:[10,13,16]};
+const COND_DIR={points:'с севера',tack:'с севера',moor3d:'вдоль причала, с востока',helm3d:'с северо-востока',anchor3d:'с берега, с севера',mob:'с севера',along3d:'с юго-востока, к понтону',buoy3d:'с юга',fail3d:'с запада, на восточный берег',reef:'с севера'};
 function condGet(){try{return Object.assign({},COND_DEF,JSON.parse(localStorage.getItem('gals-cond')||'{}'))}catch(e){return Object.assign({},COND_DEF)}}
 function condSet(c){try{localStorage.setItem('gals-cond',JSON.stringify(c))}catch(e){}}
 const condKn=(kind,c)=>COND_KN[kind][{low:0,mid:1,high:2}[c.wind]??1];
 /* упражнения, перед которыми спрашиваем условия; мастер-классы идут в своих тихих условиях */
-const condNeed=p=>p==='points'||(p==='tack'&&tackMode==='practice')||(p==='moor3d'&&moorMode==='practice')||(p==='helm3d'&&helmMode==='practice')||(p==='anchor3d'&&anchorMode==='practice')||(p==='mob'&&mobMode==='practice')||(p==='along3d'&&alongMode==='practice')||(p==='buoy3d'&&buoyMode==='practice')||(p==='fail3d'&&failMode==='practice');
+const condNeed=p=>p==='points'||(p==='tack'&&tackMode==='practice')||(p==='moor3d'&&moorMode==='practice')||(p==='helm3d'&&helmMode==='practice')||(p==='anchor3d'&&anchorMode==='practice')||(p==='mob'&&mobMode==='practice')||(p==='along3d'&&alongMode==='practice')||(p==='buoy3d'&&buoyMode==='practice')||(p==='fail3d'&&failMode==='practice')||(p==='reef'&&reefMode==='practice');
 let condSkip=false; // перезапуск той же практики (смена лодки, графики, «Сначала») — без карточки
 
 function condCard(kind,onStart){
-  const c=condGet(),K=COND_KN[kind],sail=kind==='points'||kind==='tack'||kind==='mob';
+  const c=condGet(),K=COND_KN[kind],sail=kind==='points'||kind==='tack'||kind==='mob'||kind==='reef';
   const boats=typeof FLEET!=='undefined'?FLEET.filter(f=>/moor|anchor|along|buoy|fail/.test(kind)||BOATS[f.id].sail):[]; // как в boatPicker: моторная — только в марине, на якоре, у понтона и бочки
-  const title={points:'День 2 · курсы к ветру',tack:'День 3 · лавировка и фордевинд',moor3d:'День 4 · швартовка кормой',helm3d:'Рулёжка под мотором',anchor3d:'Якорная стоянка',mob:'Человек за бортом под парусом',along3d:'Швартовка лагом',buoy3d:'Швартовка к бочке',fail3d:'Мотор заглох в узкости'}[kind];
+  const title={points:'День 2 · курсы к ветру',tack:'День 3 · лавировка и фордевинд',moor3d:'День 4 · швартовка кормой',helm3d:'Рулёжка под мотором',anchor3d:'Якорная стоянка',mob:'Человек за бортом под парусом',along3d:'Швартовка лагом',buoy3d:'Швартовка к бочке',fail3d:'Мотор заглох в узкости',reef:'Свежий ветер · риф и шквал'}[kind];
   const grp=(key,lbl,en2,opts)=>`<div class="cgrp"><p class="lbl">${lbl} <span class="en">· ${en2}</span></p><div class="chips" data-g="${key}">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${String(c[key])===String(v)}">${t}</button>`).join('')}</div></div>`;
   show('board');padMode(null);['instBox','boatBox','trimBox'].forEach(id=>$('#'+id).hidden=true);hint('');
   $('#board').innerHTML=`<div class="exam"><div class="card cond"><p class="qn">Условия практики · conditions</p><h3>${title}</h3><div class="cgrid">
     ${boats.length?`<div class="cgrp"><p class="lbl">Лодка <span class="en">· boat</span></p><div class="chips" data-g="boat">${boats.map(f=>`<button data-v="${f.id}" aria-pressed="${boatFor(kind)===f.id}">${f.s}</button>`).join('')}</div></div>`:''}
-    ${grp('wind','Ветер','wind',[['low',`слабый ${K[0]} уз`],['mid',`средний ${K[1]} уз`],['high',`свежий ${K[2]} уз`]])}
+    ${grp('wind',kind==='reef'?'Ветер на старте':'Ветер',kind==='reef'?'starting wind':'wind',[['low',`${kind==='reef'?'умеренный':'слабый'} ${K[0]} уз`],['mid',`${kind==='reef'?'свежеет':'средний'} ${K[1]} уз`],['high',`свежий ${K[2]} уз`]])}
     ${grp('dir','Откуда дует','direction',[['fix',COND_DIR[kind]],['rnd','каждый раз по-новому']])}
     ${grp('gust','Порывы и заходы ветра','gusts & shifts',[[false,'ровный ветер'],[true,'порывистый']])}
     ${grp('tod','Время суток','time of day',[['morning','утро'],['day','день'],['evening','вечер']])}
@@ -27,7 +27,8 @@ function condCard(kind,onStart){
     <p class="ex" id="cEx"></p>
     <div class="row"><button class="btn" id="cGo">Начать</button></div></div></div>`;
   const ex=()=>{const n=condGet();$('#cEx').innerHTML=rich([
-    n.wind==='high'?(sail?'Свежий ветер: сильный [[крен]] и быстрая яхта. На настоящей яхте в такой ветер шкипер думает о [[риф|рифах]].':'Свежий ветер: на малом ходу нос сдувает быстро, держи ход и помогай [[подруливающее устройство|подруливающим]].'):n.wind==='low'?'Слабый ветер: яхта разгоняется медленно, руль слушается хуже.':'',
+    kind==='reef'?`По пути к бухте ветер дважды усилится, примерно до ${condKn('reef',n)+9} узлов, потом с наветра придёт [[шквал]]. Бери [[риф]] вовремя.`:'',
+    kind==='reef'?'':n.wind==='high'?(sail?'Свежий ветер: сильный [[крен]] и быстрая яхта. На настоящей яхте в такой ветер шкипер думает о [[риф|рифах]].':'Свежий ветер: на малом ходу нос сдувает быстро, держи ход и помогай [[подруливающее устройство|подруливающим]].'):n.wind==='low'?'Слабый ветер: яхта разгоняется медленно, руль слушается хуже.':'',
     n.gust?(kind==='tack'?'Ветер меняет силу и направление: следи, когда он [[заход ветра|заходит]] и [[отход ветра|отходит]].':'[[порыв|Порывы]] видны на воде заранее — тёмные пятна ряби.'):'',
     n.tod==='evening'?'Вечер: солнце низко над водой, против света плохо видно знаки и другие суда. К темноте шкипер планирует быть в марине.':n.tod==='morning'?'Утро: дымка, горизонт виден хуже — чаще сверяйся с компасом и приборами.':'',
     n.hints==='min'?'Без подсказок: нет зелёных секторов, лейлайнов и подсказок шкипера. Только приборы, паруса и [[колдунчики]].':''].filter(Boolean).join(' '))};

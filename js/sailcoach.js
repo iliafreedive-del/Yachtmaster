@@ -1,7 +1,7 @@
 /* Галс · мастер-классы в 3D-море и команды экипажу при поворотах.
    День 2 — короткий: руль и шкот, потом задания по курсам. День 3 — поворот оверштаг по шагам: бейдевинд, ход, «Приготовиться к повороту» — «Готов!» — «Поворот!», руль, новый галс.
    Отдельный мастер-класс — поворот фордевинд: бакштаг, гика-шкот выбран, «Приготовиться к повороту фордевинд» — «Готов!» — «Поворот!», руль от ветра, потравить.
-   Мастер-класс «человек за бортом под парусом» идёт по тем же шагам, его проверки и подсказки — в js/mobsail.js.
+   Мастер-класс «человек за бортом под парусом» идёт по тем же шагам, его проверки и подсказки — в js/mobsail.js; «риф» и «лечь в дрейф» — в js/reef.js.
    Шаги и фразы — js/content/sailcoach.js. Физика и задания — sim2d.js, картинка, кнопки команд и карточки — sail3d.js.
    sim.coach — идёт мастер-класс; sim.cmd — команды: none → ra (экипаж готовится) → ready («Готов!») → lh («Поворот!») → поворот → none */
 let tackMode=null;
@@ -40,9 +40,9 @@ function coachEnter(){
   if(s.fall&&sim.mob&&!sim.mob.fallen)mobFall(); // «человек за бортом» (js/mobsail.js): на этом шаге человек падает за борт
   $('#stage').querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));
   const t=s.t.replace(/\{dir\}/g,`<b>${scDir(true)}</b>`).replace(/\{away\}/g,`<b>${scDir(false)}</b>`).replace(/\{v\}/g,scVt().toFixed(1)).replace(/\{gy\}/g,GYBE_OK);
-  const box=$('#scCoach');if(!box)return;box.hidden=false;box.classList.remove('min');box.classList.toggle('mobc',!!s.acts);
+  const box=$('#scCoach'),rf=c.kind==='reef'||c.kind==='hove';if(!box)return;box.hidden=false;box.classList.remove('min');box.classList.toggle('mobc',!!s.acts&&!rf);box.classList.toggle('rfc',!!s.acts&&rf);
   // acts — кнопки первых действий или подъёма прямо в карточке шага; подсветка — после того, как они нарисованы
-  box.innerHTML=`${coachQn(c.si,c.L.length,s)}<p>${rich(t)}</p>${s.acts?mobActsHtml(s.acts):''}<p class="live" id="scLive"></p>
+  box.innerHTML=`${coachQn(c.si,c.L.length,s)}<p>${rich(t)}</p>${s.acts?(rf?rfActsHtml(s.acts):mobActsHtml(s.acts)):''}<p class="live" id="scLive"></p>
     ${s.info||c.kind==='points'?`<div class="row">${s.info?'<button class="btn" id="scNext">Дальше</button>':''}${c.kind==='points'?'<button class="btn ghost" id="scSkip">Пропустить</button>':''}</div>`:''}`;
   (s.hl||[]).forEach(q=>{const e=$('#stage').querySelector(q);if(e)e.classList.add('hl')});
   if(s.info)$('#scNext').onclick=()=>coachNext();
@@ -59,6 +59,7 @@ function coachLive(dt){
   const c=sim.coach,e=$('#scLive');if(!c||!e)return;c.liveT-=dt;if(c.liveT>0)return;c.liveT=.2;
   const s=sim.ss,b=sim.boat,id=c.L[c.si].id;if(!s){e.textContent='';return}
   if(c.kind==='mob'){e.innerHTML=mobLive(id);return}
+  if(c.kind==='reef'||c.kind==='hove'){const r=rfLive(id);if(r!=null){e.innerHTML=r;return}}
   const trim=s.boom>s.opt?'Парус полощет — жми «Выбрать» ↑':'Парус перетянут — жми «Травить» ↓';
   const beat=s.st==='nogo'?`Нос в мёртвой зоне — руль ${scDir(false)}, от ветра`:s.awa>scLay()+8?`Ещё к ветру: руль ${scDir(true)} · сейчас ${Math.round(s.awa)}° к ветру`:s.eff<=.6?trim:'Бейдевинд, парус стоит ровно';
   e.innerHTML=id==='steer'?`Отвернул на ${Math.round(Math.abs(norm(b.h-c.h0)))}° из 15`:
@@ -79,6 +80,7 @@ function coachFinish(){
   const c=sim.coach;sim.coach=null;$('#stage').querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));if($('#scCoach'))$('#scCoach').hidden=true;
   if(c.kind==='points'){done['day2-lesson']=true;store.set(done);say(sim.steps[0].s);return}
   if(c.kind==='mob'){mobCoachDone();return}
+  if(c.kind==='reef'||c.kind==='hove'){rfCoachDone(c.kind);return}
   sim.running=false;done[c.kind==='gybe'?'day3-gybe':'day3-lesson']=true;store.set(done);coachSteps(true,c.kind);
   const go=m=>{hideDialog();tackMode=m;stopAll();startPractice('tack')};
   if(c.kind==='gybe'){
@@ -91,7 +93,7 @@ function coachFinish(){
 }
 function coachSteps(all,kind){
   const c=sim.coach||{L:SAILCOACH[kind||'tack'],si:all?99:0,kind:kind||'tack'};
-  $('#taskLbl').textContent=c.kind==='points'?'Мастер-класс · руль и шкот':c.kind==='gybe'?'Мастер-класс · поворот фордевинд · gybing':c.kind==='mob'?'Мастер-класс · человек за бортом под парусом':'Мастер-класс · поворот оверштаг · tacking';
+  $('#taskLbl').textContent=c.kind==='points'?'Мастер-класс · руль и шкот':c.kind==='gybe'?'Мастер-класс · поворот фордевинд · gybing':c.kind==='mob'?'Мастер-класс · человек за бортом под парусом':c.kind==='reef'?'Мастер-класс · риф на гроте · reefing':c.kind==='hove'?'Мастер-класс · лечь в дрейф · heaving to':'Мастер-класс · поворот оверштаг · tacking';
   $('#steps').innerHTML=c.L.map((s,i)=>`<li class="${i<c.si?'done':i===c.si?'now':''}"><i>${i<c.si?'✓':i+1}</i><span>${s.n}${en(s.en)}</span></li>`).join('');
 }
 

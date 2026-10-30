@@ -89,7 +89,7 @@ function obSay(id){const R=ONBOARD.radio.find(r=>r.id===id);if(!R||typeof voiceS
 
 /* ---------- порядок действий и справка ---------- */
 /* порядки действий по темам: сначала аварии и первая помощь, потом радио, мотор и швартовка, паруса, двигатель */
-const OB_PROC_T=['safety','med','radio','motor','sail','engine'];
+const OB_PROC_T=['safety','med','radio','motor','sail','wx','engine'];
 function obProcHtml(){const vo=typeof sayBtn==='function',ids=[...OB_PROC_T,...new Set(DORDER.map(o=>o.t).filter(t=>!OB_PROC_T.includes(t)))].filter(t=>DORDER.some(o=>o.t===t));
   const tp=t=>typeof DTOPICS!=='undefined'&&DTOPICS.find(x=>x.id===t)||{n:t,en:''};
   return`<div class="card onb-c" id="ob-proc"><div class="onb-h"><h3>Порядок действий ${en('procedures')}</h3><span class="cnt">${DORDER.length}</span></div>

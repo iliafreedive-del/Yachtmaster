@@ -50,13 +50,15 @@ function smoothNormals(arrs){
         for(let j=0;j<L.length;j+=2){const G=fn[L[j]][L[j+1]],d=G[0]*F[0]+G[1]*F[1]+G[2]*F[2];if(d>.9){x+=G[0]*G[3];y+=G[1]*G[3];z+=G[2]*G[3]}else if(d<-.9){x-=G[0]*G[3];y-=G[1]*G[3];z-=G[2]*G[3]}}
         const l=Math.hypot(x,y,z)||1;N.set([x/l,y/l,z/l],i+v*3)}}
     return N})}
-/* полотно паруса: швы полотнищ, латы и рифы на гроте, синяя защита от солнца по задней шкаторине стакселя */
+/* полотно паруса: швы полотнищ, латы и две рифовые линии на гроте, синяя защита от солнца по задней шкаторине стакселя */
 function sailTex(kind){const key='tex-'+kind;if(MAT3[key])return MAT3[key];
   const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,256,256);
   x.fillStyle='rgba(110,110,100,.22)';for(let i=1;i<12;i++){const y=i*256/12;x.fillRect(0,y-1+Math.sin(i)*2,256,1.5)}
   x.fillStyle='rgba(0,0,0,.1)';x.fillRect(0,0,6,256);x.fillRect(0,250,256,6);
   if(kind==='main'){x.fillStyle='rgba(60,60,55,.45)';[.22,.42,.62,.8].forEach((v,i)=>x.fillRect(150+i*14,256*(1-v)-2,106-i*14,4));
-    x.fillStyle='rgba(60,60,55,.5)';for(let u=12;u<250;u+=18){x.beginPath();x.arc(u,256*.86,2,0,7);x.fill()}
+    // две рифовые линии (на 14 и 28 % высоты): риф-сезни и кренгельсы у передней и задней шкаторины (js/reef.js берёт риф ровно по ним)
+    x.fillStyle='rgba(60,60,55,.5)';[.86,.72].forEach(y=>{for(let u=12;u<250;u+=18){x.beginPath();x.arc(u,256*y,2,0,7);x.fill()}
+      x.strokeStyle='rgba(50,50,46,.7)';x.lineWidth=2.5;[7,247].forEach(u=>{x.beginPath();x.arc(u,256*y,4,0,7);x.stroke()})});
     x.fillStyle='rgba(0,0,0,.14)';x.fillRect(250,0,6,256)}
   else{x.fillStyle='#2c5a86';x.fillRect(226,0,30,256);x.fillRect(0,240,256,16)}
   const t=new THREE.CanvasTexture(c);t.anisotropy=4;return MAT3[key]=t}
